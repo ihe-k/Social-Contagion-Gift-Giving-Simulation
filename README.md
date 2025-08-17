@@ -96,24 +96,24 @@ st.pyplot(fig_cm)
 1. Feature Engineering
 To enhance the predictive power of the model, several features were engineered to capture more complex patterns in the data. These features include:
 
-a. Sentiment Trends Over Time:
+* Sentiment Trends Over Time:
 Rationale: Sentiment analysis can change over time, and capturing trends can give insights into how sentiment evolves, especially for tasks like analysing social media or customer reviews.
 Implementation: A rolling window of sentiment scores was computed to identify trends in sentiment changes over time. We also tracked sentiment direction (increase or decrease) to capture sudden shifts.
 Example: "Rolling average of sentiment over a 7-day period was calculated."
 
-b. Network Centrality Measures:
+* Network Centrality Measures:
 Rationale: When dealing with network data (e.g., social media or interactions between users), centrality measures like betweenness centrality are important in identifying influential nodes.
 Implementation: Betweenness centrality was computed using the NetworkX library and added as a feature to capture the importance of each node in the network.
 Example: "Nodes with high betweenness centrality were likely to be more influential in the network."
 
 2. Hyperparameter Tuning
 To improve the performance of the model, hyperparameters were optimised using techniques like Grid Search, Random Search and Bayesian Optimisation.
-a. Grid Search:
+* Grid Search:
 Rationale: Grid search was used to exhaustively search for the best combination of hyperparameters from a predefined grid.
 Implementation: We experimented with different values for hyperparameters like n_estimators, max_depth, and min_samples_split for a Random Forest model.
 Example: "Best parameters found were n_estimators=100, max_depth=20."
 
-b. Random Search:
+* Random Search:
 Rationale: To speed up hyperparameter tuning, we used random search, which samples hyperparameters randomly rather than exhaustively.
 Implementation: Randomised search was applied to n_estimators, max_depth, and min_samples_split using the Scikit-learn library to efficiently find the best parameters.
 Example: "Optimised hyperparameters were determined in fewer trials compared to grid search."
