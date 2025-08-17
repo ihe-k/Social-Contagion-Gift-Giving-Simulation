@@ -28,6 +28,38 @@ The goal is to understand how users with varying health conditions, ideologies, 
 * Behavioural Science Research: This project integrates behavioural science and machine learning, contributing to research on how ideologies and health conditions influence human behaviour in social networks.
 * Data Science & AI: The project demonstrates the application of machine learning algorithms (e.g., Random Forests) in predicting social behaviour, contributing to data science and AI research on social media networks.
 
+## Project Structure
+```plaintext
+gift-contagion-simulation/
+├── contagion_sim_with_snscrape_animated.py  # Main simulation script
+├── requirements.txt                         # List of required Python packages
+├── README.md                                # Project overview and instructions
+├── data/
+│   ├── twitter/                             # Scraped tweet data
+│   ├── youtube/                             # Scraped YouTube video data
+│   └── tiktok/                              # Scraped TikTok video data
+├── network/
+│   ├── network_builder.py                   # Erdős–Rényi network generation
+│   └── user_assignment.py                   # Gender, ideology, chronic condition assignments
+├── analysis/
+│   ├── sentiment_analysis.py                # Sentiment & ideology classification
+│   ├── centrality_metrics.py                # Betweenness centrality calculations
+│   └── feature_engineering.py               # Sentiment trends, feature extraction
+├── modelling/
+│   ├── train_model.py                       # Model training and hyperparameter tuning
+│   └── evaluation.py                        # Accuracy, confusion matrix, classification report
+├── visualisation/
+│   ├── animate_spread.py                    # Contagion animation logic (Matplotlib + FuncAnimation)
+│   └── streamlit_dashboard.py               # Streamlit app for visualisation and interactivity
+├── utils/
+│   ├── scraper_twitter.py                   # Twitter scraping using snscrape
+│   ├── scraper_youtube.py                   # YouTube video scraping
+│   └── scraper_tiktok.py                    # TikTok API integration
+└── assets/
+    ├── figures/                             # Saved figures or animations
+    └── styles/                              # Custom CSS or configuration files
+```
+
 ## Requirements
 Before running the app, make sure you have the following libraries installed:
 
