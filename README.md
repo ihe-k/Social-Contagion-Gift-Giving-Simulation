@@ -1,4 +1,4 @@
-# Gift-Triggered-Health-Info-Contagion-Simulation
+# Gift Triggered Health Information Contagion Simulation
 This project leverages advanced machine learning models and social network analysis to predict user behaviour and information diffusion patterns across platforms. Using sentiment analysis and Random Forest Classifiers, this work explores the impact of ideologies, health conditions and social contagion on health information sharing.
 
 The goal is to understand how users with varying health conditions, ideologies, and behaviours might influence each other in a digital ecosystem. This model can be used to predict the likelihood of health-related information spreading across social networks, helping to design more effective public health communication strategies and targeted interventions.
