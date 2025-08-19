@@ -1,6 +1,7 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
@@ -49,11 +50,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (NPR Life Kit Health)
-rss_url = "https://feeds.npr.org/510307/rss.xml"  # mock public RSS :contentReference[oaicite:2]{index=2}
+rss_url = "https://feeds.npr.org/510307/rss.xml"
 podcast_items = get_podcasts_from_rss(rss_url)
 
-# --- Step 4: Scrape Health Podcast Metadata from Listen Notes Pages ---
+# --- Step 4: Scrape ListenNotes Podcast Metadata ---
 def scrape_listennotes_show(show_url):
     resp = requests.get(show_url)
     if resp.status_code != 200:
@@ -63,14 +63,13 @@ def scrape_listennotes_show(show_url):
     desc = soup.find('p').text if soup.find('p') else ""
     return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
 
-# Example scraping *Health Insights Podcast* page
 ln_url = "https://www.listennotes.com/podcasts/health-insights-podcast-wellness-and-BTgZb84DPEH/"
 scraped = scrape_listennotes_show(ln_url)
 if scraped:
     podcast_items.append(scraped)
 
 # --- Combine Content ---
-all_content = podcast_items  # Only podcasts now
+all_content = podcast_items
 
 # --- Step 5: Assign User Attributes ---
 user_data = []
@@ -92,10 +91,18 @@ for i, u in enumerate(user_data):
     G.nodes[i]['score'] = 0
     G.nodes[i]['triggered_count'] = 0
     G.nodes[i]['shared'] = False
+    G.nodes[i]['gifted'] = False
 
-# --- Step 6: Features & Labels ---
+# --- Step 6: Feature Engineering ---
 def calc_sentiment_trends():
-    return [np.mean([1 if G.nodes[n]['sentiment']=='pro-health' else 0 for n in G.neighbors(node)]) if list(G.neighbors(node)) else 0 for node in G.nodes]
+    trends = []
+    for node in G.nodes:
+        neighbors = list(G.neighbors(node))
+        if neighbors:
+            trends.append(np.mean([1 if G.nodes[n]['sentiment'] == 'pro-health' else 0 for n in neighbors]))
+        else:
+            trends.append(0)
+    return trends
 
 sent_trends = calc_sentiment_trends()
 centrality = nx.betweenness_centrality(G)
@@ -104,11 +111,11 @@ features, labels = [], []
 for n in G.nodes:
     u = G.nodes[n]
     features.append([
-        1 if u['gender']=='Female' else 0,
+        1 if u['gender'] == 'Female' else 0,
         1 if u['has_chronic_disease'] else 0,
-        1 if u['ideology']=='pro-health' else 0,
-        1 if u['ideology']=='anti-health' else 0,
-        1 if u['ideology']=='neutral' else 0,
+        1 if u['ideology'] == 'pro-health' else 0,
+        1 if u['ideology'] == 'anti-health' else 0,
+        1 if u['ideology'] == 'neutral' else 0,
         sent_trends[n],
         centrality[n]
     ])
@@ -131,42 +138,75 @@ fig, ax = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax)
 st.pyplot(fig)
 
-# --- Step 9: Contagion Simulation ---
+# --- Step 9: Contagion Simulation with Leadership Board Style ---
 pos = nx.spring_layout(G, seed=42)
-seed = random.sample(list(G.nodes), INIT_SHARED)
-for node in seed:
+
+# Initialize gifted users
+initial_gifted = random.sample(list(G.nodes), INIT_SHARED)
+for node in initial_gifted:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
 
-contagion, current = [set(seed)], set(seed)
-while current:
-    next_step = set()
-    for u in current:
-        for v in G.neighbors(u):
-            if not G.nodes[v]['shared']:
-                prob = SHARE_PROB + (GIFT_BONUS/100 if G.nodes[u]['gifted'] else 0)
-                if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-                    prob += IDEOLOGY_CROSS_BONUS
-                if G.nodes[v]['has_chronic_disease']:
-                    prob = max(prob, CHRONIC_PROPENSITY)
-                if G.nodes[u]['gender'] == G.nodes[v]['gender']:
-                    prob += GENDER_HOMOPHILY_BONUS
-                if random.random() < min(max(prob,0),1):
-                    G.nodes[v]['shared'] = True
-                    G.nodes[v]['triggered_count'] += 1
-                    next_step.add(v)
-    if not next_step: break
-    contagion.append(next_step)
-    current = next_step
+contagion_steps = [set(initial_gifted)]
 
-st.subheader("Podcast-Based Health Info Spread Simulation")
-fig, ax = plt.subplots(figsize=(8,6))
-nx.draw(G, pos, with_labels=True,
-        node_size=[300+100*G.nodes[n]['triggered_count'] for n in G.nodes],
-        node_color=['lightgreen' if G.nodes[n]['gender']=='Male' else 'lightblue' for n in G.nodes],
-        edge_color='gray', linewidths=1.5,
-        node_shape='o',
-        nodelist=list(G.nodes),
-        font_size=8,
-        ax=ax)
+def run_contagion_simulation():
+    new_shared = set(initial_gifted)
+    all_shared = set(initial_gifted)
+
+    while new_shared:
+        next_new_shared = set()
+        for user in new_shared:
+            for neighbor in G.neighbors(user):
+                if not G.nodes[neighbor]['shared']:
+                    prob = SHARE_PROB
+                    if G.nodes[user]['gifted']:
+                        prob += GIFT_BONUS / 100
+                    if G.nodes[user]['ideology'] != G.nodes[neighbor]['ideology']:
+                        prob += IDEOLOGY_CROSS_BONUS
+                    if G.nodes[neighbor]['has_chronic_disease']:
+                        prob = max(prob, CHRONIC_PROPENSITY)
+                    if G.nodes[user]['gender'] == G.nodes[neighbor]['gender']:
+                        prob += GENDER_HOMOPHILY_BONUS
+                    prob = min(max(prob, 0), 1)
+                    if random.random() < prob:
+                        G.nodes[neighbor]['shared'] = True
+                        G.nodes[neighbor]['triggered_count'] += 1
+                        next_new_shared.add(neighbor)
+                        all_shared.add(neighbor)
+        if not next_new_shared:
+            break
+        contagion_steps.append(next_new_shared)
+        new_shared = next_new_shared
+
+run_contagion_simulation()
+
+# Animation function
+fig, ax = plt.subplots(figsize=(10, 7))
+
+def animate(i):
+    ax.clear()
+    if i < len(contagion_steps):
+        current_shared = contagion_steps[i]
+    else:
+        current_shared = contagion_steps[-1]
+
+    # Node colors by gender
+    male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
+    female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
+
+    node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
+
+    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='lightgreen', node_size=node_sizes)
+    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='lightblue', node_size=node_sizes)
+    nx.draw_networkx_edges(G, pos, alpha=0.5, width=0.5, edge_color='gray')
+
+    # Labels as ideology
+    labels = {node: G.nodes[node]['ideology'] for node in G.nodes}
+    nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black')
+
+    ax.set_title(f"Step {i + 1}: Podcast Health Info Spread")
+    ax.axis('off')
+
+st.subheader("Podcast-Based Health Info Spread Simulation with Leadership Board")
+ani = FuncAnimation(fig, animate, frames=len(contagion_steps), interval=1000, repeat=False)
 st.pyplot(fig)
