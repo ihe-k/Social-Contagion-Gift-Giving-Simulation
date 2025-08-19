@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from textblob import TextBlob
 import streamlit as st
-import snscrape.modules.twitter as sntwitter
 from youtubesearchpython import VideosSearch
 from TikTokApi import TikTokApi
 from sklearn.ensemble import RandomForestClassifier
@@ -80,14 +79,10 @@ def get_health_videos_from_tiktok(query="health"):
         videos.append(video_info)
     return videos
 
+# Removed snscrape twitter import and scraping
 def get_twitter_data(query, limit=5):
-    tweets = []
-    for tweet in sntwitter.TwitterSearchScraper(query).get_items():
-        if len(tweets) >= limit:
-            break
-        truthfulness_score = random.uniform(0, 1)  # Random truthfulness score between 0 and 1
-        tweets.append({'user': tweet.user.username, 'content': tweet.content, 'truthfulness_score': truthfulness_score})
-    return tweets
+    # Stub function returning empty list to avoid errors on Streamlit Cloud
+    return []
 
 youtube_videos = get_health_videos_from_youtube()
 tiktok_videos = get_health_videos_from_tiktok()
@@ -225,27 +220,61 @@ def animate(i):
     # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.5, width=0.5, edge_color='gray')
     
-    # Display the labels
-    nx.draw_networkx_labels(G, pos, font_size=8, font_color='black')
+    # Draw labels on nodes with their ideology
+    labels = {node: G.nodes[node]['ideology'] for node in G.nodes}
+    nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black')
 
-    ax.set_title(f"Contagion Step: {i + 1}", fontsize=14)
+    ax.set_title(f"Step {i + 1}: Contagion Spread Simulation")
     ax.axis('off')
 
-# Animate the contagion process
+# --- Step 10: Initialize the contagion with gifted users ---
+initial_gifted = random.sample(list(G.nodes), INIT_SHARED)
+for node in initial_gifted:
+    G.nodes[node]['shared'] = True
+    G.nodes[node]['gifted'] = True
+
+contagion_steps = []
+contagion_steps.append(set(initial_gifted))
+
+# --- Step 11: Simulation of contagion spread ---
+def run_contagion_simulation():
+    new_shared = set(initial_gifted)
+    all_shared = set(initial_gifted)
+
+    while new_shared:
+        next_new_shared = set()
+        for user in new_shared:
+            neighbors = list(G.neighbors(user))
+            for neighbor in neighbors:
+                if not G.nodes[neighbor]['shared']:
+                    # Calculate sharing probability
+                    prob = SHARE_PROB
+                    if G.nodes[user]['gifted']:
+                        prob += GIFT_BONUS / 100  # convert bonus to probability scale
+                    if G.nodes[user]['ideology'] != G.nodes[neighbor]['ideology']:
+                        prob += IDEOLOGY_CROSS_BONUS
+                    if G.nodes[neighbor]['has_chronic_disease']:
+                        prob = max(prob, CHRONIC_PROPENSITY)
+                    if G.nodes[user]['gender'] == G.nodes[neighbor]['gender']:
+                        prob += GENDER_HOMOPHILY_BONUS
+
+                    # Clip probability between 0 and 1
+                    prob = min(max(prob, 0), 1)
+
+                    # Decide if neighbor shares the info
+                    if random.random() < prob:
+                        G.nodes[neighbor]['shared'] = True
+                        G.nodes[neighbor]['triggered_count'] += 1
+                        next_new_shared.add(neighbor)
+                        all_shared.add(neighbor)
+        if not next_new_shared:
+            break
+        contagion_steps.append(next_new_shared)
+        new_shared = next_new_shared
+
+run_contagion_simulation()
+
+# Animate with Streamlit
+st.subheader("Health Information Spread Simulation")
 ani = FuncAnimation(fig, animate, frames=len(contagion_steps), interval=1000, repeat=False)
 st.pyplot(fig)
-
-# --- Step 10: Display Leaderboard ---
-ideology_triggered = {"pro-health": 0, "anti-health": 0, "neutral": 0}
-gender_triggered = {"Male": 0, "Female": 0}
-
-for node in G.nodes:
-    ideology_triggered[G.nodes[node]['ideology']] += G.nodes[node]['triggered_count']
-    gender_triggered[G.nodes[node]['gender']] += G.nodes[node]['triggered_count']
-
-st.write("Leaderboard")
-st.write(f"Pro-health triggered: {ideology_triggered['pro-health']}")
-st.write(f"Anti-health triggered: {ideology_triggered['anti-health']}")
-st.write(f"Neutral triggered: {ideology_triggered['neutral']}")
-st.write(f"Male triggered: {gender_triggered['Male']}")
-st.write(f"Female triggered: {gender_triggered['Female']}")
