@@ -36,68 +36,58 @@ def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
     return 'pro-health' if polarity > 0.5 else ('anti-health' if polarity < -0.5 else 'neutral')
 
-# --- Step 3: Fetch Podcasts via RSS ---
+# --- Step 3: Fetch Podcasts via RSS (simple without error handling) ---
 def get_podcasts_from_rss(feed_url, max_items=5):
-    try:
-        feed = feedparser.parse(feed_url)
-        if feed.bozo:
-            st.warning(f"Failed to fetch or parse feed: {feed_url}")
-            return []
-        podcasts = []
-        for entry in feed.entries[:max_items]:
-            podcasts.append({
-                "user": entry.get('author', 'podcaster'),
-                "content": entry.title,
-                "platform": "RSS",
-                "url": entry.link
-            })
-        return podcasts
-    except Exception as e:
-        st.warning(f"Error fetching/parsing feed {feed_url}: {e}")
-        return []
+    feed = feedparser.parse(feed_url)
+    podcasts = []
+    for entry in feed.entries[:max_items]:
+        podcasts.append({
+            "user": entry.get('author', 'podcaster'),
+            "content": entry.title,
+            "platform": "RSS",
+            "url": entry.link
+        })
+    return podcasts
 
-# --- Step 4: Scrape ListenNotes Show Metadata ---
+# Example RSS feed (NPR Life Kit Health)
+rss_url = "https://feeds.npr.org/510307/rss.xml"
+podcast_items = get_podcasts_from_rss(rss_url)
+
+# --- Step 4: Scrape podcast metadata example (optional) ---
 def scrape_listennotes_show(show_url):
-    try:
-        resp = requests.get(show_url)
-        if resp.status_code != 200:
-            return None
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        title = soup.find('h1').text if soup.find('h1') else "Pod Title"
-        desc = soup.find('p').text if soup.find('p') else ""
-        return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
-    except Exception as e:
-        st.warning(f"Error scraping ListenNotes URL {show_url}: {e}")
+    resp = requests.get(show_url)
+    if resp.status_code != 200:
         return None
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    title = soup.find('h1').text if soup.find('h1') else "Pod Title"
+    desc = soup.find('p').text if soup.find('p') else ""
+    return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
 
-# ---Podcast RSS Feeds---
-rss_feeds = [
-    "https://joeroganexp.joerogan.libsynpro.com/rss",              # Joe Rogan Experience
-    "https://feeds.simplecast.com/54nAGcIl",                       # Call Her Daddy
-    "https://feeds.npr.org/510318/podcast.xml",                    # Up First (NPR)
-    "https://feeds.npr.org/510307/rss.xml",                        # The Daily (NPR)
-    "https://melrobbinspodcast.libsyn.com/rss",                    # The Mel Robbins Podcast
-    "https://hubermanlab.libsyn.com/rss",                          # Huberman Lab
-    "https://feeds.simplecast.com/8sYogDlc",                       # SmartLess
-    "https://the-diary-of-a-ceo.simplecast.com/rss",               # The Diary Of A CEO
-    "https://tuckercarlsonshow.libsyn.com/rss",                    # Tucker Carlson Show
-    # Add more if needed
-]
-
-# --- Fetch podcast episodes from RSS feeds ---
-podcast_items = []
-for feed_url in rss_feeds:
-    podcast_items.extend(get_podcasts_from_rss(feed_url, max_items=5))
-
-# --- Example: Scrape a ListenNotes show page ---
 ln_url = "https://www.listennotes.com/podcasts/health-insights-podcast-wellness-and-BTgZb84DPEH/"
 scraped = scrape_listennotes_show(ln_url)
 if scraped:
     podcast_items.append(scraped)
 
+# --- Add static podcasts as requested ---
+static_podcasts = [
+    {"user": "The Mel Robbins Podcast", "content": "Empowering insights and advice.", "platform": "Static", "url": "https://melrobbinspodcast.com/"},
+    {"user": "The Daily", "content": "News and current events podcast.", "platform": "Static", "url": "https://www.nytimes.com/column/the-daily"},
+    {"user": "Huberman Lab", "content": "Neuroscience, health and performance insights.", "platform": "Static", "url": "https://hubermanlab.com/"},
+    {"user": "SmartLess", "content": "Humor and celebrity interviews.", "platform": "Static", "url": "https://smartless.com/"},
+    {"user": "The Diary Of A CEO", "content": "Entrepreneurship and success stories.", "platform": "Static", "url": "https://thediaryofaceo.com/"},
+    {"user": "Tucker Carlson Show", "content": "Political commentary.", "platform": "Static", "url": "https://www.foxnews.com/person/c/tucker-carlson"},
+    {"user": "New Heights with Jason and Travis Kelce", "content": "Sports, motivation, and leadership.", "platform": "Static", "url": "https://newheightspodcast.com/"},
+]
+all_content = podcast_items + static_podcasts
+
+# --- Display loaded podcasts ---
+st.subheader("Loaded Podcasts")
+for p in all_content:
+    st.markdown(f"- [{p['user']}]({p['url']}) — {p['content'][:60]}{'...' if len(p['content'])>60 else ''}")
+
 # --- Step 5: Assign User Attributes ---
 user_data = []
-for content in podcast_items:
+for content in all_content:
     sentiment = analyze_sentiment(content["content"])
     user_data.append({
         'user': content['user'],
@@ -149,6 +139,7 @@ y_pred = best.predict(X_test)
 # --- Step 8: Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test,y_pred):.2%}")
+st.text("Classification Report:")
 st.text(classification_report(y_test,y_pred))
 fig, ax = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax)
@@ -178,7 +169,8 @@ while current:
                     G.nodes[v]['shared'] = True
                     G.nodes[v]['triggered_count'] += 1
                     next_step.add(v)
-    if not next_step: break
+    if not next_step:
+        break
     contagion.append(next_step)
     current = next_step
 
