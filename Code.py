@@ -7,8 +7,9 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
+import requests
+from bs4 import BeautifulSoup
 import feedparser
-import pandas as pd
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -53,13 +54,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example RSS feeds (mix of health and popular non-health podcasts)
+# Example feeds (removed the apology-line feed)
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",            # NPR Life Kit Health
-    "https://rss.art19.com/the-daily",                 # The Daily (news)
-    "https://rss.art19.com/smartless",                  # SmartLess (comedy)
-    "https://rss.art19.com/huberman-lab",              # Huberman Lab (science/health)
-    "https://rss.art19.com/the-mel-robbins-podcast",   # Mel Robbins Podcast (self-help)
+    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
+    # Add more valid podcast RSS URLs here, potentially non-health related as well
 ]
 
 podcast_items = []
@@ -86,16 +84,26 @@ counts = {
     'neutral': podcast_sentiments.count('neutral')
 }
 total = sum(counts.values())
-weights = {k: v/total if total > 0 else 1/3 for k, v in counts.items()}
+
+# **Increase pro-health representation by adjusting weights**
+weights = {
+    'pro-health': max(0.4, counts.get('pro-health', 0) / total),  # Increase pro-health representation
+    'anti-health': counts.get('anti-health', 0) / total,
+    'neutral': counts.get('neutral', 0) / total
+}
+
+# Adjust total weights to ensure they sum to 1
+total_weight = sum(weights.values())
+weights = {key: value / total_weight for key, value in weights.items()}
 
 # Assign each user a sentiment/ideology randomly but weighted by podcast content sentiment distribution
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
-    # Assign ideology based on podcast sentiment distribution weights
+    # Assign ideology based on adjusted sentiment distribution weights
     G.nodes[node]['ideology'] = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health',0.33), weights.get('anti-health',0.33), weights.get('neutral',0.33)],
+        weights=[weights['pro-health'], weights['anti-health'], weights['neutral']],
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
@@ -110,7 +118,7 @@ def calc_sentiment_trends():
     for node in G.nodes:
         neighbors = list(G.neighbors(node))
         if neighbors:
-            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment']=='pro-health')
+            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
             trends.append(pro_health_count / len(neighbors))
         else:
             trends.append(0)
@@ -147,22 +155,11 @@ best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
 # --- Step 7: Evaluation ---
-class_order = ['anti-health', 'neutral', 'pro-health']
-
 st.subheader("Model Evaluation")
-
-accuracy = accuracy_score(y_test, y_pred)
-st.write(f"Accuracy: {accuracy:.2%}")
-
-report_dict = classification_report(y_test, y_pred, labels=class_order, output_dict=True)
-report_df = pd.DataFrame(report_dict).transpose()
-st.write(report_df)
-
+st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2%}")
+st.text(classification_report(y_test, y_pred))
 fig_cm, ax_cm = plt.subplots()
-ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test,
-                                     display_labels=class_order,
-                                     labels=class_order,
-                                     ax=ax_cm)
+ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
 st.pyplot(fig_cm)
 
 # --- Step 8: Contagion Simulation ---
