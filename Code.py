@@ -38,58 +38,64 @@ def analyze_sentiment(text):
 
 # --- Step 3: Fetch Podcasts via RSS ---
 def get_podcasts_from_rss(feed_url, max_items=5):
-    feed = feedparser.parse(feed_url)
-    podcasts = []
-    for entry in feed.entries[:max_items]:
-        podcasts.append({
-            "user": entry.get('author', 'podcaster'),
-            "content": entry.title + " " + (entry.get('summary', '') if 'summary' in entry else ''),
-            "platform": "RSS",
-            "url": entry.link
-        })
-    return podcasts
+    try:
+        feed = feedparser.parse(feed_url)
+        if feed.bozo:
+            st.warning(f"Failed to fetch or parse feed: {feed_url}")
+            return []
+        podcasts = []
+        for entry in feed.entries[:max_items]:
+            podcasts.append({
+                "user": entry.get('author', 'podcaster'),
+                "content": entry.title,
+                "platform": "RSS",
+                "url": entry.link
+            })
+        return podcasts
+    except Exception as e:
+        st.warning(f"Error fetching/parsing feed {feed_url}: {e}")
+        return []
 
-# --- Step 4: Scrape ListenNotes show page fallback ---
+# --- Step 4: Scrape ListenNotes Show Metadata ---
 def scrape_listennotes_show(show_url):
     try:
-        resp = requests.get(show_url, timeout=10)
+        resp = requests.get(show_url)
         if resp.status_code != 200:
             return None
         soup = BeautifulSoup(resp.text, 'html.parser')
-        title = soup.find('h1').text.strip() if soup.find('h1') else "Pod Title"
-        desc = soup.find('p').text.strip() if soup.find('p') else ""
+        title = soup.find('h1').text if soup.find('h1') else "Pod Title"
+        desc = soup.find('p').text if soup.find('p') else ""
         return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
-    except Exception:
+    except Exception as e:
+        st.warning(f"Error scraping ListenNotes URL {show_url}: {e}")
         return None
 
-# --- Step 5: Podcast feeds to include ---
+# ---Podcast RSS Feeds---
 rss_feeds = [
-    "https://joeroganexp.joerogan.libsynpro.com/rss",           # Joe Rogan Experience
-    "https://feeds.simplecast.com/54nAGcIl",                    # Call Her Daddy
-    "https://feeds.megaphone.fm/WWO3519750118",                 # This Past Weekend w/ Theo Von
-    "https://feeds.npr.org/510318/podcast.xml",                 # Up First (NPR)
-    "https://feeds.npr.org/510307/rss.xml",                     # The Daily (NPR)
-    "https://melrobbinspodcast.libsyn.com/rss",                 # The Mel Robbins Podcast
-    "https://hubermanlab.libsyn.com/rss",                        # Huberman Lab Podcast
-    "https://feeds.simplecast.com/8sYogDlc",                     # SmartLess Podcast
-    "https://the-diary-of-a-ceo.simplecast.com/rss",            # The Diary Of A CEO
-    "https://tuckercarlsonshow.libsyn.com/rss",                 # Tucker Carlson Show (unofficial)
+    "https://joeroganexp.joerogan.libsynpro.com/rss",              # Joe Rogan Experience
+    "https://feeds.simplecast.com/54nAGcIl",                       # Call Her Daddy
+    "https://feeds.npr.org/510318/podcast.xml",                    # Up First (NPR)
+    "https://feeds.npr.org/510307/rss.xml",                        # The Daily (NPR)
+    "https://melrobbinspodcast.libsyn.com/rss",                    # The Mel Robbins Podcast
+    "https://hubermanlab.libsyn.com/rss",                          # Huberman Lab
+    "https://feeds.simplecast.com/8sYogDlc",                       # SmartLess
+    "https://the-diary-of-a-ceo.simplecast.com/rss",               # The Diary Of A CEO
+    "https://tuckercarlsonshow.libsyn.com/rss",                    # Tucker Carlson Show
+    # Add more if needed
 ]
 
+# --- Fetch podcast episodes from RSS feeds ---
 podcast_items = []
 for feed_url in rss_feeds:
-    try:
-        podcast_items.extend(get_podcasts_from_rss(feed_url, max_items=5))
-    except Exception as e:
-        st.warning(f"Failed to fetch or parse feed: {feed_url}")
+    podcast_items.extend(get_podcasts_from_rss(feed_url, max_items=5))
 
-# Fallback scrape for New Heights with Jason and Travis Kelce (no official RSS found)
-new_heights_url = "https://www.listennotes.com/c/2a7e215622c94b66a6b4f15b2275c09c/"
-scraped = scrape_listennotes_show(new_heights_url)
+# --- Example: Scrape a ListenNotes show page ---
+ln_url = "https://www.listennotes.com/podcasts/health-insights-podcast-wellness-and-BTgZb84DPEH/"
+scraped = scrape_listennotes_show(ln_url)
 if scraped:
     podcast_items.append(scraped)
 
-# --- Step 6: Assign User Attributes ---
+# --- Step 5: Assign User Attributes ---
 user_data = []
 for content in podcast_items:
     sentiment = analyze_sentiment(content["content"])
@@ -109,9 +115,8 @@ for i, u in enumerate(user_data):
     G.nodes[i]['score'] = 0
     G.nodes[i]['triggered_count'] = 0
     G.nodes[i]['shared'] = False
-    G.nodes[i]['gifted'] = False
 
-# --- Step 7: Features & Labels ---
+# --- Step 6: Features & Labels ---
 def calc_sentiment_trends():
     return [np.mean([1 if G.nodes[n]['sentiment']=='pro-health' else 0 for n in G.neighbors(node)]) if list(G.neighbors(node)) else 0 for node in G.nodes]
 
@@ -134,14 +139,14 @@ for n in G.nodes:
 
 X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
 
-# --- Step 8: Model Training ---
+# --- Step 7: Model Training ---
 param_grid = {'n_estimators':[100], 'max_depth':[10], 'min_samples_split':[2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
 best = grid.best_estimator_
 y_pred = best.predict(X_test)
 
-# --- Step 9: Evaluation ---
+# --- Step 8: Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test,y_pred):.2%}")
 st.text(classification_report(y_test,y_pred))
@@ -149,7 +154,7 @@ fig, ax = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax)
 st.pyplot(fig)
 
-# --- Step 10: Contagion Simulation ---
+# --- Step 9: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
 seed = random.sample(list(G.nodes), INIT_SHARED)
 for node in seed:
@@ -169,8 +174,7 @@ while current:
                     prob = max(prob, CHRONIC_PROPENSITY)
                 if G.nodes[u]['gender'] == G.nodes[v]['gender']:
                     prob += GENDER_HOMOPHILY_BONUS
-                prob = min(max(prob, 0), 1)
-                if random.random() < prob:
+                if random.random() < min(max(prob,0),1):
                     G.nodes[v]['shared'] = True
                     G.nodes[v]['triggered_count'] += 1
                     next_step.add(v)
@@ -178,7 +182,6 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 11: Display Graph ---
 st.subheader("Podcast-Based Health Info Spread Simulation")
 fig, ax = plt.subplots(figsize=(8,6))
 nx.draw(G, pos, with_labels=True,
