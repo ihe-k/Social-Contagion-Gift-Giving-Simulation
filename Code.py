@@ -1,7 +1,6 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
@@ -55,11 +54,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (NPR Life Kit Health)
 rss_url = "https://feeds.npr.org/510307/rss.xml"
 podcast_items = get_podcasts_from_rss(rss_url)
 
-# --- Step 4: Scrape Health Podcast Metadata from Listen Notes Pages ---
+# --- Step 4: Scrape Health Podcast Metadata ---
 def scrape_listennotes_show(show_url):
     resp = requests.get(show_url)
     if resp.status_code != 200:
@@ -69,14 +67,12 @@ def scrape_listennotes_show(show_url):
     desc = soup.find('p').text if soup.find('p') else ""
     return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
 
-# Example scraping *Health Insights Podcast* page
 ln_url = "https://www.listennotes.com/podcasts/health-insights-podcast-wellness-and-BTgZb84DPEH/"
 scraped = scrape_listennotes_show(ln_url)
 if scraped:
     podcast_items.append(scraped)
 
-# --- Combine Content ---
-all_content = podcast_items  # Only podcasts now
+all_content = podcast_items
 
 # --- Step 5: Assign User Attributes ---
 user_data = []
@@ -99,7 +95,7 @@ for i, u in enumerate(user_data):
     G.nodes[i]['triggered_count'] = 0
     G.nodes[i]['shared'] = False
 
-# Ensure all nodes have valid ideology and gender (fallback)
+# Ensure valid default attributes
 for n in G.nodes:
     if G.nodes[n]['ideology'] == '':
         G.nodes[n]['ideology'] = 'neutral'
@@ -159,9 +155,7 @@ for node in seed:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
 
-contagion_steps = [set(seed)]
 current_shared = set(seed)
-
 while current_shared:
     next_shared = set()
     for u in current_shared:
@@ -185,47 +179,27 @@ while current_shared:
                     next_shared.add(v)
     if not next_shared:
         break
-    contagion_steps.append(next_shared)
     current_shared = next_shared
 
-# --- Step 10: Animation Function ---
+# --- Step 10: Static Contagion Graph Plot ---
+st.subheader("Static Contagion Spread Graph")
+
+shared_nodes = [n for n in G.nodes if G.nodes[n]['shared']]
+not_shared_nodes = [n for n in G.nodes if not G.nodes[n]['shared']]
+
+node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
+
 fig, ax = plt.subplots(figsize=(10,7))
 
-def animate(i):
-    ax.clear()
-    shared_nodes = set()
-    for step in contagion_steps[:i+1]:
-        shared_nodes |= step
+nx.draw_networkx_nodes(G, pos, nodelist=not_shared_nodes, node_color='lightgray', node_size=[node_sizes[n] for n in not_shared_nodes], ax=ax)
+nx.draw_networkx_nodes(G, pos, nodelist=shared_nodes, node_color='orange', node_size=[node_sizes[n] for n in shared_nodes], ax=ax)
+nx.draw_networkx_edges(G, pos, alpha=0.5, edge_color='gray', ax=ax)
 
-    node_colors = []
-    for n in G.nodes:
-        if n in shared_nodes:
-            node_colors.append('orange')
-        else:
-            node_colors.append('lightgray')
+labels = {n: G.nodes[n]['ideology'] for n in G.nodes}
+nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black', ax=ax)
 
-    node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
-
-    # Draw nodes colored by gender for better visualization
-    male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
-    female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
-
-    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='lightgreen', node_size=[node_sizes[n] for n in male_nodes], ax=ax)
-    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='lightblue', node_size=[node_sizes[n] for n in female_nodes], ax=ax)
-
-    # Overlay shared nodes with orange border
-    nx.draw_networkx_nodes(G, pos, nodelist=list(shared_nodes), node_color='orange', node_size=[node_sizes[n] for n in shared_nodes], alpha=0.7, ax=ax)
-
-    nx.draw_networkx_edges(G, pos, alpha=0.5, edge_color='gray', ax=ax)
-
-    labels = {n: G.nodes[n]['ideology'] for n in G.nodes}
-    nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black', ax=ax)
-
-    ax.set_title(f"Step {i+1} of Contagion Spread")
-    ax.axis('off')
-
-st.subheader("Podcast-Based Health Info Spread Simulation (Animated)")
-ani = FuncAnimation(fig, animate, frames=len(contagion_steps), interval=1000, repeat=False)
+ax.set_title("Final Contagion Spread")
+ax.axis('off')
 st.pyplot(fig)
 
 # --- Step 11: Leaderboard ---
