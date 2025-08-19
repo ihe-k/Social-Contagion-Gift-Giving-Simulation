@@ -7,8 +7,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
 import feedparser
 
 # --- Parameters ---
@@ -54,10 +52,18 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (You can add/remove valid RSS feeds here)
+# Expanded list: Health + Top Spotify/Apple Podcasts with public RSS feeds
 rss_urls = [
+    # Health focused
     "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    # Add more valid podcast RSS URLs here
+
+    # Popular podcasts with public feeds
+    "https://feeds.simplecast.com/54nAGcIl",  # The Daily (NYTimes)
+    "https://rss.art19.com/smartless",        # SmartLess
+    "https://hubermanlab.libsyn.com/rss",     # Huberman Lab
+    "https://feeds.megaphone.fm/callherdaddy", # Call Her Daddy
+    "https://rss.art19.com/apology-line",     # The Apology Line (True Crime)
+    "https://feeds.simplecast.com/8sYogDlc",  # The Daily (alternative feed)
 ]
 
 podcast_items = []
@@ -68,9 +74,11 @@ for url in rss_urls:
         st.warning(f"Failed to fetch or parse feed: {url}")
 
 # --- Step 4: Assign User Attributes ---
+# Create users independently from podcasts, but use podcast sentiment distribution to bias ideology
+
 podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
 if not podcast_sentiments:
-    podcast_sentiments = ['neutral'] * 10
+    podcast_sentiments = ['neutral'] * 10  # fallback
 
 counts = {
     'pro-health': podcast_sentiments.count('pro-health'),
@@ -174,63 +182,14 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Visualization & Leaderboard ---
-
+# --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
-
-col1, col2 = st.columns([3,1])
-
-with col1:
-    fig_net, ax_net = plt.subplots(figsize=(8, 6))
-
-    # Edges colored by gender pairs
-    male_edges = [(u,v) for u,v in G.edges if G.nodes[u]['gender']=='Male' and G.nodes[v]['gender']=='Male']
-    female_edges = [(u,v) for u,v in G.edges if G.nodes[u]['gender']=='Female' and G.nodes[v]['gender']=='Female']
-    mixed_edges = [(u,v) for u,v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender']]
-
-    nx.draw_networkx_edges(G, pos, edgelist=male_edges, edge_color='lightgreen', alpha=0.7, ax=ax_net)
-    nx.draw_networkx_edges(G, pos, edgelist=female_edges, edge_color='lightblue', alpha=0.7, ax=ax_net)
-    nx.draw_networkx_edges(G, pos, edgelist=mixed_edges, edge_color='gray', alpha=0.4, ax=ax_net)
-
-    # Nodes by gender and shape
-    male_nodes = [n for n in G.nodes if G.nodes[n]['gender']=='Male']
-    female_nodes = [n for n in G.nodes if G.nodes[n]['gender']=='Female']
-
-    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes,
-                           node_color='green',
-                           node_shape='o',
-                           node_size=[300 + 50 * G.nodes[n]['triggered_count'] for n in male_nodes],
-                           alpha=0.9, ax=ax_net)
-
-    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes,
-                           node_color='blue',
-                           node_shape='s',
-                           node_size=[300 + 50 * G.nodes[n]['triggered_count'] for n in female_nodes],
-                           alpha=0.9, ax=ax_net)
-
-    nx.draw_networkx_labels(G, pos, font_size=8, ax=ax_net)
-    ax_net.axis('off')
-    st.pyplot(fig_net)
-
-with col2:
-    st.subheader("🏆 Top Influencers")
-
-    sorted_nodes = sorted(G.nodes, key=lambda n: G.nodes[n]['score'], reverse=True)
-    top_n = st.slider("Number of Top Influencers", min_value=1, max_value=10, value=3)
-    top_nodes = sorted_nodes[:top_n]
-
-    for rank, node in enumerate(top_nodes, 1):
-        gender = G.nodes[node]['gender']
-        score = G.nodes[node]['score']
-        triggered = G.nodes[node]['triggered_count']
-        st.markdown(f"**Rank {rank}: User {node} — Score: {score},** Triggered: {triggered}, Gender: {gender}")
-
-    male_triggered = sum(G.nodes[n]['triggered_count'] for n in G.nodes if G.nodes[n]['gender']=='Male')
-    female_triggered = sum(G.nodes[n]['triggered_count'] for n in G.nodes if G.nodes[n]['gender']=='Female')
-
-    st.markdown("---")
-    st.markdown(f"**Male Users Triggered Shares:** {male_triggered}")
-    st.markdown(f"**Female Users Triggered Shares:** {female_triggered}")
-
-    st.markdown("---")
-    st.markdown("Use the slider to adjust the number of top influencers shown.")
+fig_net, ax_net = plt.subplots(figsize=(8, 6))
+nx.draw(G, pos,
+        with_labels=True,
+        node_size=[300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes],
+        node_color=['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes],
+        edge_color='gray', linewidths=1.5,
+        font_size=8,
+        ax=ax_net)
+st.pyplot(fig_net)
