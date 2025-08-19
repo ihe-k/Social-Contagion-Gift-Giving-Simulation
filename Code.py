@@ -217,4 +217,20 @@ run_contagion()
 
 st.subheader("Health Information Spread Simulation (Static Graph)")
 
-fig, ax = plt.subplots(fi
+fig, ax = plt.subplots(figsize=(10,7))
+ax.axis('off')
+
+node_colors = ['lightgreen' if G.nodes[n]['gender']=='Male' else 'lightblue' for n in G.nodes]
+node_sizes = [400 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
+node_borders = ['red' if G.nodes[n]['shared'] else 'black' for n in G.nodes]
+
+nx.draw_networkx_edges(G, pos, ax=ax, alpha=0.5, edge_color='gray')
+nx.draw_networkx_nodes(G, pos, ax=ax,
+                       node_size=node_sizes,
+                       node_color=node_colors,
+                       edgecolors=node_borders,
+                       linewidths=1.5)
+labels = {n: G.nodes[n]['ideology'] for n in G.nodes}
+nx.draw_networkx_labels(G, pos, labels, font_size=9, font_color='black', ax=ax)
+
+st.pyplot(fig)
