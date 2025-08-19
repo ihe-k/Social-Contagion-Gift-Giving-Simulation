@@ -109,8 +109,8 @@ with left_col:
             # Propagate contagion to neighbors
             for neighbor in G.neighbors(user):
                 if not G.nodes[neighbor]['shared']:  # If neighbor has not been triggered
-                    # Trigger the neighbor with some probability
-                    if np.random.rand() < 0.5:  # Arbitrary probability to trigger neighbor
+                    # Trigger the neighbor with some probability (higher probability to trigger)
+                    if np.random.rand() < 0.7:  # Increased probability to trigger neighbor
                         G.nodes[neighbor]['triggered_count'] += 1
                         G.nodes[neighbor]['shared'] = True
 
