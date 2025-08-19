@@ -4,6 +4,9 @@ import random
 import matplotlib.pyplot as plt
 import requests
 from bs4 import BeautifulSoup
+import numpy as np
+import seaborn as sns
+from sklearn.metrics import confusion_matrix
 
 # --- Scraping YouTube using BeautifulSoup ---
 def scrape_youtube(query="health tips", max_results=5):
@@ -69,7 +72,9 @@ st.subheader("Model Evaluation")
 # Simulate a confusion matrix (for illustration purposes)
 y_test = [1, 0, 1, 1, 0]
 y_pred = [1, 0, 1, 0, 1]
-cm = [[sum((y_test == t) & (y_pred == p)) for p in set(y_pred)] for t in set(y_test)]
+
+# Use sklearn's confusion_matrix function
+cm = confusion_matrix(y_test, y_pred)
 
 # Display the confusion matrix
 st.subheader("Confusion Matrix")
@@ -98,5 +103,26 @@ with left_col:
     ax.set_title(f"Network at Contagion Step (Red outline = Shaped by triggers)")
     ax.axis('off')
     st.pyplot(fig)
-    
-# You can use a similar setup to display other information as required
+
+# Rank the influencers
+influencer_stats = []
+for node in G.nodes:
+    influencer_stats.append({
+        'user': node,
+        'score': G.nodes[node]['score'],
+        'triggered': G.nodes[node]['triggered_count'],
+    })
+top_influencers = sorted(influencer_stats, key=lambda x: (x['triggered'], x['score']), reverse=True)[:5]
+
+# Display top influencers
+st.markdown("### 🏆 Top Influencers")
+for rank, inf in enumerate(top_influencers, 1):
+    st.markdown(f"- **Rank {rank}**: User {inf['user']} — Score: {inf['score']}, Triggered: {inf['triggered']}")
+
+# Display triggered users
+male_triggered = sum(1 for n in contagion_steps[-1] if G.nodes[n]['gender'] == 'Male')
+female_triggered = sum(1 for n in contagion_steps[-1] if G.nodes[n]['gender'] == 'Female')
+
+st.markdown(f"- **Male Users Triggered**: {male_triggered} shares")
+st.markdown(f"- **Female Users Triggered**: {female_triggered} shares")
+
