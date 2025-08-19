@@ -36,7 +36,7 @@ def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
     return 'pro-health' if polarity > 0.5 else ('anti-health' if polarity < -0.5 else 'neutral')
 
-# --- Step 3: Fetch Podcasts via RSS (multiple popular feeds, no health filter) ---
+# --- Step 3: Fetch Podcasts via RSS ---
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
@@ -49,13 +49,31 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Popular podcast RSS feeds (not health-only)
+# --- Step 4: Scrape ListenNotes show page fallback ---
+def scrape_listennotes_show(show_url):
+    try:
+        resp = requests.get(show_url, timeout=10)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        title = soup.find('h1').text.strip() if soup.find('h1') else "Pod Title"
+        desc = soup.find('p').text.strip() if soup.find('p') else ""
+        return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
+    except Exception:
+        return None
+
+# --- Step 5: Podcast feeds to include ---
 rss_feeds = [
-    "https://joeroganexp.joerogan.libsynpro.com/rss",   # Joe Rogan Experience
-    "https://feeds.simplecast.com/54nAGcIl",           # Call Her Daddy
-    "https://feeds.megaphone.fm/WWO3519750118",        # This Past Weekend w/ Theo Von
-    "https://feeds.npr.org/510318/podcast.xml",        # Up First (NPR)
-    "https://feeds.npr.org/510307/rss.xml",             # The Daily (NPR)
+    "https://joeroganexp.joerogan.libsynpro.com/rss",           # Joe Rogan Experience
+    "https://feeds.simplecast.com/54nAGcIl",                    # Call Her Daddy
+    "https://feeds.megaphone.fm/WWO3519750118",                 # This Past Weekend w/ Theo Von
+    "https://feeds.npr.org/510318/podcast.xml",                 # Up First (NPR)
+    "https://feeds.npr.org/510307/rss.xml",                     # The Daily (NPR)
+    "https://melrobbinspodcast.libsyn.com/rss",                 # The Mel Robbins Podcast
+    "https://hubermanlab.libsyn.com/rss",                        # Huberman Lab Podcast
+    "https://feeds.simplecast.com/8sYogDlc",                     # SmartLess Podcast
+    "https://the-diary-of-a-ceo.simplecast.com/rss",            # The Diary Of A CEO
+    "https://tuckercarlsonshow.libsyn.com/rss",                 # Tucker Carlson Show (unofficial)
 ]
 
 podcast_items = []
@@ -65,30 +83,13 @@ for feed_url in rss_feeds:
     except Exception as e:
         st.warning(f"Failed to fetch or parse feed: {feed_url}")
 
-# --- Optional: Scrape some ListenNotes podcast pages (adds flavor, can skip or expand) ---
-def scrape_listennotes_show(show_url):
-    try:
-        resp = requests.get(show_url, timeout=5)
-        if resp.status_code != 200:
-            return None
-        soup = BeautifulSoup(resp.text, 'html.parser')
-        title = soup.find('h1').text if soup.find('h1') else "Pod Title"
-        desc = soup.find('p').text if soup.find('p') else ""
-        return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
-    except Exception:
-        return None
+# Fallback scrape for New Heights with Jason and Travis Kelce (no official RSS found)
+new_heights_url = "https://www.listennotes.com/c/2a7e215622c94b66a6b4f15b2275c09c/"
+scraped = scrape_listennotes_show(new_heights_url)
+if scraped:
+    podcast_items.append(scraped)
 
-# Add example ListenNotes podcast metadata (optional)
-ln_urls = [
-    "https://www.listennotes.com/c/4d3fe717742d4963a85562e9f84d8c79/",  # The Daily ListenNotes page
-]
-
-for url in ln_urls:
-    scraped = scrape_listennotes_show(url)
-    if scraped:
-        podcast_items.append(scraped)
-
-# --- Step 4: Assign User Attributes (based on podcast content) ---
+# --- Step 6: Assign User Attributes ---
 user_data = []
 for content in podcast_items:
     sentiment = analyze_sentiment(content["content"])
@@ -100,7 +101,6 @@ for content in podcast_items:
         'has_chronic_disease': random.choice([True, False])
     })
 
-# Assign users to network nodes (up to NUM_USERS)
 for i, u in enumerate(user_data):
     if i >= NUM_USERS:
         break
@@ -109,8 +109,9 @@ for i, u in enumerate(user_data):
     G.nodes[i]['score'] = 0
     G.nodes[i]['triggered_count'] = 0
     G.nodes[i]['shared'] = False
+    G.nodes[i]['gifted'] = False
 
-# --- Step 5: Features & Labels for ML ---
+# --- Step 7: Features & Labels ---
 def calc_sentiment_trends():
     return [np.mean([1 if G.nodes[n]['sentiment']=='pro-health' else 0 for n in G.neighbors(node)]) if list(G.neighbors(node)) else 0 for node in G.nodes]
 
@@ -133,14 +134,14 @@ for n in G.nodes:
 
 X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
 
-# --- Step 6: Model Training ---
+# --- Step 8: Model Training ---
 param_grid = {'n_estimators':[100], 'max_depth':[10], 'min_samples_split':[2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
 best = grid.best_estimator_
 y_pred = best.predict(X_test)
 
-# --- Step 7: Model Evaluation ---
+# --- Step 9: Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test,y_pred):.2%}")
 st.text(classification_report(y_test,y_pred))
@@ -148,7 +149,7 @@ fig, ax = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax)
 st.pyplot(fig)
 
-# --- Step 8: Contagion Simulation ---
+# --- Step 10: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
 seed = random.sample(list(G.nodes), INIT_SHARED)
 for node in seed:
@@ -168,7 +169,7 @@ while current:
                     prob = max(prob, CHRONIC_PROPENSITY)
                 if G.nodes[u]['gender'] == G.nodes[v]['gender']:
                     prob += GENDER_HOMOPHILY_BONUS
-                prob = min(max(prob,0),1)
+                prob = min(max(prob, 0), 1)
                 if random.random() < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[v]['triggered_count'] += 1
@@ -177,28 +178,9 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Leaderboard ---
-ideology_triggered = {"pro-health": 0, "anti-health": 0, "neutral": 0}
-gender_triggered = {"Male": 0, "Female": 0}
-for node in G.nodes:
-    ideology = G.nodes[node]['ideology']
-    gender = G.nodes[node]['gender']
-    triggered = G.nodes[node]['triggered_count']
-    if ideology in ideology_triggered:
-        ideology_triggered[ideology] += triggered
-    if gender in gender_triggered:
-        gender_triggered[gender] += triggered
-
-st.subheader("Leaderboard: Triggered Shares by Ideology and Gender")
-st.write(f"Pro-health triggered: {ideology_triggered['pro-health']}")
-st.write(f"Anti-health triggered: {ideology_triggered['anti-health']}")
-st.write(f"Neutral triggered: {ideology_triggered['neutral']}")
-st.write(f"Male triggered: {gender_triggered['Male']}")
-st.write(f"Female triggered: {gender_triggered['Female']}")
-
-# --- Step 10: Plot static contagion network ---
-st.subheader("Podcast Contagion Simulation Network")
-fig2, ax2 = plt.subplots(figsize=(8,6))
+# --- Step 11: Display Graph ---
+st.subheader("Podcast-Based Health Info Spread Simulation")
+fig, ax = plt.subplots(figsize=(8,6))
 nx.draw(G, pos, with_labels=True,
         node_size=[300+100*G.nodes[n]['triggered_count'] for n in G.nodes],
         node_color=['lightgreen' if G.nodes[n]['gender']=='Male' else 'lightblue' for n in G.nodes],
@@ -206,5 +188,5 @@ nx.draw(G, pos, with_labels=True,
         node_shape='o',
         nodelist=list(G.nodes),
         font_size=8,
-        ax=ax2)
-st.pyplot(fig2)
+        ax=ax)
+st.pyplot(fig)
