@@ -106,6 +106,14 @@ with left_col:
             G.nodes[user]['triggered_count'] += 1
             G.nodes[user]['shared'] = True
 
+            # Propagate contagion to neighbors
+            for neighbor in G.neighbors(user):
+                if not G.nodes[neighbor]['shared']:  # If neighbor has not been triggered
+                    # Trigger the neighbor with some probability
+                    if np.random.rand() < 0.5:  # Arbitrary probability to trigger neighbor
+                        G.nodes[neighbor]['triggered_count'] += 1
+                        G.nodes[neighbor]['shared'] = True
+
     # --- Network Graph ---
     fig, ax = plt.subplots(figsize=(10, 8))
     pos = nx.spring_layout(G, seed=42)
