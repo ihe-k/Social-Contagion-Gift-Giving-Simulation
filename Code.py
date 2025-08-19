@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import time
 import pandas as pd
+import random
 
 # --- Streamlit Layout ---
 st.title("Health Information Spread Simulation")
@@ -17,7 +18,7 @@ st.subheader("Model Evaluation")
 G = nx.erdos_renyi_graph(30, 0.1)  # Random graph for demonstration
 for node in G.nodes:
     G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'  # Random gender
-    G.nodes[node]['score'] = 0  # Dummy score
+    G.nodes[node]['score'] = random.randint(70, 100)  # Random score
     G.nodes[node]['triggered_count'] = 0  # Placeholder trigger count
     G.nodes[node]['shared'] = False  # Shared info status
 
@@ -75,9 +76,13 @@ for step in range(6):  # Assuming 6 steps
         if G.nodes[user]['triggered_count'] > 0:
             # Simulate sharing the info with others
             neighbors = list(G.neighbors(user))
-            for neighbor in neighbors:
-                if G.nodes[neighbor]['triggered_count'] == 0:  # Only share if not triggered
-                    new_sharers.add(neighbor)
+            
+            # Dynamically trigger a random number of neighbors based on the trigger count
+            num_to_trigger = G.nodes[user]['triggered_count'] // 3  # Trigger based on the user's triggered count
+            for _ in range(num_to_trigger):
+                random_neighbor = random.choice(neighbors)  # Randomly pick a neighbor to trigger
+                if G.nodes[random_neighbor]['triggered_count'] == 0:  # Only share if not triggered
+                    new_sharers.add(random_neighbor)
     
     # Update nodes with new share information
     for user in new_sharers:
@@ -139,4 +144,3 @@ with right_col:
     # Optional slider to explore contagion steps
     step = st.slider("Contagion Step", min_value=1, max_value=len(contagion_steps), value=len(contagion_steps))
     st.markdown(f"Showing step {step} of {len(contagion_steps)}")
-
