@@ -6,5 +6,5 @@ youtube-search-python
 tiktokapi
 scikit-learn
 numpy
-git+https://github.com/alexmercerind/youtube-search-python.git
+youtube-search-python @ git+https://github.com/alexmercerind/youtube-search-python.git
 httpx>=0.23.0
