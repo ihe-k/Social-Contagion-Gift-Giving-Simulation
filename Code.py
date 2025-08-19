@@ -4,77 +4,63 @@ import matplotlib.pyplot as plt
 import random
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
-import seaborn as sns  # Import seaborn for the confusion matrix heatmap
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-import time
+import seaborn as sns  # For Confusion Matrix visualization
+import requests
+from bs4 import BeautifulSoup  # BeautifulSoup4 for scraping
 
-# --- Setup Selenium WebDriver ---
-def setup_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless")  # Run headless (without GUI)
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    driver = webdriver.Chrome(options=chrome_options)
-    return driver
-
-# --- Scraping YouTube using Selenium ---
+# --- Scraping YouTube using BeautifulSoup ---
 def scrape_youtube(query="health tips"):
-    driver = setup_driver()
-
-    # Define YouTube search URL
     search_url = f'https://www.youtube.com/results?search_query={query}'
-    driver.get(search_url)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
 
-    # Wait for the page to load
-    time.sleep(2)
+    # Send HTTP request to YouTube search page
+    response = requests.get(search_url, headers=headers)
+    if response.status_code != 200:
+        st.error(f"Failed to fetch YouTube page. Status code: {response.status_code}")
+        return []
 
-    # Scrape video titles and URLs
+    # Parse the HTML content using BeautifulSoup
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Find all video links and titles
     video_data = []
-    videos = driver.find_elements(By.CSS_SELECTOR, 'a#video-title')
-    for video in videos:
-        title = video.get_attribute('title')
-        url = video.get_attribute('href')
+    for video in soup.find_all('a', {'id': 'video-title'}):
+        title = video.get('title')
+        url = "https://www.youtube.com" + video.get('href')
         video_data.append({"title": title, "url": url})
 
-    driver.quit()
     return video_data
 
 # --- Sample Data Setup (adjust based on actual simulation logic) ---
-# Assuming you already have G (Graph), y_test, and y_pred defined
-# Example placeholders for the simulation
-G = nx.erdos_renyi_graph(30, 0.2)  # Example graph (30 nodes, 20% chance of edge creation)
+# Example setup for a random graph (simulate users and contagion spread)
+G = nx.erdos_renyi_graph(30, 0.2)  # 30 users, 20% chance of edge creation
 for node in G.nodes:
-    G.nodes[node]['score'] = random.randint(1, 100)  # Random score
-    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'  # Alternating genders
-    G.nodes[node]['triggered_count'] = 0  # Initialize trigger count
-    G.nodes[node]['shared'] = False  # Shared info status (False by default)
+    G.nodes[node]['score'] = random.randint(1, 100)  # Random score for each user
+    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'  # Male and Female alternated
+    G.nodes[node]['triggered_count'] = 0  # Triggered count (for contagion)
+    G.nodes[node]['shared'] = False  # Shared info status
 
-# Example simulation of contagion spread (you would replace this with actual logic)
+# Example steps for contagion simulation
 contagion_steps = [
     {1, 2, 3},  # Step 1: Users 1, 2, 3 share info
     {4, 5},     # Step 2: Users 4, 5 share info
     {6, 7, 8},  # Step 3: Users 6, 7, 8 share info
-    # Add more steps based on the simulation logic
+    # Add more steps for your logic
 ]
 
-# --- Streamlit UI with interactive contagion step slider ---
+# --- Streamlit UI ---
 st.title("Health Information Spread Simulation")
 
-# Placeholder for Model Evaluation (dummy data for illustration)
-accuracy = 0.75  # Example accuracy (should be calculated based on your model)
-y_test = np.random.randint(0, 2, 30)  # Dummy ground truth
-y_pred = np.random.randint(0, 2, 30)  # Dummy predictions
-
-# Compute confusion matrix
-cm = confusion_matrix(y_test, y_pred)
-
-# Display Model Evaluation
-st.subheader("Model Evaluation")
-st.write(f"Accuracy: {accuracy:.2%}")
-st.text("Classification Report:")
-st.text(classification_report(y_test, y_pred))
+# Scrape YouTube for "health tips" as an example
+st.markdown("### YouTube Scraped Data (Health Tips)")
+videos = scrape_youtube("health tips")
+if not videos:
+    st.error("No videos found.")
+else:
+    for video in videos:
+        st.markdown(f"[{video['title']}]({video['url']})")
 
 # Slider to pick contagion step
 max_step = len(contagion_steps)
@@ -85,35 +71,35 @@ shared_up_to_step = set()
 for i in range(step):
     shared_up_to_step.update(contagion_steps[i])
 
-# --- Update trigger count based on shared nodes ---
-# If a node shares info, increase its triggered count
+# Update trigger count based on shared nodes
 for node in shared_up_to_step:
-    G.nodes[node]['triggered_count'] += 1  # Increment the trigger count for each node
+    G.nodes[node]['triggered_count'] += 1
 
-# Prepare graph visualization
-left_col, right_col = st.columns([2, 1])  # Wider left for network diagram
+# --- Display Network Diagram ---
+left_col, right_col = st.columns([2, 1])  # Wider left column for network diagram
 
 with left_col:
     fig, ax = plt.subplots(figsize=(8, 6))
     pos = nx.spring_layout(G, seed=42)
 
+    # Separate male and female nodes for color coding
     male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
     female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
 
     # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
 
-    # Draw all nodes by gender with specified colors
+    # Draw nodes by gender
     nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='#03396c', node_size=300, ax=ax)
     nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
 
-    # Highlight nodes that have shared *up to* current step (red outline)
+    # Highlight nodes that shared up to current step (red outline)
     nx.draw_networkx_nodes(
         G, pos, nodelist=list(shared_up_to_step),
         node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
     )
 
-    # Labels
+    # Labels for nodes
     nx.draw_networkx_labels(G, pos, labels={n: str(n) for n in G.nodes}, font_size=8, ax=ax)
 
     ax.set_title(f"Network at Contagion Step {step} (Red outline = Shared)")
@@ -123,7 +109,7 @@ with left_col:
 with right_col:
     st.markdown("### 🏆 Top Influencers")
 
-    # Sort top influencers by triggered count first, then by score
+    # Sort influencers by trigger count and score
     influencer_stats = []
     for node in G.nodes:
         influencer_stats.append({
@@ -148,13 +134,8 @@ with right_col:
 
     # --- Move confusion matrix to the right of the model evaluation ---
     st.subheader("Confusion Matrix")
+    cm = confusion_matrix([random.randint(0, 1) for _ in range(30)], [random.randint(0, 1) for _ in range(30)])  # Dummy confusion matrix for illustration
     fig, ax = plt.subplots(figsize=(6, 4))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
     st.pyplot(fig)
-
-    # Scrape YouTube for "health tips" as an example
-    st.markdown("### YouTube Scraped Data (Health Tips)")
-    videos = scrape_youtube("health tips")
-    for video in videos:
-        st.markdown(f"[{video['title']}]({video['url']})")
 
