@@ -52,31 +52,36 @@ def analyze_sentiment(text):
 
 # --- Step 3: Scraping Health-Related Content ---
 def get_health_videos_from_youtube(query="health"):
-    search = VideosSearch(query, limit=5)  # Limit to top 5 results
-    results = search.result()
-    videos = []
-    for video in results['videos']:
-        video_info = {
-            "user": video['channel']['name'],
-            "content": video['title'],
-            "platform": "YouTube",
-            "url": video['link']
-        }
-        videos.append(video_info)
-    return videos
+    try:
+        search = VideosSearch(query, limit=5)  # Limit to top 5 results
+        results = search.result()
+        videos = []
+        for video in results['videos']:
+            video_info = {
+                "user": video['channel']['name'],
+                "content": video['title'],
+                "platform": "YouTube",
+                "url": video['link']
+            }
+            videos.append(video_info)
+        return videos
+    except Exception as e:
+        st.warning(f"Could not fetch YouTube data: {e}")
+        return []
 
 def get_health_videos_from_tiktok(query="health"):
     try:
         with TikTokApi() as api:
-            trending_videos = api.by_hashtag(query, count=5)
+            trending_videos = api.hashtag(name=query).videos(count=5)
             videos = []
             for video in trending_videos:
-                videos.append({
-                    "user": video['author']['uniqueId'],
-                    "content": video['desc'],
+                video_info = {
+                    "user": video.author.username,
+                    "content": video.desc,
                     "platform": "TikTok",
-                    "url": f"https://www.tiktok.com/@{video['author']['uniqueId']}/video/{video['id']}"
-                })
+                    "url": f"https://www.tiktok.com/@{video.author.username}/video/{video.id}"
+                }
+                videos.append(video_info)
             return videos
     except Exception as e:
         st.warning(f"Could not fetch TikTok data: {e}")
@@ -119,6 +124,8 @@ for content in all_videos_and_tweets:
 
 # Add users to the network
 for i, user_info in enumerate(user_data):
+    if i >= NUM_USERS:
+        break  # Avoid exceeding the graph size
     G.nodes[i]['gender'] = user_info['gender']
     G.nodes[i]['sentiment'] = user_info['sentiment']
     G.nodes[i]['ideology'] = user_info['ideology']
@@ -134,7 +141,7 @@ def calculate_sentiment_trends():
         sentiment_scores = []
         for neighbor in G.neighbors(node):
             sentiment_scores.append(1 if G.nodes[neighbor]['sentiment'] == 'pro-health' else 0)
-        sentiment_trends.append(np.mean(sentiment_scores))
+        sentiment_trends.append(np.mean(sentiment_scores) if sentiment_scores else 0)
     return sentiment_trends
 
 def calculate_betweenness_centrality():
