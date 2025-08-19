@@ -1,15 +1,15 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
+from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
 import feedparser
-from textblob import TextBlob
+import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
-from matplotlib.lines import Line2D
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -20,7 +20,7 @@ IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
 
-# --- Step 1: Network Setup (Users only) ---
+# --- Step 1: Network Setup (Users Only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
@@ -54,14 +54,13 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (including non-health podcasts)
+# Example feeds (including health and general podcasts)
 rss_urls = [
     "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    "https://rss.art19.com/the-daily",      # The Daily (News)
-    "https://rss.art19.com/planet-money",   # Planet Money (Economics)
-    "https://rss.art19.com/startup",        # StartUp Podcast (Business)
-    "https://rss.art19.com/serial",         # Serial (True Crime)
-    # Removed problematic feeds like apology-line
+    "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
+    "https://rss.art19.com/the-daily",        # The Daily by NYT
+    "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
+    # Removed problematic feed "https://rss.art19.com/apology-line"
 ]
 
 podcast_items = []
@@ -69,8 +68,7 @@ for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception:
-        # silently skip failed feeds to avoid clutter
-        pass
+        pass  # silently ignore feeds that fail
 
 # --- Step 4: Assign User Attributes ---
 podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
@@ -176,86 +174,46 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Visualization with enhanced clarity ---
-st.subheader("User Network Contagion Simulation with Clusters")
+# --- Step 9: Visualization ---
+st.subheader("User Network Contagion Simulation")
+fig_net, ax_net = plt.subplots(figsize=(8, 6))
 
-betweenness = nx.betweenness_centrality(G)
+def darken_color(color, amount=0.6):
+    c = mcolors.to_rgb(color)
+    darkened = tuple(max(min(x * amount, 1), 0) for x in c)
+    return darkened
 
-fig, ax = plt.subplots(figsize=(10, 8))
-
-# Node colors by gender
-node_colors = ['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes]
-
-# Node shapes by gender: circle for Male, square for Female
-node_shapes = {'Male': 'o', 'Female': 's'}
-
-# Edge colors by gender similarity
+node_colors = []
 edge_colors = []
+node_sizes = []
+
+for n in G.nodes:
+    color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
+    node_colors.append(color)
+    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+
 for u, v in G.edges:
-    if G.nodes[u]['gender'] == 'Male' and G.nodes[v]['gender'] == 'Male':
-        edge_colors.append('lightgreen')
-    elif G.nodes[u]['gender'] == 'Female' and G.nodes[v]['gender'] == 'Female':
-        edge_colors.append('lightblue')
-    else:
-        edge_colors.append('gray')
+    color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
+    color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
+    rgb_u = mcolors.to_rgb(color_u)
+    rgb_v = mcolors.to_rgb(color_v)
+    mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
+    dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
+    edge_colors.append(dark_edge_color)
 
-# Draw edges
-nx.draw_networkx_edges(G, pos, ax=ax, edge_color=edge_colors, alpha=0.5)
+nx.draw(G, pos,
+        with_labels=False,  # no ideology text on nodes
+        node_size=node_sizes,
+        node_color=node_colors,
+        edge_color=edge_colors,
+        linewidths=2,
+        font_size=8,
+        ax=ax_net,
+        edgecolors='gray')  # light gray node border
 
-# Draw nodes by gender with sizes and border widths (betweenness)
-for gender in ['Male', 'Female']:
-    nodelist = [n for n in G.nodes if G.nodes[n]['gender'] == gender]
-    sizes = [300 + 150 * G.nodes[n]['triggered_count'] for n in nodelist]
-    widths = [3 + 10 * betweenness[n] for n in nodelist]
-    nx.draw_networkx_nodes(
-        G, pos,
-        nodelist=nodelist,
-        node_color=['lightgreen' if gender == 'Male' else 'lightblue'] * len(nodelist),
-        node_shape=node_shapes[gender],
-        node_size=sizes,
-        edgecolors='black',
-        linewidths=widths,
-        ax=ax,
-        alpha=0.9
-    )
-
-# Add labels (user ID and ideology abbreviation)
-labels = {n: f"{n}\n{G.nodes[n]['ideology'][:3]}" for n in G.nodes}
-nx.draw_networkx_labels(G, pos, labels, font_size=8, ax=ax)
-
-# Legend elements
+# Add legend
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
 female_patch = mpatches.Patch(color='lightblue', label='Female')
-edge_male = Line2D([0], [0], color='lightgreen', lw=2, label='Male-Male connection')
-edge_female = Line2D([0], [0], color='lightblue', lw=2, label='Female-Female connection')
-edge_mixed = Line2D([0], [0], color='gray', lw=2, label='Male-Female connection')
+ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
-ax.legend(handles=[male_patch, female_patch, edge_male, edge_female, edge_mixed],
-          loc='upper right', fontsize='small', frameon=True)
-
-st.pyplot(fig)
-
-# --- Explanatory Notes ---
-st.markdown("""
-**Network Diagram Interpretation:**
-
-- **Node Shapes and Colors:**  
-  - Circles (green) represent Male users  
-  - Squares (blue) represent Female users  
-
-- **Node Size:** Reflects the number of other users this node has influenced/shared information with. Larger nodes have triggered more shares.
-
-- **Node Border Width:** Indicates *betweenness centrality* — a measure of how often a user acts as a bridge on the shortest path between other users, highlighting their importance in information flow.
-
-- **Edge Colors:**  
-  - Light green edges connect two males (male homophily)  
-  - Light blue edges connect two females (female homophily)  
-  - Gray edges connect male and female users (cross-gender ties)  
-
-- **Clusters:**  
-  The green cluster in the middle represents a group of male users who are densely connected, likely influencing each other heavily due to gender homophily and shared ideology.
-
-- **Overall:**  
-  This network demonstrates homophily effects (same gender users connect more), ideology influence on contagion dynamics, and the role of key bridge users in spreading health information.
-
-""")
+st.pyplot(fig_net)
