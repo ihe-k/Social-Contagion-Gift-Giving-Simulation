@@ -164,5 +164,3 @@ with left_col:
     st.markdown(f"- **Male Users Triggered**: {male_triggered} shares")
     st.markdown(f"- **Female Users Triggered**: {female_triggered} shares")
 
-    st.markdown("---")
-    st.markdown("🕹️ Use the slider to explore the contagion spread over time.")
