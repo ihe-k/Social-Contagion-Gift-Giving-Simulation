@@ -61,9 +61,9 @@ with left_col:
     # Draw edges lightly
     nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
 
-    # Updated node colors: male=blue, female=pink
-    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='blue', node_size=300, ax=ax)
-    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='pink', node_size=300, ax=ax)
+    # Updated node colors: male=#03396c, female=#6497b1
+    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='#03396c', node_size=300, ax=ax)
+    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
 
     # Highlight nodes that shared info up to current step (red outline)
     nx.draw_networkx_nodes(
