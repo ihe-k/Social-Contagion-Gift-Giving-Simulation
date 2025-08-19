@@ -42,8 +42,8 @@ for node in G.nodes():
     gender = 1 if G.nodes[node]['gender'] == 'Male' else 0  # Male=1, Female=0
     degree_centrality = nx.degree_centrality(G).get(node, 0)
     
-    # Target variable: 1 if user has shared info, else 0 (simulating sharing)
-    triggered = 1 if np.random.rand() > 0.3 else 0  # Randomly assigning triggered value for illustration (30% chance)
+    # Simulate more realistic triggering based on probability (higher score, higher chance of triggering)
+    triggered = 1 if np.random.rand() < (score / 100) else 0  # Probability based on score
     
     # Append features and target
     X.append([score, gender, degree_centrality])
