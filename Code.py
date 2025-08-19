@@ -1,300 +1,210 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
 from textblob import TextBlob
 import streamlit as st
-import feedparser
-import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+import numpy as np
+import requests
+from bs4 import BeautifulSoup
+import feedparser
 
 # --- Parameters ---
 NUM_USERS = 30
-INIT_SHARED = 3  # initial gifted users
-SHARE_PROB = 0.3  # base probability of sharing health information
-GIFT_BONUS = 10  # score for triggering another user's share
-IDEOLOGY_CROSS_BONUS = 0.2  # bonus for cross-ideology sharing
-CHRONIC_PROPENSITY = 0.6  # probability of sharing health info for users with chronic disease
-GENDER_PROPENSITY = {"Male": 0.3, "Female": 0.5}  # Gender-specific sharing propensity
-GENDER_HOMOPHILY_BONUS = 0.2  # Homophily bonus for same-gender sharing
+INIT_SHARED = 3
+SHARE_PROB = 0.3
+GIFT_BONUS = 10
+IDEOLOGY_CROSS_BONUS = 0.2
+CHRONIC_PROPENSITY = 0.6
+GENDER_HOMOPHILY_BONUS = 0.2
 
-# --- Step 1: Create a social network ---
-G = nx.erdos_renyi_graph(n=NUM_USERS, p=0.1, seed=42)
+# --- Step 1: Network Setup ---
+G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
 nx.set_node_attributes(G, False, 'gifted')
 nx.set_node_attributes(G, 0, 'triggered_count')
-nx.set_node_attributes(G, '', 'gender')  # Assign empty gender initially
-nx.set_node_attributes(G, False, 'has_chronic_disease')  # Chronic disease attribute
-nx.set_node_attributes(G, '', 'ideology')  # Ideological stance (pro-health, anti-health, neutral)
-nx.set_node_attributes(G, '', 'sentiment')  # Sentiment (pro-health, anti-health, neutral)
+nx.set_node_attributes(G, '', 'gender')
+nx.set_node_attributes(G, False, 'has_chronic_disease')
+nx.set_node_attributes(G, '', 'ideology')
+nx.set_node_attributes(G, '', 'sentiment')
 
-# --- Step 2: Sentiment Analysis and Ideological Mapping ---
+# --- Step 2: Sentiment Analyzer ---
 def analyze_sentiment(text):
-    """
-    Analyze sentiment of text and classify as pro-health, anti-health, or neutral.
-    Pro-health: Positive sentiment (score > 0.5)
-    Anti-health: Negative sentiment (score < -0.5)
-    Neutral: Sentiment score between -0.5 and 0.5
-    """
-    blob = TextBlob(text)
-    polarity = blob.sentiment.polarity
-    if polarity > 0.5:
-        return 'pro-health'
-    elif polarity < -0.5:
-        return 'anti-health'
-    else:
-        return 'neutral'
+    polarity = TextBlob(text).sentiment.polarity
+    return 'pro-health' if polarity > 0.5 else ('anti-health' if polarity < -0.5 else 'neutral')
 
-# --- Step 3: Podcast RSS Feed Parsing ---
-def get_health_podcasts(feed_urls, keyword="health"):
-    """
-    Parse multiple podcast RSS feeds and return episodes with keyword in title or description.
-    """
-    episodes = []
-    for feed_url in feed_urls:
-        feed = feedparser.parse(feed_url)
-        for entry in feed.entries:
-            title = entry.get('title', '').lower()
-            description = entry.get('description', '').lower()
-            if keyword in title or keyword in description:
-                episodes.append({
-                    "title": entry.get('title', 'No Title'),
-                    "author": feed.feed.get('title', 'Unknown Podcast'),
-                    "link": entry.get('link', ''),
-                    "published": entry.get('published', 'Unknown Date'),
-                    "summary": entry.get('summary', '')
-                })
-    return episodes
+# --- Step 3: Fetch Podcasts via RSS (multiple popular feeds, no health filter) ---
+def get_podcasts_from_rss(feed_url, max_items=5):
+    feed = feedparser.parse(feed_url)
+    podcasts = []
+    for entry in feed.entries[:max_items]:
+        podcasts.append({
+            "user": entry.get('author', 'podcaster'),
+            "content": entry.title + " " + (entry.get('summary', '') if 'summary' in entry else ''),
+            "platform": "RSS",
+            "url": entry.link
+        })
+    return podcasts
 
-# Podcast RSS feeds
-daily_feed = ["https://rss.art19.com/the-daily"]  # NPR The Daily
-
-other_feeds = [
-    "https://feeds.megaphone.fm/ADV8924270618",   # Call Her Daddy
-    "https://feeds.simplecast.com/5Z9BHkuQ",      # This Past Weekend w/ Theo Von
-    "https://joeroganexp.joerogan.libsynpro.com/rss", # Joe Rogan Experience
-    "https://feeds.npr.org/510289/podcast.xml",   # NPR Up First alternative
-    "https://feeds.simplecast.com/tOjNXec5",      # Reply All
-    "https://feeds.megaphone.fm/stuffyoushouldknow" # Stuff You Should Know
+# Popular podcast RSS feeds (not health-only)
+rss_feeds = [
+    "https://joeroganexp.joerogan.libsynpro.com/rss",   # Joe Rogan Experience
+    "https://feeds.simplecast.com/54nAGcIl",           # Call Her Daddy
+    "https://feeds.megaphone.fm/WWO3519750118",        # This Past Weekend w/ Theo Von
+    "https://feeds.npr.org/510318/podcast.xml",        # Up First (NPR)
+    "https://feeds.npr.org/510307/rss.xml",             # The Daily (NPR)
 ]
 
-# --- Step 4: Collect podcast episodes with health keyword ---
-st.header("Health-Related Podcast Episodes")
+podcast_items = []
+for feed_url in rss_feeds:
+    try:
+        podcast_items.extend(get_podcasts_from_rss(feed_url, max_items=5))
+    except Exception as e:
+        st.warning(f"Failed to fetch or parse feed: {feed_url}")
 
-# The Daily episodes first
-st.subheader("NPR The Daily")
-daily_eps = get_health_podcasts(daily_feed)
-if daily_eps:
-    for i, ep in enumerate(daily_eps[:10]):
-        st.markdown(f"**{i+1}. {ep['title']}**  ")
-        st.markdown(f"*Podcast:* {ep['author']}  ")
-        st.markdown(f"*Published:* {ep['published']}  ")
-        st.markdown(f"[Listen here]({ep['link']})")
-        st.markdown("---")
-else:
-    st.write("No health-related episodes found in The Daily.")
+# --- Optional: Scrape some ListenNotes podcast pages (adds flavor, can skip or expand) ---
+def scrape_listennotes_show(show_url):
+    try:
+        resp = requests.get(show_url, timeout=5)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        title = soup.find('h1').text if soup.find('h1') else "Pod Title"
+        desc = soup.find('p').text if soup.find('p') else ""
+        return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
+    except Exception:
+        return None
 
-# Other podcasts
-st.subheader("Other Popular Podcasts")
-other_eps = get_health_podcasts(other_feeds)
-if other_eps:
-    for i, ep in enumerate(other_eps[:20]):
-        st.markdown(f"**{i+1}. {ep['title']}**  ")
-        st.markdown(f"*Podcast:* {ep['author']}  ")
-        st.markdown(f"*Published:* {ep['published']}  ")
-        st.markdown(f"[Listen here]({ep['link']})")
-        st.markdown("---")
-else:
-    st.write("No health-related episodes found in other podcasts.")
+# Add example ListenNotes podcast metadata (optional)
+ln_urls = [
+    "https://www.listennotes.com/c/4d3fe717742d4963a85562e9f84d8c79/",  # The Daily ListenNotes page
+]
 
-# --- Step 5: Generate user data from podcast episodes ---
+for url in ln_urls:
+    scraped = scrape_listennotes_show(url)
+    if scraped:
+        podcast_items.append(scraped)
+
+# --- Step 4: Assign User Attributes (based on podcast content) ---
 user_data = []
-for i, ep in enumerate(daily_eps + other_eps):
-    user = ep['author']
-    text_content = ep['title'] + " " + ep['summary']
-
-    # Assign gender randomly
-    gender = random.choice(['Male', 'Female'])
-
-    # Assign ideology based on sentiment
-    sentiment = analyze_sentiment(text_content)
-
-    # Assign chronic disease status randomly
-    has_chronic_disease = random.choice([True, False])
-
+for content in podcast_items:
+    sentiment = analyze_sentiment(content["content"])
     user_data.append({
-        'user': user,
-        'gender': gender,
-        'sentiment': sentiment,
-        'ideology': sentiment,  # Simplified
-        'has_chronic_disease': has_chronic_disease
-    })
-
-# If there are fewer episodes than NUM_USERS, pad with random users
-while len(user_data) < NUM_USERS:
-    user_data.append({
-        'user': f'User{len(user_data)}',
+        'user': content['user'],
         'gender': random.choice(['Male', 'Female']),
-        'sentiment': random.choice(['pro-health', 'anti-health', 'neutral']),
-        'ideology': random.choice(['pro-health', 'anti-health', 'neutral']),
+        'sentiment': sentiment,
+        'ideology': sentiment,
         'has_chronic_disease': random.choice([True, False])
     })
 
-# Assign user data to graph nodes
-for i in range(NUM_USERS):
-    info = user_data[i]
-    G.nodes[i]['gender'] = info['gender']
-    G.nodes[i]['sentiment'] = info['sentiment']
-    G.nodes[i]['ideology'] = info['ideology']
-    G.nodes[i]['has_chronic_disease'] = info['has_chronic_disease']
-    G.nodes[i]['shared'] = False
+# Assign users to network nodes (up to NUM_USERS)
+for i, u in enumerate(user_data):
+    if i >= NUM_USERS:
+        break
+    for k in u:
+        G.nodes[i][k] = u[k]
     G.nodes[i]['score'] = 0
     G.nodes[i]['triggered_count'] = 0
+    G.nodes[i]['shared'] = False
 
-# --- Step 6: Feature Engineering ---
-def calculate_sentiment_trends():
-    sentiment_trends = []
-    for node in G.nodes:
-        sentiment_scores = []
-        for neighbor in G.neighbors(node):
-            sentiment_scores.append(1 if G.nodes[neighbor]['sentiment'] == 'pro-health' else 0)
-        sentiment_trends.append(np.mean(sentiment_scores) if sentiment_scores else 0)
-    return sentiment_trends
+# --- Step 5: Features & Labels for ML ---
+def calc_sentiment_trends():
+    return [np.mean([1 if G.nodes[n]['sentiment']=='pro-health' else 0 for n in G.neighbors(node)]) if list(G.neighbors(node)) else 0 for node in G.nodes]
 
-def calculate_betweenness_centrality():
-    return nx.betweenness_centrality(G)
+sent_trends = calc_sentiment_trends()
+centrality = nx.betweenness_centrality(G)
 
-sentiment_trends = calculate_sentiment_trends()
-betweenness_centrality = calculate_betweenness_centrality()
-
-# --- Step 7: Prepare Data for Model Training ---
-user_features = []
-user_labels = []
-
-for node in G.nodes:
-    user_info = G.nodes[node]
-    user_features.append([
-        1 if user_info['gender'] == 'Female' else 0,
-        1 if user_info['has_chronic_disease'] else 0,
-        1 if user_info['ideology'] == 'pro-health' else 0,
-        1 if user_info['ideology'] == 'anti-health' else 0,
-        1 if user_info['ideology'] == 'neutral' else 0,
-        sentiment_trends[node],
-        betweenness_centrality[node]
+features, labels = [], []
+for n in G.nodes:
+    u = G.nodes[n]
+    features.append([
+        1 if u['gender']=='Female' else 0,
+        1 if u['has_chronic_disease'] else 0,
+        1 if u['ideology']=='pro-health' else 0,
+        1 if u['ideology']=='anti-health' else 0,
+        1 if u['ideology']=='neutral' else 0,
+        sent_trends[n],
+        centrality[n]
     ])
-    user_labels.append(user_info['ideology'])
+    labels.append(u['ideology'])
 
-# Train/test split
-X_train, X_test, y_train, y_test = train_test_split(user_features, user_labels, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
 
-# --- Step 8: Hyperparameter Tuning ---
-param_grid = {
-    'n_estimators': [100, 200],
-    'max_depth': [10, 20],
-    'min_samples_split': [2, 5],
-}
+# --- Step 6: Model Training ---
+param_grid = {'n_estimators':[100], 'max_depth':[10], 'min_samples_split':[2]}
+grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
+grid.fit(X_train, y_train)
+best = grid.best_estimator_
+y_pred = best.predict(X_test)
 
-grid_search = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, n_jobs=-1)
-grid_search.fit(X_train, y_train)
-
-best_model = grid_search.best_estimator_
-
-y_pred = best_model.predict(X_test)
-
-# --- Step 9: Evaluate Model ---
-accuracy = accuracy_score(y_test, y_pred)
+# --- Step 7: Model Evaluation ---
 st.subheader("Model Evaluation")
-st.write(f"Model Accuracy: {accuracy:.2%}")
+st.write(f"Accuracy: {accuracy_score(y_test,y_pred):.2%}")
+st.text(classification_report(y_test,y_pred))
+fig, ax = plt.subplots()
+ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax)
+st.pyplot(fig)
 
-report = classification_report(y_test, y_pred)
-st.text("Classification Report:")
-st.text(report)
-
-fig_cm, ax_cm = plt.subplots()
-ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
-st.pyplot(fig_cm)
-
-# --- Step 10: Contagion Simulation ---
-
-# Initialize contagion
-initial_gifted = random.sample(list(G.nodes), INIT_SHARED)
-for node in initial_gifted:
+# --- Step 8: Contagion Simulation ---
+pos = nx.spring_layout(G, seed=42)
+seed = random.sample(list(G.nodes), INIT_SHARED)
+for node in seed:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
 
-contagion_steps = [set(initial_gifted)]
+contagion, current = [set(seed)], set(seed)
+while current:
+    next_step = set()
+    for u in current:
+        for v in G.neighbors(u):
+            if not G.nodes[v]['shared']:
+                prob = SHARE_PROB + (GIFT_BONUS/100 if G.nodes[u]['gifted'] else 0)
+                if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+                    prob += IDEOLOGY_CROSS_BONUS
+                if G.nodes[v]['has_chronic_disease']:
+                    prob = max(prob, CHRONIC_PROPENSITY)
+                if G.nodes[u]['gender'] == G.nodes[v]['gender']:
+                    prob += GENDER_HOMOPHILY_BONUS
+                prob = min(max(prob,0),1)
+                if random.random() < prob:
+                    G.nodes[v]['shared'] = True
+                    G.nodes[v]['triggered_count'] += 1
+                    next_step.add(v)
+    if not next_step: break
+    contagion.append(next_step)
+    current = next_step
 
-def run_contagion_simulation():
-    new_shared = set(initial_gifted)
-    all_shared = set(initial_gifted)
-
-    while new_shared:
-        next_new_shared = set()
-        for user in new_shared:
-            neighbors = list(G.neighbors(user))
-            for neighbor in neighbors:
-                if not G.nodes[neighbor]['shared']:
-                    prob = SHARE_PROB
-                    if G.nodes[user]['gifted']:
-                        prob += GIFT_BONUS / 100
-                    if G.nodes[user]['ideology'] != G.nodes[neighbor]['ideology']:
-                        prob += IDEOLOGY_CROSS_BONUS
-                    if G.nodes[neighbor]['has_chronic_disease']:
-                        prob = max(prob, CHRONIC_PROPENSITY)
-                    if G.nodes[user]['gender'] == G.nodes[neighbor]['gender']:
-                        prob += GENDER_HOMOPHILY_BONUS
-
-                    prob = min(max(prob, 0), 1)
-
-                    if random.random() < prob:
-                        G.nodes[neighbor]['shared'] = True
-                        G.nodes[neighbor]['triggered_count'] += 1
-                        next_new_shared.add(neighbor)
-                        all_shared.add(neighbor)
-
-        if not next_new_shared:
-            break
-        contagion_steps.append(next_new_shared)
-        new_shared = next_new_shared
-
-run_contagion_simulation()
-
-# --- Step 11: Static Contagion Graph ---
-fig, ax = plt.subplots(figsize=(10, 7))
-pos = nx.spring_layout(G, seed=42)
-
-node_colors = ['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes]
-node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
-
-nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes, ax=ax)
-nx.draw_networkx_edges(G, pos, alpha=0.5, width=0.5, edge_color='gray', ax=ax)
-labels = {node: G.nodes[node]['ideology'] for node in G.nodes}
-nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black', ax=ax)
-
-ax.set_title("Static Contagion Spread Simulation")
-ax.axis('off')
-
-st.subheader("Health Information Spread Simulation - Static Graph")
-st.pyplot(fig)
-
-# --- Step 12: Leaderboard ---
+# --- Step 9: Leaderboard ---
 ideology_triggered = {"pro-health": 0, "anti-health": 0, "neutral": 0}
 gender_triggered = {"Male": 0, "Female": 0}
-
 for node in G.nodes:
     ideology = G.nodes[node]['ideology']
     gender = G.nodes[node]['gender']
+    triggered = G.nodes[node]['triggered_count']
     if ideology in ideology_triggered:
-        ideology_triggered[ideology] += G.nodes[node]['triggered_count']
+        ideology_triggered[ideology] += triggered
     if gender in gender_triggered:
-        gender_triggered[gender] += G.nodes[node]['triggered_count']
+        gender_triggered[gender] += triggered
 
-st.subheader("Leaderboard")
+st.subheader("Leaderboard: Triggered Shares by Ideology and Gender")
 st.write(f"Pro-health triggered: {ideology_triggered['pro-health']}")
 st.write(f"Anti-health triggered: {ideology_triggered['anti-health']}")
 st.write(f"Neutral triggered: {ideology_triggered['neutral']}")
 st.write(f"Male triggered: {gender_triggered['Male']}")
 st.write(f"Female triggered: {gender_triggered['Female']}")
+
+# --- Step 10: Plot static contagion network ---
+st.subheader("Podcast Contagion Simulation Network")
+fig2, ax2 = plt.subplots(figsize=(8,6))
+nx.draw(G, pos, with_labels=True,
+        node_size=[300+100*G.nodes[n]['triggered_count'] for n in G.nodes],
+        node_color=['lightgreen' if G.nodes[n]['gender']=='Male' else 'lightblue' for n in G.nodes],
+        edge_color='gray', linewidths=1.5,
+        node_shape='o',
+        nodelist=list(G.nodes),
+        font_size=8,
+        ax=ax2)
+st.pyplot(fig2)
