@@ -1,151 +1,220 @@
-import streamlit as st
+import random
 import networkx as nx
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, classification_report
+from textblob import TextBlob
+import streamlit as st
+from youtubesearchpython import VideosSearch
+from TikTokApi import TikTokApi
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
-import praw
+import requests
+from bs4 import BeautifulSoup
 
-# --- Reddit Scraping using PRAW ---
-def scrape_reddit(query="health"):
-    # Reddit API credentials (replace with your own)
-    reddit = praw.Reddit(client_id="YOUR_CLIENT_ID", 
-                         client_secret="YOUR_CLIENT_SECRET", 
-                         user_agent="YOUR_USER_AGENT")
+# --- Parameters ---
+NUM_USERS = 30
+INIT_SHARED = 3  # initial gifted users
+SHARE_PROB = 0.3  # base probability of sharing health information
+GIFT_BONUS = 10  # score for triggering another user's share
+IDEOLOGY_CROSS_BONUS = 0.2  # bonus for cross-ideology sharing
+CHRONIC_PROPENSITY = 0.6  # probability of sharing health info for users with chronic disease
+GENDER_HOMOPHILY_BONUS = 0.2  # Homophily bonus for same-gender sharing
+
+# --- Step 1: Create a social network ---
+G = nx.erdos_renyi_graph(n=NUM_USERS, p=0.1, seed=42)
+nx.set_node_attributes(G, False, 'shared')
+nx.set_node_attributes(G, 0, 'score')
+nx.set_node_attributes(G, False, 'gifted')
+nx.set_node_attributes(G, 0, 'triggered_count')
+nx.set_node_attributes(G, '', 'gender')  
+nx.set_node_attributes(G, False, 'has_chronic_disease')
+nx.set_node_attributes(G, '', 'ideology')
+nx.set_node_attributes(G, '', 'sentiment')
+
+# --- Step 2: Sentiment Analysis ---
+def analyze_sentiment(text):
+    blob = TextBlob(text)
+    polarity = blob.sentiment.polarity
+    if polarity > 0.5:
+        return 'pro-health'
+    elif polarity < -0.5:
+        return 'anti-health'
+    else:
+        return 'neutral'
+
+# --- Step 3: Scrape podcasts from Reddit ---
+def get_health_podcasts_from_reddit(subreddit="Health"):
+    url = f"https://www.reddit.com/r/{subreddit}/search/?q=podcast&restrict_sr=1&sort=relevance&t=all"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.content, 'html.parser')
     
-    # Search for posts related to health in the health subreddit
-    subreddit = reddit.subreddit("health")
-    posts = subreddit.search(query, limit=5)  # Limiting to top 5 posts
-    
-    health_posts = []
+    # Find all post titles and links related to health podcasts
+    posts = soup.find_all('a', class_='SQnoC3ObvgnGjWf5p3r1')
+    podcasts = []
     for post in posts:
-        health_posts.append({
-            'title': post.title,
-            'url': post.url,
-            'score': post.score,
-            'comments': post.num_comments
+        title = post.text
+        link = "https://www.reddit.com" + post['href']
+        podcasts.append({
+            "user": post.text.split(' ')[0],  # Simplified: First word of the title as user
+            "content": title,
+            "platform": "Reddit",
+            "url": link
         })
-    
-    return health_posts
+    return podcasts
 
-# --- Model Evaluation Section (Dummy data for now) ---
-y_test = [1, 0, 1, 1, 0]  # Actual values (dummy for illustration)
-y_pred = [1, 0, 1, 0, 1]  # Predicted values (dummy for illustration)
+# --- Step 4: Get videos and podcasts ---
+youtube_videos = get_health_videos_from_youtube()
+tiktok_videos = get_health_videos_from_tiktok()
+reddit_podcasts = get_health_podcasts_from_reddit("Health")
 
-# Calculate confusion matrix
-cm = confusion_matrix(y_test, y_pred)
-classification_rep = classification_report(y_test, y_pred)
+all_content = youtube_videos + tiktok_videos + reddit_podcasts
 
-# --- Streamlit Layout: Left = Graph | Right = Leaderboard ---
-st.title("Health Information Spread Simulation")
+# --- Step 5: Assign user attributes ---
+user_data = []
+for content in all_content:
+    user = content['user']
+    text = content['content']
+    gender = random.choice(['Male', 'Female'])
+    sentiment = analyze_sentiment(text)
+    has_chronic = random.choice([True, False])
+    user_data.append({
+        'user': user,
+        'gender': gender,
+        'sentiment': sentiment,
+        'ideology': sentiment,
+        'has_chronic_disease': has_chronic
+    })
+
+# Add to graph nodes
+for i, user_info in enumerate(user_data):
+    if i >= NUM_USERS:
+        break
+    G.nodes[i]['gender'] = user_info['gender']
+    G.nodes[i]['sentiment'] = user_info['sentiment']
+    G.nodes[i]['ideology'] = user_info['ideology']
+    G.nodes[i]['has_chronic_disease'] = user_info['has_chronic_disease']
+    G.nodes[i]['shared'] = False
+    G.nodes[i]['score'] = 0
+    G.nodes[i]['triggered_count'] = 0
+
+# --- Step 6: Sentiment trend & centrality ---
+def calculate_sentiment_trends():
+    trends = []
+    for node in G.nodes:
+        scores = [1 if G.nodes[n]['sentiment']=='pro-health' else 0 for n in G.neighbors(node)]
+        trends.append(np.mean(scores) if scores else 0)
+    return trends
+
+def calculate_betweenness_centrality():
+    return nx.betweenness_centrality(G)
+
+sentiment_trends = calculate_sentiment_trends()
+betweenness_centrality = calculate_betweenness_centrality()
+
+# --- Step 7: Prepare features and labels ---
+features = []
+labels = []
+
+for node in G.nodes:
+    u = G.nodes[node]
+    features.append([
+        1 if u['gender']=='Female' else 0,
+        1 if u['has_chronic_disease'] else 0,
+        1 if u['ideology']=='pro-health' else 0,
+        1 if u['ideology']=='anti-health' else 0,
+        1 if u['ideology']=='neutral' else 0,
+        sentiment_trends[node],
+        betweenness_centrality[node]
+    ])
+    labels.append(u['ideology'])
+
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=0.2, random_state=42)
+
+# --- Step 8: Train Random Forest with GridSearchCV ---
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [10, 20],
+    'min_samples_split': [2, 5],
+}
+grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, n_jobs=-1)
+grid.fit(X_train, y_train)
+best_model = grid.best_estimator_
+y_pred = best_model.predict(X_test)
+
+# --- Step 9: Evaluation ---
+accuracy = accuracy_score(y_test, y_pred)
 
 st.subheader("Model Evaluation")
-st.write(f"Classification Report:\n{classification_rep}")
+st.write(f"Accuracy: {accuracy:.2%}")
 
-# Display Confusion Matrix
-st.subheader("Confusion Matrix")
-fig, ax = plt.subplots(figsize=(6, 4))
-# Using matplotlib for the confusion matrix visualization
-plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
-plt.title("Confusion Matrix")
-plt.colorbar()
-tick_marks = np.arange(len(['0', '1']))
-plt.xticks(tick_marks, ['0', '1'])
-plt.yticks(tick_marks, ['0', '1'])
+st.text("Classification Report:")
+st.text(classification_report(y_test, y_pred))
 
-thresh = cm.max() / 2.
-for i in range(len(cm)):
-    for j in range(len(cm[i])):
-        plt.text(j, i, format(cm[i][j], 'd'),
-                 ha="center", va="center",
-                 color="white" if cm[i][j] > thresh else "black")
+fig_cm, ax_cm = plt.subplots()
+ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
+st.pyplot(fig_cm)
 
-plt.ylabel('True label')
-plt.xlabel('Predicted label')
+# --- Step 10: Contagion Simulation ---
+pos = nx.spring_layout(G, seed=42)
+
+initial_gifted = random.sample(list(G.nodes), INIT_SHARED)
+for node in initial_gifted:
+    G.nodes[node]['shared'] = True
+    G.nodes[node]['gifted'] = True
+
+contagion_steps = []
+contagion_steps.append(set(initial_gifted))
+
+def run_contagion():
+    new_shared = set(initial_gifted)
+    all_shared = set(initial_gifted)
+
+    while new_shared:
+        next_new = set()
+        for user in new_shared:
+            for neighbor in G.neighbors(user):
+                if not G.nodes[neighbor]['shared']:
+                    prob = SHARE_PROB
+                    if G.nodes[user]['gifted']:
+                        prob += GIFT_BONUS / 100
+                    if G.nodes[user]['ideology'] != G.nodes[neighbor]['ideology']:
+                        prob += IDEOLOGY_CROSS_BONUS
+                    if G.nodes[neighbor]['has_chronic_disease']:
+                        prob = max(prob, CHRONIC_PROPENSITY)
+                    if G.nodes[user]['gender'] == G.nodes[neighbor]['gender']:
+                        prob += GENDER_HOMOPHILY_BONUS
+                    prob = min(max(prob, 0), 1)
+                    if random.random() < prob:
+                        G.nodes[neighbor]['shared'] = True
+                        G.nodes[neighbor]['triggered_count'] += 1
+                        next_new.add(neighbor)
+                        all_shared.add(neighbor)
+        if not next_new:
+            break
+        contagion_steps.append(next_new)
+        new_shared = next_new
+
+run_contagion()
+
+st.subheader("Health Information Spread Simulation (Static Graph)")
+
+fig, ax = plt.subplots(figsize=(10,7))
+ax.axis('off')
+
+node_colors = ['lightgreen' if G.nodes[n]['gender']=='Male' else 'lightblue' for n in G.nodes]
+node_sizes = [400 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
+node_borders = ['red' if G.nodes[n]['shared'] else 'black' for n in G.nodes]
+
+nx.draw_networkx_edges(G, pos, ax=ax, alpha=0.5, edge_color='gray')
+nx.draw_networkx_nodes(G, pos, ax=ax,
+                       node_size=node_sizes,
+                       node_color=node_colors,
+                       edgecolors=node_borders,
+                       linewidths=1.5)
+labels = {n: G.nodes[n]['ideology'] for n in G.nodes}
+nx.draw_networkx_labels(G, pos, labels, font_size=9, font_color='black', ax=ax)
+
 st.pyplot(fig)
-
-# --- Scrape Reddit for Health Posts ---
-st.subheader("Health Information from Reddit")
-posts = scrape_reddit(query="health")  # Search query for health-related posts
-
-if posts:
-    st.write("Found the following health-related posts:")
-    for post in posts:
-        st.markdown(f"**{post['title']}**: [Link]({post['url']}) | Score: {post['score']} | Comments: {post['comments']}")
-else:
-    st.write("No posts found. Try changing the query or check the subreddit.")
-
-# --- Contagion Simulation ---
-# Example Network (You can modify this part based on your real data)
-G = nx.erdos_renyi_graph(30, 0.1)  # A random graph with 30 nodes and a 10% chance of edge creation
-for node in G.nodes:
-    G.nodes[node]['score'] = np.random.randint(50, 100)  # Random scores for nodes
-    G.nodes[node]['triggered_count'] = np.random.randint(0, 5)  # Random trigger count for nodes
-
-# Contagion Steps (Dummy example)
-contagion_steps = [{0, 1}, {2, 3, 4}, {5, 6, 7, 8}]
-
-# Slider for Contagion Step
-max_step = len(contagion_steps)
-step = st.slider("Select contagion step", 1, max_step, max_step)
-
-# Collect nodes that shared up to current step
-shared_up_to_step = set()
-for i in range(step):
-    shared_up_to_step.update(contagion_steps[i])
-
-# Network Graph Visualization
-left_col, right_col = st.columns([2, 1])  # Wider left for graph
-
-with left_col:
-    fig, ax = plt.subplots(figsize=(8, 6))
-    pos = nx.spring_layout(G, seed=42)
-
-    male_nodes = [n for n in G.nodes if G.nodes[n]['score'] % 2 == 0]  # Random condition for males
-    female_nodes = [n for n in G.nodes if G.nodes[n]['score'] % 2 != 0]  # Random condition for females
-
-    # Draw edges
-    nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
-
-    # Draw all nodes by gender (male: blue, female: pink)
-    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='#03396c', node_size=300, ax=ax)
-    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
-
-    # Highlight nodes that have shared *up to* current step (red outline)
-    nx.draw_networkx_nodes(
-        G, pos, nodelist=list(shared_up_to_step),
-        node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
-    )
-
-    # Labels
-    nx.draw_networkx_labels(G, pos, labels={n: str(n) for n in G.nodes}, font_size=8, ax=ax)
-
-    ax.set_title(f"Network at Contagion Step {step} (Red outline = Shared)")
-    ax.axis('off')
-    st.pyplot(fig)
-
-# --- Leaderboard Panel: Influencers ---
-with right_col:
-    st.markdown("### 🏆 Top Influencers")
-
-    influencer_stats = []
-    for node in G.nodes:
-        influencer_stats.append({
-            'user': node,
-            'score': G.nodes[node]['score'],
-            'triggered': G.nodes[node]['triggered_count'],
-        })
-    top_influencers = sorted(influencer_stats, key=lambda x: (x['triggered'], x['score']), reverse=True)[:5]
-
-    for rank, inf in enumerate(top_influencers, 1):
-        st.markdown(f"- **Rank {rank}**: User {inf['user']} — Score: {inf['score']}, Triggered: {inf['triggered']}")
-
-    # Gender-triggered stats
-    male_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['score'] % 2 == 0)
-    female_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['score'] % 2 != 0)
-
-    st.markdown(f"- **Male Users Triggered**: {male_triggered} shares")
-    st.markdown(f"- **Female Users Triggered**: {female_triggered} shares")
-
-    st.markdown("---")
-    st.markdown("🕹️ *Use the slider to explore the contagion spread over time*")
-
