@@ -1,7 +1,6 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
@@ -53,11 +52,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (no error-prone feeds included)
+# Example RSS feeds (no apology-line)
 rss_urls = [
     "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health (health)
     "https://feeds.simplecast.com/54nAGcIl", # The Daily (news)
-    "https://rss.art19.com/apology-line",    # Removed due to errors
     "https://rss.art19.com/the-daily",       # The Daily (news)
     "https://feeds.simplecast.com/tOjNXec5"  # Stuff You Should Know (general knowledge)
 ]
@@ -66,8 +64,8 @@ podcast_items = []
 for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
-    except Exception as e:
-        st.warning(f"Failed to fetch or parse feed: {url}")
+    except Exception:
+        pass
 
 # --- Step 4: Assign User Attributes ---
 podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
@@ -79,15 +77,15 @@ counts = {
     'anti-health': podcast_sentiments.count('anti-health'),
     'neutral': podcast_sentiments.count('neutral')
 }
-total = sum(counts.values()) or 1
-weights = {k: v / total for k, v in counts.items()}
+total = sum(counts.values())
+weights = {k: v/total for k, v in counts.items()}
 
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
     G.nodes[node]['ideology'] = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
+        weights=[weights.get('pro-health',0.33), weights.get('anti-health',0.33), weights.get('neutral',0.33)],
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
@@ -102,7 +100,7 @@ def calc_sentiment_trends():
     for node in G.nodes:
         neighbors = list(G.neighbors(node))
         if neighbors:
-            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
+            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment']=='pro-health')
             trends.append(pro_health_count / len(neighbors))
         else:
             trends.append(0)
@@ -176,97 +174,14 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9 & 10: Visualization + Leaderboard ---
-
-st.subheader("User Network Contagion Simulation & Leaderboard")
-
-col1, col2 = st.columns([3, 1])  # wide left for graph, narrow right for leaderboard
-
-with col1:
-    fig_net, ax_net = plt.subplots(figsize=(10, 8))
-
-    male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
-    female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
-
-    male_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in male_nodes]
-    female_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in female_nodes]
-
-    nx.draw_networkx_nodes(G, pos,
-                           nodelist=male_nodes,
-                           node_color='lightgreen',
-                           node_size=male_sizes,
-                           node_shape='o',
-                           ax=ax_net,
-                           label='Male')
-
-    nx.draw_networkx_nodes(G, pos,
-                           nodelist=female_nodes,
-                           node_color='lightblue',
-                           node_size=female_sizes,
-                           node_shape='s',
-                           ax=ax_net,
-                           label='Female')
-
-    edge_colors = []
-    for u, v in G.edges():
-        if G.nodes[u]['gender'] == 'Male' and G.nodes[v]['gender'] == 'Male':
-            edge_colors.append('lightgreen')
-        elif G.nodes[u]['gender'] == 'Female' and G.nodes[v]['gender'] == 'Female':
-            edge_colors.append('lightblue')
-        else:
-            edge_colors.append('gray')
-
-    nx.draw_networkx_edges(G, pos, edge_color=edge_colors, ax=ax_net)
-    nx.draw_networkx_labels(G, pos, font_size=8, ax=ax_net)
-
-    legend_elements = [
-        Line2D([0], [0], marker='o', color='w', label='Male',
-               markerfacecolor='lightgreen', markersize=10),
-        Line2D([0], [0], marker='s', color='w', label='Female',
-               markerfacecolor='lightblue', markersize=10),
-        Line2D([0], [0], color='lightgreen', lw=2, label='Male-Male Share'),
-        Line2D([0], [0], color='lightblue', lw=2, label='Female-Female Share'),
-        Line2D([0], [0], color='gray', lw=2, label='Male-Female Share'),
-    ]
-    ax_net.legend(handles=legend_elements, loc='best')
-    st.pyplot(fig_net)
-
-with col2:
-    st.markdown("🏆 **Top Influencers**")
-    users_sorted = sorted(G.nodes(data=True), key=lambda x: x[1]['triggered_count'], reverse=True)
-    for rank, (user_id, attrs) in enumerate(users_sorted[:5], start=1):
-        st.markdown(f"- Rank {rank}: User {user_id} — Score: {attrs['score']}, Triggered: {attrs['triggered_count']}")
-
-    male_triggered_total = sum(G.nodes[n]['triggered_count'] for n in male_nodes)
-    female_triggered_total = sum(G.nodes[n]['triggered_count'] for n in female_nodes)
-
-    st.markdown(f"- Male Users Triggered: {male_triggered_total} shares")
-    st.markdown(f"- Female Users Triggered: {female_triggered_total} shares")
-
-# --- Step 11: Explanatory Notes ---
-st.markdown("""
-### Interpretation of Network Contagion Results
-
-- **Nodes represent users**, colored by gender:
-    - 🟢 Green circles = Male users
-    - 🔵 Blue squares = Female users
-
-- **Node size reflects influence**: Larger nodes indicate users who shared content more often or influenced others more.
-
-- **Edges represent sharing relationships**:
-    - Light green edges connect male-to-male shares
-    - Light blue edges connect female-to-female shares
-    - Grey edges connect male-to-female shares
-
-- **Gender homophily effect**: Users tend to share more within their own gender groups.
-
-- **Ideology influence**: Users with similar health-related ideologies (pro-health, anti-health, neutral) are more likely to share content with each other.
-
-- **Users with chronic diseases** are more likely to spread health information, acting as key amplifiers.
-
-- **Trigger count** tracks how many times a user has been influenced or shared content, helping identify top influencers.
-
-- This network simulation helps visualize how health-related information (and misinformation) spreads through social connections influenced by gender, ideology, and health status.
-
-Use these insights to target interventions, optimize messaging, and understand community dynamics in health communication.
-""")
+# --- Step 9: Visualization ---
+st.subheader("User Network Contagion Simulation")
+fig_net, ax_net = plt.subplots(figsize=(8, 6))
+nx.draw(G, pos,
+        with_labels=True,
+        node_size=[300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes],
+        node_color=['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes],
+        edge_color='gray', linewidths=1.5,
+        font_size=8,
+        ax=ax_net)
+st.pyplot(fig_net)
