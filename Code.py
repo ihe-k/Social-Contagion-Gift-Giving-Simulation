@@ -3,7 +3,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from textblob import TextBlob
 import streamlit as st
-from youtubesearchpython import VideosSearch
 from TikTokApi import TikTokApi
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -65,11 +64,28 @@ def get_health_podcasts_from_reddit(subreddit="Health"):
     return podcasts
 
 # --- Step 4: Get videos and podcasts ---
-youtube_videos = get_health_videos_from_youtube()
-tiktok_videos = get_health_videos_from_tiktok()
-reddit_podcasts = get_health_podcasts_from_reddit("Health")
+def get_health_videos_from_tiktok(query="health"):
+    try:
+        api = TikTokApi()
+        trending_videos = api.by_hashtag(query, count=5)
+        videos = []
+        for video in trending_videos:
+            videos.append({
+                "user": video['author']['uniqueId'],
+                "content": video['desc'],
+                "platform": "TikTok",
+                "url": f"https://www.tiktok.com/@{video['author']['uniqueId']}/video/{video['id']}"
+            })
+        return videos
+    except Exception as e:
+        st.warning(f"Could not fetch TikTok data: {e}")
+        return []
 
-all_content = youtube_videos + tiktok_videos + reddit_podcasts
+reddit_podcasts = get_health_podcasts_from_reddit("Health")
+tiktok_videos = get_health_videos_from_tiktok()
+
+# Combine all content (Reddit podcasts and TikTok videos)
+all_content = reddit_podcasts + tiktok_videos
 
 # --- Step 5: Assign user attributes ---
 user_data = []
@@ -201,20 +217,4 @@ run_contagion()
 
 st.subheader("Health Information Spread Simulation (Static Graph)")
 
-fig, ax = plt.subplots(figsize=(10,7))
-ax.axis('off')
-
-node_colors = ['lightgreen' if G.nodes[n]['gender']=='Male' else 'lightblue' for n in G.nodes]
-node_sizes = [400 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
-node_borders = ['red' if G.nodes[n]['shared'] else 'black' for n in G.nodes]
-
-nx.draw_networkx_edges(G, pos, ax=ax, alpha=0.5, edge_color='gray')
-nx.draw_networkx_nodes(G, pos, ax=ax,
-                       node_size=node_sizes,
-                       node_color=node_colors,
-                       edgecolors=node_borders,
-                       linewidths=1.5)
-labels = {n: G.nodes[n]['ideology'] for n in G.nodes}
-nx.draw_networkx_labels(G, pos, labels, font_size=9, font_color='black', ax=ax)
-
-st.pyplot(fig)
+fig, ax = plt.subplots(fi
