@@ -5,7 +5,7 @@ from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 import feedparser
 import matplotlib.colors as mcolors
@@ -54,13 +54,11 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (including health and general podcasts)
 rss_urls = [
     "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
     "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
     "https://rss.art19.com/the-daily",        # The Daily by NYT
     "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
-    # Removed problematic feed "https://rss.art19.com/apology-line"
 ]
 
 podcast_items = []
@@ -186,11 +184,20 @@ def darken_color(color, amount=0.6):
 node_colors = []
 edge_colors = []
 node_sizes = []
+node_border_widths = []
 
-for n in G.nodes:
+# Normalize betweenness centrality for border widths (scale 1 to 6 for visibility)
+bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
+if bc_values.max() > 0:
+    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
+else:
+    norm_bc = np.ones(len(G.nodes))
+
+for idx, n in enumerate(G.nodes):
     color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+    node_border_widths.append(norm_bc[idx])
 
 for u, v in G.edges:
     color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
@@ -202,16 +209,17 @@ for u, v in G.edges:
     edge_colors.append(dark_edge_color)
 
 nx.draw(G, pos,
-        with_labels=False,  # no ideology text on nodes
+        with_labels=True,  # Show user number
+        labels={n: str(n) for n in G.nodes},  # user number as label
         node_size=node_sizes,
         node_color=node_colors,
         edge_color=edge_colors,
-        linewidths=2,
+        linewidths=node_border_widths,
         font_size=8,
         ax=ax_net,
-        edgecolors='gray')  # light gray node border
+        edgecolors='gray')  # node border color
 
-# Add legend
+# Legend for genders
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
 female_patch = mpatches.Patch(color='lightblue', label='Female')
 ax_net.legend(handles=[male_patch, female_patch], loc='best')
