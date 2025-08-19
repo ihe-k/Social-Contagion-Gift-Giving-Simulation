@@ -4,6 +4,8 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
 
 # --- Sample Data Setup (adjust based on actual simulation logic) ---
 # Create a random graph with 30 nodes and 20% chance of edge creation
@@ -58,8 +60,17 @@ contagion_steps = [
 # --- Streamlit Layout: Left = Graph | Right = Leaderboard ---
 left_col, right_col = st.columns([2, 1])  # Wider left for graph
 
-# --- LEFT COLUMN: Network Graph ---
+# --- LEFT COLUMN: Contagion Step Slider ---
 with left_col:
+    # Slider to control contagion step
+    max_step = len(contagion_steps)
+    step = st.slider("Select contagion step", 1, max_step, max_step, key="step_slider")
+
+    shared_up_to_step = set()
+    for i in range(step):
+        shared_up_to_step.update(contagion_steps[i])
+
+    # --- Network Graph ---
     fig, ax = plt.subplots(figsize=(8, 6))
     pos = nx.spring_layout(G, seed=42)
 
@@ -74,11 +85,6 @@ with left_col:
     nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
 
     # Highlight nodes that have shared *up to* current step (red outline)
-    shared_up_to_step = set()
-    step = st.slider("Select contagion step", 1, len(contagion_steps), len(contagion_steps), key="step_slider")
-    for i in range(step):
-        shared_up_to_step.update(contagion_steps[i])
-
     nx.draw_networkx_nodes(
         G, pos, nodelist=list(shared_up_to_step),
         node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
