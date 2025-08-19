@@ -49,7 +49,8 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-rss_url = "https://feeds.npr.org/510307/rss.xml"  # Example RSS feed
+# Example feed (NPR Life Kit Health)
+rss_url = "https://feeds.npr.org/510307/rss.xml"
 podcast_items = get_podcasts_from_rss(rss_url)
 
 # --- Step 4: Scrape Health Podcast Metadata from Listen Notes Pages ---
@@ -62,13 +63,14 @@ def scrape_listennotes_show(show_url):
     desc = soup.find('p').text if soup.find('p') else ""
     return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
 
+# Example scraping ListenNotes podcast page
 ln_url = "https://www.listennotes.com/podcasts/health-insights-podcast-wellness-and-BTgZb84DPEH/"
 scraped = scrape_listennotes_show(ln_url)
 if scraped:
     podcast_items.append(scraped)
 
 # --- Combine Content ---
-all_content = podcast_items  # Only podcasts
+all_content = podcast_items  # Only podcasts now
 
 # --- Step 5: Assign User Attributes ---
 user_data = []
@@ -177,3 +179,22 @@ nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black', ax=ax)
 ax.set_title("Health Information Contagion Spread (Static)")
 ax.axis('off')
 st.pyplot(fig)
+
+# --- Step 11: Display Leaderboard ---
+st.subheader("Leaderboard of Users by Triggered Influence")
+
+ideology_triggered = {"pro-health": 0, "anti-health": 0, "neutral": 0}
+gender_triggered = {"Male": 0, "Female": 0}
+
+for node in G.nodes:
+    ideology_triggered[G.nodes[node]['ideology']] += G.nodes[node]['triggered_count']
+    gender_triggered[G.nodes[node]['gender']] += G.nodes[node]['triggered_count']
+
+st.write("### Triggered Influence by Ideology")
+st.write(f"Pro-health triggered: **{ideology_triggered['pro-health']}**")
+st.write(f"Anti-health triggered: **{ideology_triggered['anti-health']}**")
+st.write(f"Neutral triggered: **{ideology_triggered['neutral']}**")
+
+st.write("### Triggered Influence by Gender")
+st.write(f"Male triggered: **{gender_triggered['Male']}**")
+st.write(f"Female triggered: **{gender_triggered['Female']}**")
