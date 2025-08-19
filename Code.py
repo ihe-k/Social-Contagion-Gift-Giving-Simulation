@@ -10,6 +10,7 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import feedparser
+from newsapi import NewsApiClient
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -19,6 +20,9 @@ GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
+
+# --- News API Setup ---
+newsapi = NewsApiClient(api_key='YOUR_NEWSAPI_KEY')
 
 # --- Step 1: Network Setup (Users Only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
@@ -54,56 +58,63 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (removed the apology-line feed)
-rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    # Add more valid podcast RSS URLs here, potentially non-health related as well
+# --- Step 4: Fetch News Articles via News API ---
+def get_news_articles(query, max_items=5):
+    articles = newsapi.get_everything(q=query, language='en', sort_by='relevancy', page_size=max_items)
+    news_items = []
+    for article in articles['articles']:
+        news_items.append({
+            "user": article.get('source', {}).get('name', 'news source'),
+            "content": article.get('title', ''),
+            "platform": "NewsAPI",
+            "url": article.get('url', '')
+        })
+    return news_items
+
+# --- Fetch Data: Podcasts and News Articles ---
+podcast_urls = [
+    "https://feeds.npr.org/510307/rss.xml",  # Example: NPR Life Kit Health
+    # Add more valid podcast RSS URLs here
 ]
 
 podcast_items = []
-for url in rss_urls:
+for url in podcast_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception as e:
         st.warning(f"Failed to fetch or parse feed: {url}")
 
-# --- Step 4: Assign User Attributes ---
-# We create users independently from podcasts.
-# But we use podcasts sentiment distribution to bias user ideology.
+# Fetching some top news articles on health-related topics
+news_items = get_news_articles("health", max_items=5)
+all_content = podcast_items + news_items
 
-# Analyze podcast sentiments to get general content sentiment distribution
-podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
-if not podcast_sentiments:
-    # fallback if no podcast content
-    podcast_sentiments = ['neutral'] * 10
+# --- Step 5: Assign User Attributes ---
+# We create users independently from podcasts and news articles.
+# But we use content sentiment to bias user ideology.
+
+# Analyze podcast and news sentiments to get general content sentiment distribution
+content_sentiments = [analyze_sentiment(item['content']) for item in all_content]
+if not content_sentiments:
+    # fallback if no content
+    content_sentiments = ['neutral'] * 10
 
 # Count sentiment distribution to bias user ideologies
 counts = {
-    'pro-health': podcast_sentiments.count('pro-health'),
-    'anti-health': podcast_sentiments.count('anti-health'),
-    'neutral': podcast_sentiments.count('neutral')
+    'pro-health': content_sentiments.count('pro-health'),
+    'anti-health': content_sentiments.count('anti-health'),
+    'neutral': content_sentiments.count('neutral')
 }
 total = sum(counts.values())
+weights = {k: v/total for k, v in counts.items()}
 
-# **Increase pro-health representation by adjusting weights**
-weights = {
-    'pro-health': max(0.4, counts.get('pro-health', 0) / total),  # Increase pro-health representation
-    'anti-health': counts.get('anti-health', 0) / total,
-    'neutral': counts.get('neutral', 0) / total
-}
-
-# Adjust total weights to ensure they sum to 1
-total_weight = sum(weights.values())
-weights = {key: value / total_weight for key, value in weights.items()}
-
-# Assign each user a sentiment/ideology randomly but weighted by podcast content sentiment distribution
+# Assign each user a sentiment/ideology randomly but weighted by content sentiment distribution
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
-    # Assign ideology based on adjusted sentiment distribution weights
+    # Assign ideology based on content sentiment distribution weights
     G.nodes[node]['ideology'] = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights['pro-health'], weights['anti-health'], weights['neutral']],
+        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
@@ -112,7 +123,7 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Step 5: Features & Labels ---
+# --- Step 6: Features & Labels ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -147,14 +158,14 @@ X_train, X_test, y_train, y_test = train_test_split(
     user_features, user_labels, test_size=0.2, random_state=42
 )
 
-# --- Step 6: Model Training ---
+# --- Step 7: Model Training ---
 param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
-# --- Step 7: Evaluation ---
+# --- Step 8: Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2%}")
 st.text(classification_report(y_test, y_pred))
@@ -162,7 +173,7 @@ fig_cm, ax_cm = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
 st.pyplot(fig_cm)
 
-# --- Step 8: Contagion Simulation ---
+# --- Step 9: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 for node in seed_nodes:
@@ -192,7 +203,7 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Visualization ---
+# --- Step 10: Visualization ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
 nx.draw(G, pos,
