@@ -1,13 +1,15 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
-from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 import feedparser
+from textblob import TextBlob
+import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -18,7 +20,7 @@ IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
 
-# --- Step 1: Network Setup (Users Only) ---
+# --- Step 1: Network Setup (Users only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
@@ -52,12 +54,14 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example RSS feeds (no apology-line)
+# Example feeds (including non-health podcasts)
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health (health)
-    "https://feeds.simplecast.com/54nAGcIl", # The Daily (news)
-    "https://rss.art19.com/the-daily",       # The Daily (news)
-    "https://feeds.simplecast.com/tOjNXec5"  # Stuff You Should Know (general knowledge)
+    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
+    "https://rss.art19.com/the-daily",      # The Daily (News)
+    "https://rss.art19.com/planet-money",   # Planet Money (Economics)
+    "https://rss.art19.com/startup",        # StartUp Podcast (Business)
+    "https://rss.art19.com/serial",         # Serial (True Crime)
+    # Removed problematic feeds like apology-line
 ]
 
 podcast_items = []
@@ -65,6 +69,7 @@ for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception:
+        # silently skip failed feeds to avoid clutter
         pass
 
 # --- Step 4: Assign User Attributes ---
@@ -78,14 +83,14 @@ counts = {
     'neutral': podcast_sentiments.count('neutral')
 }
 total = sum(counts.values())
-weights = {k: v/total for k, v in counts.items()}
+weights = {k: v / total for k, v in counts.items()}
 
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
     G.nodes[node]['ideology'] = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health',0.33), weights.get('anti-health',0.33), weights.get('neutral',0.33)],
+        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
@@ -100,7 +105,7 @@ def calc_sentiment_trends():
     for node in G.nodes:
         neighbors = list(G.neighbors(node))
         if neighbors:
-            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment']=='pro-health')
+            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
             trends.append(pro_health_count / len(neighbors))
         else:
             trends.append(0)
@@ -140,9 +145,6 @@ y_pred = best_model.predict(X_test)
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2%}")
 st.text(classification_report(y_test, y_pred))
-fig_cm, ax_cm = plt.subplots()
-ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
-st.pyplot(fig_cm)
 
 # --- Step 8: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
@@ -174,14 +176,53 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Visualization ---
-st.subheader("User Network Contagion Simulation")
-fig_net, ax_net = plt.subplots(figsize=(8, 6))
-nx.draw(G, pos,
-        with_labels=True,
-        node_size=[300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes],
-        node_color=['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes],
-        edge_color='gray', linewidths=1.5,
-        font_size=8,
-        ax=ax_net)
-st.pyplot(fig_net)
+# --- Step 9: Visualization with enhanced clarity ---
+st.subheader("User Network Contagion Simulation with Clusters")
+
+betweenness = nx.betweenness_centrality(G)
+
+fig, ax = plt.subplots(figsize=(10, 8))
+
+# Node colors by gender
+node_colors = ['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes]
+
+# Node shapes by gender: circle for Male, square for Female
+node_shapes = {'Male': 'o', 'Female': 's'}
+
+# Edge colors by gender similarity
+edge_colors = []
+for u, v in G.edges:
+    if G.nodes[u]['gender'] == 'Male' and G.nodes[v]['gender'] == 'Male':
+        edge_colors.append('lightgreen')
+    elif G.nodes[u]['gender'] == 'Female' and G.nodes[v]['gender'] == 'Female':
+        edge_colors.append('lightblue')
+    else:
+        edge_colors.append('gray')
+
+# Draw edges
+nx.draw_networkx_edges(G, pos, ax=ax, edge_color=edge_colors, alpha=0.5)
+
+# Draw nodes by gender with sizes and border widths (betweenness)
+for gender in ['Male', 'Female']:
+    nodelist = [n for n in G.nodes if G.nodes[n]['gender'] == gender]
+    sizes = [300 + 150 * G.nodes[n]['triggered_count'] for n in nodelist]
+    widths = [3 + 10 * betweenness[n] for n in nodelist]
+    nx.draw_networkx_nodes(
+        G, pos,
+        nodelist=nodelist,
+        node_color=['lightgreen' if gender == 'Male' else 'lightblue'] * len(nodelist),
+        node_shape=node_shapes[gender],
+        node_size=sizes,
+        edgecolors='black',
+        linewidths=widths,
+        ax=ax,
+        alpha=0.9
+    )
+
+# Add labels (user ID and ideology abbreviation)
+labels = {n: f"{n}\n{G.nodes[n]['ideology'][:3]}" for n in G.nodes}
+nx.draw_networkx_labels(G, pos, labels, font_size=8, ax=ax)
+
+# Legend
+male_patch = mpatches.Patch(color='lightgreen', label='Male')
+female_patch
