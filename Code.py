@@ -1,6 +1,7 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
@@ -39,82 +40,61 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Fetch News Articles via RSS ---
-def get_news_rss(feed_url, max_items=5):
-    feed = feedparser.parse(feed_url)
-    articles = []
-    for entry in feed.entries[:max_items]:
-        articles.append({
-            "title": entry.title,
-            "link": entry.link,
-            "published": entry.get("published", "N/A"),
-            "summary": entry.get("summary", "No summary available")
-        })
-    return articles
-
-# --- Step 4: Fetch Podcasts via RSS ---
+# --- Step 3: Fetch Podcasts via RSS (Content Source Only) ---
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
     for entry in feed.entries[:max_items]:
         podcasts.append({
-            "title": entry.title,
-            "link": entry.link,
-            "published": entry.get("published", "N/A"),
-            "summary": entry.get("summary", "No summary available")
+            "user": entry.get('author', 'podcaster'),
+            "content": entry.title,
+            "platform": "RSS",
+            "url": entry.link
         })
     return podcasts
 
-# --- Step 5: Fetch Content ---
-rss_urls_news = [
-    "https://rss.nytimes.com/services/xml/rss/nyt/Health.xml",  # New York Times Health News
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Health News
-    "https://feeds.bbci.co.uk/news/health/rss.xml"  # BBC Health News
+# Example feeds (You can add/remove valid RSS feeds here)
+rss_urls = [
+    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
+    "https://rss.art19.com/the-daily",      # The Daily - news podcast example
+    "https://feeds.simplecast.com/54nAGcIl", # Reply All - non-health podcast
 ]
 
-rss_urls_podcasts = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health Podcast
-    "https://rss.art19.com/the-daily",  # The Daily Podcast
-    "https://feeds.simplecast.com/8sYogDlc"  # Example Podcast Feed
-]
-
-# Fetch news articles
-news_articles = []
-for url in rss_urls_news:
-    try:
-        news_articles.extend(get_news_rss(url))
-    except Exception as e:
-        st.warning(f"Failed to fetch or parse feed: {url}, error: {e}")
-
-# Fetch podcasts
 podcast_items = []
-for url in rss_urls_podcasts:
+for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception as e:
-        st.warning(f"Failed to fetch or parse feed: {url}, error: {e}")
+        st.warning(f"Failed to fetch or parse feed: {url}")
 
-# --- Step 6: Combine Content (News + Podcasts) ---
-combined_content = news_articles + podcast_items
+# --- Step 4: Assign User Attributes ---
+podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
+if not podcast_sentiments:
+    podcast_sentiments = ['neutral'] * 10
 
-# --- Step 7: Assign Sentiments to Users Based on Content ---
-user_data = []
-for content in combined_content:
-    sentiment = analyze_sentiment(content["summary"])
-    user_data.append({
-        'content': content["title"],
-        'sentiment': sentiment,
-        'url': content["link"]
-    })
+counts = {
+    'pro-health': podcast_sentiments.count('pro-health'),
+    'anti-health': podcast_sentiments.count('anti-health'),
+    'neutral': podcast_sentiments.count('neutral')
+}
+total = sum(counts.values())
+weights = {k: v / total for k, v in counts.items()}
 
-# Assign the sentiment/ideology to users in the network
-for i, u in enumerate(user_data):
-    if i >= NUM_USERS:
-        break
-    G.nodes[i]['sentiment'] = u['sentiment']
-    G.nodes[i]['ideology'] = u['sentiment']
+for node in G.nodes:
+    G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
+    G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
+    G.nodes[node]['ideology'] = random.choices(
+        population=['pro-health', 'anti-health', 'neutral'],
+        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
+        k=1
+    )[0]
+    G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
+    G.nodes[node]['shared'] = False
+    G.nodes[node]['score'] = 0
+    G.nodes[node]['triggered_count'] = 0
+    G.nodes[node]['gifted'] = False
 
-# --- Step 8: Features & Labels ---
+# --- Step 5: Features & Labels ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -145,25 +125,26 @@ for node in G.nodes:
     user_features.append(features)
     user_labels.append(u['ideology'])
 
-X_train, X_test, y_train, y_test = train_test_split(user_features, user_labels, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    user_features, user_labels, test_size=0.2, random_state=42
+)
 
-# --- Step 9: Model Training ---
+# --- Step 6: Model Training ---
 param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
-# --- Step 10: Model Evaluation ---
+# --- Step 7: Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2%}")
 st.text(classification_report(y_test, y_pred))
-
 fig_cm, ax_cm = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
 st.pyplot(fig_cm)
 
-# --- Step 11: Contagion Simulation ---
+# --- Step 8: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 for node in seed_nodes:
@@ -193,14 +174,91 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 12: Visualization ---
+# --- Step 9: Visualization with improved clarity ---
 st.subheader("User Network Contagion Simulation")
-fig_net, ax_net = plt.subplots(figsize=(8, 6))
-nx.draw(G, pos,
-        with_labels=True,
-        node_size=[300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes],
-        node_color=['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes],
-        edge_color='gray', linewidths=1.5,
-        font_size=8,
-        ax=ax_net)
+
+fig_net, ax_net = plt.subplots(figsize=(10, 8))
+pos = nx.spring_layout(G, seed=42)  # fixed layout for consistency
+
+# Prepare node shapes/colors by gender
+male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
+female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
+
+# Node sizes scaled by triggered_count
+male_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in male_nodes]
+female_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in female_nodes]
+
+# Draw nodes by gender with different shapes
+nx.draw_networkx_nodes(G, pos,
+                       nodelist=male_nodes,
+                       node_color='lightgreen',
+                       node_size=male_sizes,
+                       node_shape='o',
+                       ax=ax_net,
+                       label='Male')
+
+nx.draw_networkx_nodes(G, pos,
+                       nodelist=female_nodes,
+                       node_color='lightblue',
+                       node_size=female_sizes,
+                       node_shape='s',
+                       ax=ax_net,
+                       label='Female')
+
+# Draw edges with colors based on gender homophily
+edge_colors = []
+for u, v in G.edges():
+    if G.nodes[u]['gender'] == 'Male' and G.nodes[v]['gender'] == 'Male':
+        edge_colors.append('lightgreen')
+    elif G.nodes[u]['gender'] == 'Female' and G.nodes[v]['gender'] == 'Female':
+        edge_colors.append('lightblue')
+    else:
+        edge_colors.append('gray')
+
+nx.draw_networkx_edges(G, pos, edge_color=edge_colors, ax=ax_net)
+
+# Draw labels
+nx.draw_networkx_labels(G, pos, font_size=8, ax=ax_net)
+
+# Create legend manually
+legend_elements = [
+    Line2D([0], [0], marker='o', color='w', label='Male',
+           markerfacecolor='lightgreen', markersize=10),
+    Line2D([0], [0], marker='s', color='w', label='Female',
+           markerfacecolor='lightblue', markersize=10),
+    Line2D([0], [0], color='lightgreen', lw=2, label='Male-Male Share'),
+    Line2D([0], [0], color='lightblue', lw=2, label='Female-Female Share'),
+    Line2D([0], [0], color='gray', lw=2, label='Male-Female Share'),
+]
+
+ax_net.legend(handles=legend_elements, loc='best')
+
 st.pyplot(fig_net)
+
+# --- Step 10: Explanatory Notes ---
+st.markdown("""
+### Interpretation of Network Contagion Results
+
+- **Nodes represent users**, colored by gender:
+    - 🟢 Green circles = Male users
+    - 🔵 Blue squares = Female users
+
+- **Node size reflects influence**: Larger nodes indicate users who shared content more often or influenced others more.
+
+- **Edges represent sharing relationships**:
+    - Light green edges connect male-to-male shares
+    - Light blue edges connect female-to-female shares
+    - Grey edges connect male-to-female shares
+
+- **Gender homophily effect**: Users tend to share more within their own gender groups.
+
+- **Ideology influence**: Users with similar health-related ideologies (pro-health, anti-health, neutral) are more likely to share content with each other.
+
+- **Users with chronic diseases** are more likely to spread health information, acting as key amplifiers.
+
+- **Trigger count** tracks how many times a user has been influenced or shared content, helping identify top influencers.
+
+- This network simulation helps visualize how health-related information (and misinformation) spreads through social connections influenced by gender, ideology, and health status.
+
+Use these insights to target interventions, optimize messaging, and understand community dynamics in health communication.
+""")
