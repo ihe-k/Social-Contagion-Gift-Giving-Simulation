@@ -3,27 +3,29 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
+import praw
 
-# --- Scraping YouTube using BeautifulSoup ---
-def scrape_youtube(query="health"):
-    base_url = f"https://www.youtube.com/results?search_query={query}"
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(base_url, headers=headers)
+# --- Reddit Scraping using PRAW ---
+def scrape_reddit(query="health"):
+    # Reddit API credentials (replace with your own)
+    reddit = praw.Reddit(client_id="YOUR_CLIENT_ID", 
+                         client_secret="YOUR_CLIENT_SECRET", 
+                         user_agent="YOUR_USER_AGENT")
     
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, "html.parser")
-        videos = []
-        
-        for video in soup.find_all("a", {"class": "yt-uix-tile-link"}):
-            title = video.get("title")
-            url = "https://www.youtube.com" + video.get("href")
-            videos.append({"title": title, "url": url})
-        
-        return videos
-    else:
-        return []
+    # Search for posts related to health in the health subreddit
+    subreddit = reddit.subreddit("health")
+    posts = subreddit.search(query, limit=5)  # Limiting to top 5 posts
+    
+    health_posts = []
+    for post in posts:
+        health_posts.append({
+            'title': post.title,
+            'url': post.url,
+            'score': post.score,
+            'comments': post.num_comments
+        })
+    
+    return health_posts
 
 # --- Model Evaluation Section (Dummy data for now) ---
 y_test = [1, 0, 1, 1, 0]  # Actual values (dummy for illustration)
@@ -42,19 +44,35 @@ st.write(f"Classification Report:\n{classification_rep}")
 # Display Confusion Matrix
 st.subheader("Confusion Matrix")
 fig, ax = plt.subplots(figsize=(6, 4))
-sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
+# Using matplotlib for the confusion matrix visualization
+plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+plt.title("Confusion Matrix")
+plt.colorbar()
+tick_marks = np.arange(len(['0', '1']))
+plt.xticks(tick_marks, ['0', '1'])
+plt.yticks(tick_marks, ['0', '1'])
+
+thresh = cm.max() / 2.
+for i in range(len(cm)):
+    for j in range(len(cm[i])):
+        plt.text(j, i, format(cm[i][j], 'd'),
+                 ha="center", va="center",
+                 color="white" if cm[i][j] > thresh else "black")
+
+plt.ylabel('True label')
+plt.xlabel('Predicted label')
 st.pyplot(fig)
 
-# --- Scrape YouTube for Health Videos ---
-st.subheader("Health Information from YouTube")
-videos = scrape_youtube(query="health")  # Search query for health-related videos
+# --- Scrape Reddit for Health Posts ---
+st.subheader("Health Information from Reddit")
+posts = scrape_reddit(query="health")  # Search query for health-related posts
 
-if videos:
-    st.write("Found the following health videos:")
-    for video in videos[:5]:  # Show top 5 videos
-        st.markdown(f"[{video['title']}]({video['url']})")
+if posts:
+    st.write("Found the following health-related posts:")
+    for post in posts:
+        st.markdown(f"**{post['title']}**: [Link]({post['url']}) | Score: {post['score']} | Comments: {post['comments']}")
 else:
-    st.write("No videos found. Check the search query or page structure.")
+    st.write("No posts found. Try changing the query or check the subreddit.")
 
 # --- Contagion Simulation ---
 # Example Network (You can modify this part based on your real data)
