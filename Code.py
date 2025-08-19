@@ -4,14 +4,11 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from textblob import TextBlob
 import streamlit as st
-from youtubesearchpython import VideosSearch
 from TikTokApi import TikTokApi
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
-from sklearn.preprocessing import StandardScaler
 import numpy as np
-import httpx
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -20,7 +17,6 @@ SHARE_PROB = 0.3  # base probability of sharing health information
 GIFT_BONUS = 10  # score for triggering another user's share
 IDEOLOGY_CROSS_BONUS = 0.2  # bonus for cross-ideology sharing
 CHRONIC_PROPENSITY = 0.6  # probability of sharing health info for users with chronic disease
-GENDER_PROPENSITY = {"Male": 0.3, "Female": 0.5}  # Gender-specific sharing propensity
 GENDER_HOMOPHILY_BONUS = 0.2  # Homophily bonus for same-gender sharing
 
 # --- Step 1: Create a social network ---
@@ -36,12 +32,6 @@ nx.set_node_attributes(G, '', 'sentiment')  # Sentiment (pro-health, anti-health
 
 # --- Step 2: Sentiment Analysis and Ideological Mapping ---
 def analyze_sentiment(text):
-    """
-    Analyze sentiment of text and classify as pro-health, anti-health, or neutral.
-    Pro-health: Positive sentiment (score > 0.5)
-    Anti-health: Negative sentiment (score < -0.5)
-    Neutral: Sentiment score between -0.5 and 0.5
-    """
     blob = TextBlob(text)
     polarity = blob.sentiment.polarity
     if polarity > 0.5:
@@ -51,50 +41,23 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Scraping Health-Related Content ---
+# --- Step 3: Stubs for content scraping ---
 def get_health_videos_from_youtube(query="health"):
-    try:
-        search = VideosSearch(query, limit=5)  # Limit to top 5 results
-        results = search.result()
-        videos = []
-        for video in results.get('videos', []):
-            video_info = {
-                "user": video['channel']['name'],
-                "content": video['title'],
-                "platform": "YouTube",
-                "url": video['link']
-            }
-            videos.append(video_info)
-        return videos
-    except TypeError as e:
-        # Handle httpx post() unexpected proxies argument error here or others
-        print(f"Could not fetch YouTube data: {e}")
-        return []
-    except Exception as e:
-        print(f"Unexpected error fetching YouTube data: {e}")
-        return []
+    # Stubbed list to avoid issues with external API in Streamlit
+    return [
+        {"user": f"YT_User_{i}", "content": f"Health video content {i}", "platform": "YouTube", "url": ""}
+        for i in range(5)
+    ]
 
 def get_health_videos_from_tiktok(query="health"):
-    try:
-        api = TikTokApi()
-        hashtag = api.hashtag(name=query)
-        trending_videos = hashtag.videos(count=5)
-        videos = []
-        for video in trending_videos:
-            video_info = {
-                "user": video.author.username,
-                "content": video.desc,
-                "platform": "TikTok",
-                "url": f"https://www.tiktok.com/@{video.author.username}/video/{video.id}"
-            }
-            videos.append(video_info)
-        return videos
-    except Exception as e:
-        print(f"Could not fetch TikTok data: {e}")
-        return []
+    # Stubbed list to avoid TikTok API issues
+    return [
+        {"user": f"TT_User_{i}", "content": f"Health TikTok content {i}", "platform": "TikTok", "url": ""}
+        for i in range(5)
+    ]
 
-# Stub Twitter scraping returning empty list for now
 def get_twitter_data(query, limit=5):
+    # Stub: empty list since snscrape was removed
     return []
 
 youtube_videos = get_health_videos_from_youtube()
@@ -103,32 +66,28 @@ twitter_tweets = get_twitter_data("health", limit=5)
 
 all_videos_and_tweets = youtube_videos + tiktok_videos + twitter_tweets
 
-# --- Step 4: Assign Gender, Ideology, and Chronic Disease to Users ---
+# --- Step 4: Assign Gender, Ideology, Chronic Disease ---
 user_data = []
 for content in all_videos_and_tweets:
     user = content['user']
-    platform = content['platform']
     text_content = content['content']
-    
-    # Assign gender randomly
+
     gender = random.choice(['Male', 'Female'])
-    
-    # Assign ideology based on sentiment
     sentiment = analyze_sentiment(text_content)
-    
-    # Assign chronic disease status randomly
     has_chronic_disease = random.choice([True, False])
-    
+
     user_data.append({
         'user': user,
         'gender': gender,
         'sentiment': sentiment,
-        'ideology': sentiment,  # Simplified ideology
+        'ideology': sentiment,
         'has_chronic_disease': has_chronic_disease
     })
 
-# Add users to the network (only up to NUM_USERS)
-for i, user_info in enumerate(user_data[:NUM_USERS]):
+# Add users to network nodes
+for i, user_info in enumerate(user_data):
+    if i >= NUM_USERS:
+        break
     G.nodes[i]['gender'] = user_info['gender']
     G.nodes[i]['sentiment'] = user_info['sentiment']
     G.nodes[i]['ideology'] = user_info['ideology']
@@ -137,7 +96,7 @@ for i, user_info in enumerate(user_data[:NUM_USERS]):
     G.nodes[i]['score'] = 0
     G.nodes[i]['triggered_count'] = 0
 
-# --- Step 5: Feature Engineering - Sentiment Trends Over Time & Network Centrality ---
+# --- Step 5: Feature Engineering ---
 def calculate_sentiment_trends():
     sentiment_trends = []
     for node in G.nodes:
@@ -153,46 +112,40 @@ def calculate_betweenness_centrality():
 sentiment_trends = calculate_sentiment_trends()
 betweenness_centrality = calculate_betweenness_centrality()
 
-# --- Step 6: Prepare Data for Model Training ---
+# --- Step 6: Prepare data for model ---
 user_features = []
 user_labels = []
 
 for node in G.nodes:
     user_info = G.nodes[node]
     user_features.append([
-        1 if user_info['gender'] == 'Female' else 0,  # Gender (1 = Female, 0 = Male)
-        1 if user_info['has_chronic_disease'] else 0,  # Chronic Disease
-        1 if user_info['ideology'] == 'pro-health' else 0,  # Pro-health ideology
-        1 if user_info['ideology'] == 'anti-health' else 0,  # Anti-health ideology
-        1 if user_info['ideology'] == 'neutral' else 0,  # Neutral ideology
-        sentiment_trends[node],  # Sentiment trend
-        betweenness_centrality[node]  # Betweenness centrality
+        1 if user_info['gender'] == 'Female' else 0,
+        1 if user_info['has_chronic_disease'] else 0,
+        1 if user_info['ideology'] == 'pro-health' else 0,
+        1 if user_info['ideology'] == 'anti-health' else 0,
+        1 if user_info['ideology'] == 'neutral' else 0,
+        sentiment_trends[node],
+        betweenness_centrality[node]
     ])
     user_labels.append(user_info['ideology'])
 
-# Train/test split
 X_train, X_test, y_train, y_test = train_test_split(user_features, user_labels, test_size=0.2, random_state=42)
 
-# --- Step 7: Hyperparameter Tuning with GridSearchCV ---
+# --- Step 7: Train model ---
 param_grid = {
-    'n_estimators': [100, 200, 300],
-    'max_depth': [10, 20, 30],
-    'min_samples_split': [2, 5, 10],
+    'n_estimators': [100, 200],
+    'max_depth': [10, 20],
+    'min_samples_split': [2, 5],
 }
 
-grid_search = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=5, n_jobs=-1)
+grid_search = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, n_jobs=-1)
 grid_search.fit(X_train, y_train)
-
-# Best model
 best_model = grid_search.best_estimator_
-
-# Predictions
 y_pred = best_model.predict(X_test)
 
-# --- Step 8: Evaluate Model ---
-accuracy = accuracy_score(y_test, y_pred)
-
+# --- Step 8: Display model evaluation ---
 st.subheader("Model Evaluation")
+accuracy = accuracy_score(y_test, y_pred)
 st.write(f"Model Accuracy: {accuracy:.2%}")
 
 report = classification_report(y_test, y_pred, output_dict=False)
@@ -203,40 +156,20 @@ fig_cm, ax_cm = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
 st.pyplot(fig_cm)
 
-# --- Step 9: Animation of Contagion Spread ---
-fig, ax = plt.subplots(figsize=(10, 7))
+# --- Step 9: Contagion Simulation Setup ---
 pos = nx.spring_layout(G, seed=42)
 
-def animate(i):
-    ax.clear()
-    shared = contagion_steps[i] if i < len(contagion_steps) else contagion_steps[-1]
-
-    node_colors = ['green' if G.nodes[n]['gender'] == 'Male' else 'blue' for n in G.nodes]
-    node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
-
-    male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
-    female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
-
-    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_size=node_sizes, node_color='lightgreen')
-    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_size=node_sizes, node_color='lightblue')
-    nx.draw_networkx_edges(G, pos, alpha=0.5, width=0.5, edge_color='gray')
-
-    labels = {node: G.nodes[node]['ideology'] for node in G.nodes}
-    nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black')
-
-    ax.set_title(f"Step {i + 1}: Contagion Spread Simulation")
-    ax.axis('off')
-
-# --- Step 10: Initialize contagion ---
+# Initialize gifted users
 initial_gifted = random.sample(list(G.nodes), INIT_SHARED)
 for node in initial_gifted:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
 
-contagion_steps = []
-contagion_steps.append(set(initial_gifted))
+st.write(f"Initial gifted users: {initial_gifted}")
 
-# --- Step 11: Contagion spread simulation ---
+contagion_steps = [set(initial_gifted)]
+
+# --- Step 10: Run contagion simulation ---
 def run_contagion_simulation():
     new_shared = set(initial_gifted)
     all_shared = set(initial_gifted)
@@ -256,7 +189,6 @@ def run_contagion_simulation():
                         prob = max(prob, CHRONIC_PROPENSITY)
                     if G.nodes[user]['gender'] == G.nodes[neighbor]['gender']:
                         prob += GENDER_HOMOPHILY_BONUS
-
                     prob = min(max(prob, 0), 1)
 
                     if random.random() < prob:
@@ -264,6 +196,8 @@ def run_contagion_simulation():
                         G.nodes[neighbor]['triggered_count'] += 1
                         next_new_shared.add(neighbor)
                         all_shared.add(neighbor)
+                        st.write(f"User {neighbor} shared info triggered by {user} (prob={prob:.2f})")
+
         if not next_new_shared:
             break
         contagion_steps.append(next_new_shared)
@@ -271,7 +205,40 @@ def run_contagion_simulation():
 
 run_contagion_simulation()
 
-# Streamlit animation display
-st.subheader("Health Information Spread Simulation")
+st.write(f"Number of contagion steps: {len(contagion_steps)}")
+st.write(f"Contagion steps detail: {contagion_steps}")
+
+# --- Step 11: Animation ---
+fig, ax = plt.subplots(figsize=(10, 7))
+
+def animate(i):
+    ax.clear()
+
+    shared = contagion_steps[i] if i < len(contagion_steps) else contagion_steps[-1]
+
+    node_colors = []
+    node_borders = []
+    for n in G.nodes:
+        node_borders.append('red' if n in shared else 'black')
+        node_colors.append('lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue')
+
+    node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
+
+    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes, edgecolors=node_borders, linewidths=2)
+    nx.draw_networkx_edges(G, pos, alpha=0.5, width=0.5, edge_color='gray')
+
+    labels = {node: G.nodes[node]['ideology'] for node in G.nodes}
+    nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black')
+
+    ax.set_title(f"Step {i + 1}: Contagion Spread Simulation")
+    ax.axis('off')
+
 ani = FuncAnimation(fig, animate, frames=len(contagion_steps), interval=1000, repeat=False)
 st.pyplot(fig)
+
+# --- Step 12: Static plot sanity check ---
+fig_static, ax_static = plt.subplots(figsize=(10, 7))
+node_colors_static = ['red' if G.nodes[n]['shared'] else 'gray' for n in G.nodes]
+nx.draw(G, pos, node_color=node_colors_static, with_labels=True, ax=ax_static)
+ax_static.set_title("Static Network: Red = Shared Nodes")
+st.pyplot(fig_static)
