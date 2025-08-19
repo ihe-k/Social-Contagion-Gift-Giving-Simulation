@@ -14,14 +14,10 @@ G = nx.erdos_renyi_graph(30, 0.2)  # Example graph with 30 nodes and 20% chance 
 
 # Add node attributes for gender, score, triggered_count, and shared status
 for node in G.nodes():
-    # Assigning a gender based on even and odd nodes for simplicity
-    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'
-    # Assigning a random score between 1 and 100 to simulate influencer power
-    G.nodes[node]['score'] = np.random.randint(1, 100)
-    # Triggered count is 0 initially
-    G.nodes[node]['triggered_count'] = 0
-    # Shared status is False initially
-    G.nodes[node]['shared'] = False
+    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'  # Assign gender based on even or odd node
+    G.nodes[node]['score'] = np.random.randint(1, 100)  # Assign random score between 1 and 100
+    G.nodes[node]['triggered_count'] = 0  # Initially no one is triggered
+    G.nodes[node]['shared'] = False  # Initially no one shares the information
 
 # --- Streamlit Layout ---
 st.title("Health Information Spread Simulation")
@@ -30,9 +26,6 @@ st.title("Health Information Spread Simulation")
 st.subheader("Model Evaluation")
 
 # --- Create Features for Model Evaluation ---
-# Let's use 'score' as a feature to predict if a user shares info (triggered)
-# We'll treat sharing info (triggered = 1) as a binary classification task
-# Adding more features: score, gender (encoded), and degree centrality
 X = []
 y = []
 
@@ -82,10 +75,9 @@ ax_cm.set_title("Confusion Matrix")
 st.pyplot(fig_cm)
 
 # --- Contagion Simulation ---
-# Assuming you have steps of contagion in 'contagion_steps' as a list of sets of triggered users
-# You can modify this part based on the actual contagion simulation data
+# Example of gradual contagion steps
 contagion_steps = [
-    {20, 18, 27},  # Example first contagion step
+    {20, 18, 27},  # First contagion step
     {0, 3, 10, 12, 25},  # Second step
     {8, 9, 22, 23, 29},  # Third step
     {21, 15},  # Fourth step
@@ -115,7 +107,7 @@ with left_col:
             G.nodes[user]['shared'] = True
 
     # --- Network Graph ---
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(10, 8))
     pos = nx.spring_layout(G, seed=42)
 
     male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
@@ -163,4 +155,3 @@ with left_col:
 
     st.markdown(f"- **Male Users Triggered**: {male_triggered} shares")
     st.markdown(f"- **Female Users Triggered**: {female_triggered} shares")
-
