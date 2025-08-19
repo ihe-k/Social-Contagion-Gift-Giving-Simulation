@@ -7,10 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
 import feedparser
-from newsapi import NewsApiClient
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -20,9 +17,6 @@ GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
-
-# --- News API Setup ---
-newsapi = NewsApiClient(api_key='YOUR_NEWSAPI_KEY')
 
 # --- Step 1: Network Setup (Users Only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
@@ -45,85 +39,82 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Fetch Podcasts via RSS (Content Source Only) ---
+# --- Step 3: Fetch News Articles via RSS ---
+def get_news_rss(feed_url, max_items=5):
+    feed = feedparser.parse(feed_url)
+    articles = []
+    for entry in feed.entries[:max_items]:
+        articles.append({
+            "title": entry.title,
+            "link": entry.link,
+            "published": entry.get("published", "N/A"),
+            "summary": entry.get("summary", "No summary available")
+        })
+    return articles
+
+# --- Step 4: Fetch Podcasts via RSS ---
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
     for entry in feed.entries[:max_items]:
         podcasts.append({
-            "user": entry.get('author', 'podcaster'),
-            "content": entry.title,
-            "platform": "RSS",
-            "url": entry.link
+            "title": entry.title,
+            "link": entry.link,
+            "published": entry.get("published", "N/A"),
+            "summary": entry.get("summary", "No summary available")
         })
     return podcasts
 
-# --- Step 4: Fetch News Articles via News API ---
-def get_news_articles(query, max_items=5):
-    articles = newsapi.get_everything(q=query, language='en', sort_by='relevancy', page_size=max_items)
-    news_items = []
-    for article in articles['articles']:
-        news_items.append({
-            "user": article.get('source', {}).get('name', 'news source'),
-            "content": article.get('title', ''),
-            "platform": "NewsAPI",
-            "url": article.get('url', '')
-        })
-    return news_items
-
-# --- Fetch Data: Podcasts and News Articles ---
-podcast_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # Example: NPR Life Kit Health
-    # Add more valid podcast RSS URLs here
+# --- Step 5: Fetch Content ---
+rss_urls_news = [
+    "https://rss.nytimes.com/services/xml/rss/nyt/Health.xml",  # New York Times Health News
+    "https://feeds.npr.org/510307/rss.xml",  # NPR Health News
+    "https://feeds.bbci.co.uk/news/health/rss.xml"  # BBC Health News
 ]
 
+rss_urls_podcasts = [
+    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health Podcast
+    "https://rss.art19.com/the-daily",  # The Daily Podcast
+    "https://feeds.simplecast.com/8sYogDlc"  # Example Podcast Feed
+]
+
+# Fetch news articles
+news_articles = []
+for url in rss_urls_news:
+    try:
+        news_articles.extend(get_news_rss(url))
+    except Exception as e:
+        st.warning(f"Failed to fetch or parse feed: {url}, error: {e}")
+
+# Fetch podcasts
 podcast_items = []
-for url in podcast_urls:
+for url in rss_urls_podcasts:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception as e:
-        st.warning(f"Failed to fetch or parse feed: {url}")
+        st.warning(f"Failed to fetch or parse feed: {url}, error: {e}")
 
-# Fetching some top news articles on health-related topics
-news_items = get_news_articles("health", max_items=5)
-all_content = podcast_items + news_items
+# --- Step 6: Combine Content (News + Podcasts) ---
+combined_content = news_articles + podcast_items
 
-# --- Step 5: Assign User Attributes ---
-# We create users independently from podcasts and news articles.
-# But we use content sentiment to bias user ideology.
+# --- Step 7: Assign Sentiments to Users Based on Content ---
+user_data = []
+for content in combined_content:
+    sentiment = analyze_sentiment(content["summary"])
+    user_data.append({
+        'content': content["title"],
+        'sentiment': sentiment,
+        'url': content["link"]
+    })
 
-# Analyze podcast and news sentiments to get general content sentiment distribution
-content_sentiments = [analyze_sentiment(item['content']) for item in all_content]
-if not content_sentiments:
-    # fallback if no content
-    content_sentiments = ['neutral'] * 10
+# Assign the sentiment/ideology to users in the network
+for i, u in enumerate(user_data):
+    if i >= NUM_USERS:
+        break
+    G.nodes[i]['sentiment'] = u['sentiment']
+    G.nodes[i]['ideology'] = u['sentiment']
 
-# Count sentiment distribution to bias user ideologies
-counts = {
-    'pro-health': content_sentiments.count('pro-health'),
-    'anti-health': content_sentiments.count('anti-health'),
-    'neutral': content_sentiments.count('neutral')
-}
-total = sum(counts.values())
-weights = {k: v/total for k, v in counts.items()}
-
-# Assign each user a sentiment/ideology randomly but weighted by content sentiment distribution
-for node in G.nodes:
-    G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
-    G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
-    # Assign ideology based on content sentiment distribution weights
-    G.nodes[node]['ideology'] = random.choices(
-        population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
-        k=1
-    )[0]
-    G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
-    G.nodes[node]['shared'] = False
-    G.nodes[node]['score'] = 0
-    G.nodes[node]['triggered_count'] = 0
-    G.nodes[node]['gifted'] = False
-
-# --- Step 6: Features & Labels ---
+# --- Step 8: Features & Labels ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -154,26 +145,25 @@ for node in G.nodes:
     user_features.append(features)
     user_labels.append(u['ideology'])
 
-X_train, X_test, y_train, y_test = train_test_split(
-    user_features, user_labels, test_size=0.2, random_state=42
-)
+X_train, X_test, y_train, y_test = train_test_split(user_features, user_labels, test_size=0.2, random_state=42)
 
-# --- Step 7: Model Training ---
+# --- Step 9: Model Training ---
 param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
-# --- Step 8: Evaluation ---
+# --- Step 10: Model Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2%}")
 st.text(classification_report(y_test, y_pred))
+
 fig_cm, ax_cm = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
 st.pyplot(fig_cm)
 
-# --- Step 9: Contagion Simulation ---
+# --- Step 11: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 for node in seed_nodes:
@@ -203,7 +193,7 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 10: Visualization ---
+# --- Step 12: Visualization ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
 nx.draw(G, pos,
