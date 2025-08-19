@@ -223,6 +223,39 @@ for gender in ['Male', 'Female']:
 labels = {n: f"{n}\n{G.nodes[n]['ideology'][:3]}" for n in G.nodes}
 nx.draw_networkx_labels(G, pos, labels, font_size=8, ax=ax)
 
-# Legend
+# Legend elements
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
-female_patch
+female_patch = mpatches.Patch(color='lightblue', label='Female')
+edge_male = Line2D([0], [0], color='lightgreen', lw=2, label='Male-Male connection')
+edge_female = Line2D([0], [0], color='lightblue', lw=2, label='Female-Female connection')
+edge_mixed = Line2D([0], [0], color='gray', lw=2, label='Male-Female connection')
+
+ax.legend(handles=[male_patch, female_patch, edge_male, edge_female, edge_mixed],
+          loc='upper right', fontsize='small', frameon=True)
+
+st.pyplot(fig)
+
+# --- Explanatory Notes ---
+st.markdown("""
+**Network Diagram Interpretation:**
+
+- **Node Shapes and Colors:**  
+  - Circles (green) represent Male users  
+  - Squares (blue) represent Female users  
+
+- **Node Size:** Reflects the number of other users this node has influenced/shared information with. Larger nodes have triggered more shares.
+
+- **Node Border Width:** Indicates *betweenness centrality* — a measure of how often a user acts as a bridge on the shortest path between other users, highlighting their importance in information flow.
+
+- **Edge Colors:**  
+  - Light green edges connect two males (male homophily)  
+  - Light blue edges connect two females (female homophily)  
+  - Gray edges connect male and female users (cross-gender ties)  
+
+- **Clusters:**  
+  The green cluster in the middle represents a group of male users who are densely connected, likely influencing each other heavily due to gender homophily and shared ideology.
+
+- **Overall:**  
+  This network demonstrates homophily effects (same gender users connect more), ideology influence on contagion dynamics, and the role of key bridge users in spreading health information.
+
+""")
