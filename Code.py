@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import random
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
+import seaborn as sns  # Import seaborn for the confusion matrix heatmap
 
 # --- Sample Data Setup (adjust based on actual simulation logic) ---
 # Assuming you already have G (Graph), y_test, and y_pred defined
@@ -34,6 +35,7 @@ y_pred = np.random.randint(0, 2, 30)  # Dummy predictions
 # Compute confusion matrix
 cm = confusion_matrix(y_test, y_pred)
 
+# Display Model Evaluation
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy:.2%}")
 st.text("Classification Report:")
@@ -109,4 +111,3 @@ with right_col:
     fig, ax = plt.subplots(figsize=(6, 4))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
     st.pyplot(fig)
-
