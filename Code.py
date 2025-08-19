@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 from sklearn.preprocessing import StandardScaler
 import numpy as np
+import httpx
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -56,7 +57,7 @@ def get_health_videos_from_youtube(query="health"):
         search = VideosSearch(query, limit=5)  # Limit to top 5 results
         results = search.result()
         videos = []
-        for video in results['videos']:
+        for video in results.get('videos', []):
             video_info = {
                 "user": video['channel']['name'],
                 "content": video['title'],
@@ -65,31 +66,35 @@ def get_health_videos_from_youtube(query="health"):
             }
             videos.append(video_info)
         return videos
+    except TypeError as e:
+        # Handle httpx post() unexpected proxies argument error here or others
+        print(f"Could not fetch YouTube data: {e}")
+        return []
     except Exception as e:
-        st.warning(f"Could not fetch YouTube data: {e}")
+        print(f"Unexpected error fetching YouTube data: {e}")
         return []
 
 def get_health_videos_from_tiktok(query="health"):
     try:
-        with TikTokApi() as api:
-            trending_videos = api.hashtag(name=query).videos(count=5)
-            videos = []
-            for video in trending_videos:
-                video_info = {
-                    "user": video.author.username,
-                    "content": video.desc,
-                    "platform": "TikTok",
-                    "url": f"https://www.tiktok.com/@{video.author.username}/video/{video.id}"
-                }
-                videos.append(video_info)
-            return videos
+        api = TikTokApi()
+        hashtag = api.hashtag(name=query)
+        trending_videos = hashtag.videos(count=5)
+        videos = []
+        for video in trending_videos:
+            video_info = {
+                "user": video.author.username,
+                "content": video.desc,
+                "platform": "TikTok",
+                "url": f"https://www.tiktok.com/@{video.author.username}/video/{video.id}"
+            }
+            videos.append(video_info)
+        return videos
     except Exception as e:
-        st.warning(f"Could not fetch TikTok data: {e}")
+        print(f"Could not fetch TikTok data: {e}")
         return []
 
-# Removed snscrape twitter import and scraping
+# Stub Twitter scraping returning empty list for now
 def get_twitter_data(query, limit=5):
-    # Stub function returning empty list to avoid errors on Streamlit Cloud
     return []
 
 youtube_videos = get_health_videos_from_youtube()
@@ -111,21 +116,19 @@ for content in all_videos_and_tweets:
     # Assign ideology based on sentiment
     sentiment = analyze_sentiment(text_content)
     
-    # Assign chronic disease status
+    # Assign chronic disease status randomly
     has_chronic_disease = random.choice([True, False])
     
     user_data.append({
         'user': user,
         'gender': gender,
         'sentiment': sentiment,
-        'ideology': sentiment,  # Ideology based on sentiment (simplified)
+        'ideology': sentiment,  # Simplified ideology
         'has_chronic_disease': has_chronic_disease
     })
 
-# Add users to the network
-for i, user_info in enumerate(user_data):
-    if i >= NUM_USERS:
-        break  # Avoid exceeding the graph size
+# Add users to the network (only up to NUM_USERS)
+for i, user_info in enumerate(user_data[:NUM_USERS]):
     G.nodes[i]['gender'] = user_info['gender']
     G.nodes[i]['sentiment'] = user_info['sentiment']
     G.nodes[i]['ideology'] = user_info['ideology']
@@ -159,11 +162,11 @@ for node in G.nodes:
     user_features.append([
         1 if user_info['gender'] == 'Female' else 0,  # Gender (1 = Female, 0 = Male)
         1 if user_info['has_chronic_disease'] else 0,  # Chronic Disease
-        1 if user_info['ideology'] == 'pro-health' else 0,  # Pro-health ideology (1 = pro-health, 0 = not)
-        1 if user_info['ideology'] == 'anti-health' else 0,  # Anti-health ideology (1 = anti-health, 0 = not)
-        1 if user_info['ideology'] == 'neutral' else 0,  # Neutral ideology (1 = neutral, 0 = not)
-        sentiment_trends[node],  # Sentiment trend feature
-        betweenness_centrality[node]  # Betweenness centrality feature
+        1 if user_info['ideology'] == 'pro-health' else 0,  # Pro-health ideology
+        1 if user_info['ideology'] == 'anti-health' else 0,  # Anti-health ideology
+        1 if user_info['ideology'] == 'neutral' else 0,  # Neutral ideology
+        sentiment_trends[node],  # Sentiment trend
+        betweenness_centrality[node]  # Betweenness centrality
     ])
     user_labels.append(user_info['ideology'])
 
@@ -180,25 +183,22 @@ param_grid = {
 grid_search = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=5, n_jobs=-1)
 grid_search.fit(X_train, y_train)
 
-# Best model after GridSearchCV
+# Best model
 best_model = grid_search.best_estimator_
 
-# Make predictions
+# Predictions
 y_pred = best_model.predict(X_test)
 
 # --- Step 8: Evaluate Model ---
 accuracy = accuracy_score(y_test, y_pred)
 
-# Display accuracy, classification report, and confusion matrix in Streamlit
 st.subheader("Model Evaluation")
-st.write(f"Model Accuracy: {accuracy:.2%}")  # e.g., 83.33%
+st.write(f"Model Accuracy: {accuracy:.2%}")
 
-# Classification Report
 report = classification_report(y_test, y_pred, output_dict=False)
 st.text("Classification Report:")
 st.text(report)
 
-# Confusion Matrix
 fig_cm, ax_cm = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
 st.pyplot(fig_cm)
@@ -209,35 +209,25 @@ pos = nx.spring_layout(G, seed=42)
 
 def animate(i):
     ax.clear()
-
-    # Determine shared nodes in current step
     shared = contagion_steps[i] if i < len(contagion_steps) else contagion_steps[-1]
 
-    # Define colors based on gender (Green for Male, Blue for Female)
     node_colors = ['green' if G.nodes[n]['gender'] == 'Male' else 'blue' for n in G.nodes]
-    
-    # Define node size based on the number of shares triggered by each user
     node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
 
-    # Draw nodes with different colors based on gender and sizes based on influence
     male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
     female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
 
-    # Draw nodes for males and females
     nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_size=node_sizes, node_color='lightgreen')
     nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_size=node_sizes, node_color='lightblue')
-
-    # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.5, width=0.5, edge_color='gray')
-    
-    # Draw labels on nodes with their ideology
+
     labels = {node: G.nodes[node]['ideology'] for node in G.nodes}
     nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color='black')
 
     ax.set_title(f"Step {i + 1}: Contagion Spread Simulation")
     ax.axis('off')
 
-# --- Step 10: Initialize the contagion with gifted users ---
+# --- Step 10: Initialize contagion ---
 initial_gifted = random.sample(list(G.nodes), INIT_SHARED)
 for node in initial_gifted:
     G.nodes[node]['shared'] = True
@@ -246,7 +236,7 @@ for node in initial_gifted:
 contagion_steps = []
 contagion_steps.append(set(initial_gifted))
 
-# --- Step 11: Simulation of contagion spread ---
+# --- Step 11: Contagion spread simulation ---
 def run_contagion_simulation():
     new_shared = set(initial_gifted)
     all_shared = set(initial_gifted)
@@ -257,10 +247,9 @@ def run_contagion_simulation():
             neighbors = list(G.neighbors(user))
             for neighbor in neighbors:
                 if not G.nodes[neighbor]['shared']:
-                    # Calculate sharing probability
                     prob = SHARE_PROB
                     if G.nodes[user]['gifted']:
-                        prob += GIFT_BONUS / 100  # convert bonus to probability scale
+                        prob += GIFT_BONUS / 100
                     if G.nodes[user]['ideology'] != G.nodes[neighbor]['ideology']:
                         prob += IDEOLOGY_CROSS_BONUS
                     if G.nodes[neighbor]['has_chronic_disease']:
@@ -268,10 +257,8 @@ def run_contagion_simulation():
                     if G.nodes[user]['gender'] == G.nodes[neighbor]['gender']:
                         prob += GENDER_HOMOPHILY_BONUS
 
-                    # Clip probability between 0 and 1
                     prob = min(max(prob, 0), 1)
 
-                    # Decide if neighbor shares the info
                     if random.random() < prob:
                         G.nodes[neighbor]['shared'] = True
                         G.nodes[neighbor]['triggered_count'] += 1
@@ -284,7 +271,7 @@ def run_contagion_simulation():
 
 run_contagion_simulation()
 
-# Animate with Streamlit
+# Streamlit animation display
 st.subheader("Health Information Spread Simulation")
 ani = FuncAnimation(fig, animate, frames=len(contagion_steps), interval=1000, repeat=False)
 st.pyplot(fig)
