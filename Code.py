@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
 import feedparser
+import pandas as pd
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -52,18 +53,13 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Expanded list: Health + Top Spotify/Apple Podcasts with public RSS feeds
+# Example RSS feeds (mix of health and popular non-health podcasts)
 rss_urls = [
-    # Health focused
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-
-    # Popular podcasts with public feeds
-    "https://feeds.simplecast.com/54nAGcIl",  # The Daily (NYTimes)
-    "https://rss.art19.com/smartless",        # SmartLess
-    "https://hubermanlab.libsyn.com/rss",     # Huberman Lab
-    "https://feeds.megaphone.fm/callherdaddy", # Call Her Daddy
-    "https://rss.art19.com/apology-line",     # The Apology Line (True Crime)
-    "https://feeds.simplecast.com/8sYogDlc",  # The Daily (alternative feed)
+    "https://feeds.npr.org/510307/rss.xml",            # NPR Life Kit Health
+    "https://rss.art19.com/the-daily",                 # The Daily (news)
+    "https://rss.art19.com/smartless",                  # SmartLess (comedy)
+    "https://rss.art19.com/huberman-lab",              # Huberman Lab (science/health)
+    "https://rss.art19.com/the-mel-robbins-podcast",   # Mel Robbins Podcast (self-help)
 ]
 
 podcast_items = []
@@ -74,23 +70,29 @@ for url in rss_urls:
         st.warning(f"Failed to fetch or parse feed: {url}")
 
 # --- Step 4: Assign User Attributes ---
-# Create users independently from podcasts, but use podcast sentiment distribution to bias ideology
+# We create users independently from podcasts.
+# But we use podcasts sentiment distribution to bias user ideology.
 
+# Analyze podcast sentiments to get general content sentiment distribution
 podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
 if not podcast_sentiments:
-    podcast_sentiments = ['neutral'] * 10  # fallback
+    # fallback if no podcast content
+    podcast_sentiments = ['neutral'] * 10
 
+# Count sentiment distribution to bias user ideologies
 counts = {
     'pro-health': podcast_sentiments.count('pro-health'),
     'anti-health': podcast_sentiments.count('anti-health'),
     'neutral': podcast_sentiments.count('neutral')
 }
 total = sum(counts.values())
-weights = {k: v/total for k, v in counts.items()}
+weights = {k: v/total if total > 0 else 1/3 for k, v in counts.items()}
 
+# Assign each user a sentiment/ideology randomly but weighted by podcast content sentiment distribution
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
+    # Assign ideology based on podcast sentiment distribution weights
     G.nodes[node]['ideology'] = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
         weights=[weights.get('pro-health',0.33), weights.get('anti-health',0.33), weights.get('neutral',0.33)],
@@ -145,11 +147,22 @@ best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
 # --- Step 7: Evaluation ---
+class_order = ['anti-health', 'neutral', 'pro-health']
+
 st.subheader("Model Evaluation")
-st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2%}")
-st.text(classification_report(y_test, y_pred))
+
+accuracy = accuracy_score(y_test, y_pred)
+st.write(f"Accuracy: {accuracy:.2%}")
+
+report_dict = classification_report(y_test, y_pred, labels=class_order, output_dict=True)
+report_df = pd.DataFrame(report_dict).transpose()
+st.write(report_df)
+
 fig_cm, ax_cm = plt.subplots()
-ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax_cm)
+ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test,
+                                     display_labels=class_order,
+                                     labels=class_order,
+                                     ax=ax_cm)
 st.pyplot(fig_cm)
 
 # --- Step 8: Contagion Simulation ---
