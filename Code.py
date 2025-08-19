@@ -1,72 +1,50 @@
 import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 import numpy as np
 
-# --- Dummy Data Setup ---
-
-# Create example graph with gender and sharing info
+# Dummy example data: replace with your actual data & logic
 G = nx.erdos_renyi_graph(30, 0.1, seed=42)
-
 for node in G.nodes:
-    # Random gender
     G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'
-    # Random score
-    G.nodes[node]['score'] = np.random.randint(0, 101)
-    # Random triggered count
-    G.nodes[node]['triggered_count'] = np.random.randint(0, 6)
-    # Shared flag false init
-    G.nodes[node]['shared'] = False
+    G.nodes[node]['shared'] = np.random.choice([True, False], p=[0.3, 0.7])
+    G.nodes[node]['score'] = np.random.randint(0, 100)
+    G.nodes[node]['triggered_count'] = np.random.randint(1, 6)
 
-# Simulated contagion steps as list of sets of node ids sharing info at each step
-contagion_steps = [
-    {20, 18, 27},
-    {0, 3, 10, 12, 25},
-    {8, 9, 22, 23, 29},
-    {15, 21},
-    {4, 26, 28}
-]
-
-# Mark nodes that shared info up to last step as shared=True
-shared_nodes = set()
-for step_nodes in contagion_steps:
-    shared_nodes.update(step_nodes)
-for n in G.nodes:
-    G.nodes[n]['shared'] = (n in shared_nodes)
+contagion_steps = [{0, 1, 2}, {3, 4, 5}, {6, 7, 8}, {9, 10}, {11, 12}, {13}]
 
 # Dummy classification results
-y_test = [0, 1, 0, 1, 1, 0, 1]
-y_pred = [0, 1, 0, 0, 1, 0, 1]
-accuracy = accuracy_score(y_test, y_pred)
+y_test = [0, 1, 0, 1, 0, 1]
+y_pred = [0, 1, 0, 0, 1, 1]
 
-# --- Streamlit App ---
+accuracy = np.mean(np.array(y_test) == np.array(y_pred))
 
 st.title("Health Information Spread Simulation")
 
+# Model evaluation section
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy:.2%}")
-
 st.text("Classification Report:")
 st.text(classification_report(y_test, y_pred))
 
-st.subheader("Confusion Matrix")
-fig_cm, ax_cm = plt.subplots()
+# Confusion Matrix with controlled size
 cm = confusion_matrix(y_test, y_pred)
+fig_cm, ax_cm = plt.subplots(figsize=(4, 4))
 disp = ConfusionMatrixDisplay(confusion_matrix=cm)
 disp.plot(ax=ax_cm)
 st.pyplot(fig_cm)
 
-# Slider to select contagion step
+# Slider for contagion step
 max_step = len(contagion_steps)
 step = st.slider("Select contagion step", 1, max_step, max_step)
 
-# Nodes shared up to the current step
+# Collect nodes shared up to selected step
 shared_up_to_step = set()
 for i in range(step):
     shared_up_to_step.update(contagion_steps[i])
 
-# Layout with two columns: Left = graph, Right = leaderboard
+# Layout columns: Left = Network, Right = Leaderboard
 left_col, right_col = st.columns([2, 1])
 
 with left_col:
@@ -79,17 +57,16 @@ with left_col:
     # Draw edges lightly
     nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
 
-    # Draw male/female nodes
+    # Draw male/female nodes with colors
     nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='lightgreen', node_size=300, ax=ax)
     nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='lightblue', node_size=300, ax=ax)
 
-    # Highlight shared nodes up to current step with red outline
+    # Highlight nodes that shared info up to current step (red outline)
     nx.draw_networkx_nodes(
         G, pos, nodelist=list(shared_up_to_step),
         node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
     )
 
-    # Node labels
     nx.draw_networkx_labels(G, pos, labels={n: str(n) for n in G.nodes}, font_size=8, ax=ax)
 
     ax.set_title(f"Network at Contagion Step {step} (Red outline = Shared)")
@@ -107,7 +84,12 @@ with right_col:
             'triggered': G.nodes[node]['triggered_count'],
         })
 
-    top_influencers = sorted(influencer_stats, key=lambda x: x['triggered'], reverse=True)[:5]
+    # Sort by triggered desc, then score desc
+    top_influencers = sorted(
+        influencer_stats,
+        key=lambda x: (x['triggered'], x['score']),
+        reverse=True
+    )[:5]
 
     for rank, inf in enumerate(top_influencers, 1):
         st.markdown(f"- **Rank {rank}**: User {inf['user']} — Score: {inf['score']}, Triggered: {inf['triggered']}")
@@ -120,4 +102,3 @@ with right_col:
 
     st.markdown("---")
     st.markdown("🕹️ Use the slider to explore the contagion spread over time.")
-
