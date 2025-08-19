@@ -43,7 +43,7 @@ for node in G.nodes():
     degree_centrality = nx.degree_centrality(G).get(node, 0)
     
     # Target variable: 1 if user has shared info, else 0 (simulating sharing)
-    triggered = 1 if np.random.rand() > 0.5 else 0  # Randomly assigning triggered value for illustration
+    triggered = 1 if np.random.rand() > 0.3 else 0  # Randomly assigning triggered value for illustration (30% chance)
     
     # Append features and target
     X.append([score, gender, degree_centrality])
@@ -140,8 +140,7 @@ with left_col:
     ax.axis('off')
     st.pyplot(fig)
 
-# --- RIGHT COLUMN: Leaderboard & Stats ---
-with right_col:
+    # --- MOVE INFLUENCER TABLE BELOW NETWORK GRAPH ---
     st.markdown("### 🏆 Top Influencers")
 
     influencer_stats = []
