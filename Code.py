@@ -4,34 +4,23 @@ import random
 import matplotlib.pyplot as plt
 import requests
 from bs4 import BeautifulSoup
-import numpy as np
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
-# --- Scraping YouTube using BeautifulSoup ---
-def scrape_youtube(query="health tips", max_results=5):
-    query = query.replace(' ', '+')
-    url = f"https://www.youtube.com/results?search_query={query}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        return [], "Failed to retrieve YouTube data"
-    
-    soup = BeautifulSoup(response.text, "html.parser")
-    video_links = []
-    for a_tag in soup.find_all('a', href=True):
-        if '/watch?v=' in a_tag['href']:
-            video_url = 'https://www.youtube.com' + a_tag['href']
-            video_links.append(video_url)
-            if len(video_links) >= max_results:
-                break
-    
-    if not video_links:
-        return [], "No videos found. Check the search query or page structure."
-    
-    return video_links, "Success"
+# --- Scraping Static Health Blog Page with BeautifulSoup ---
+def scrape_health_blog(url="https://www.health.com", max_results=5):
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Find all the links to health articles (assuming <a> tags with a class 'article')
+        links = soup.find_all('a', class_='article')
+        
+        health_links = [link.get('href') for link in links[:max_results]]
+        
+        return health_links, "Success"
+    except Exception as e:
+        return [], f"Error: {e}"
 
 # --- Graph and Contagion Setup ---
 G = nx.erdos_renyi_graph(30, 0.1)  # Example graph with 30 nodes
@@ -42,9 +31,13 @@ for node in G.nodes:
     G.nodes[node]['shared'] = False
 
 # --- Contagion Propagation ---
-def propagate_contagion(G, initial_users, probability=0.5, max_steps=10):
+def propagate_contagion(G, initial_users, probability=0.6, max_steps=15):
     contagion_steps = []
     triggered = set(initial_users)
+    
+    # Mark initial users as triggered
+    for user in initial_users:
+        G.nodes[user]['triggered_count'] += 1
     
     for step in range(max_steps):
         new_triggered = set()
@@ -58,12 +51,14 @@ def propagate_contagion(G, initial_users, probability=0.5, max_steps=10):
             break
         
         triggered.update(new_triggered)
+        
+        # Increment the triggered count for newly triggered users
+        for user in new_triggered:
+            G.nodes[user]['triggered_count'] += 1
+        
         contagion_steps.append(new_triggered)
     
     return contagion_steps
-
-initial_users = [1, 2, 3]  # Start with a few users
-contagion_steps = propagate_contagion(G, initial_users, probability=0.6, max_steps=15)
 
 # --- Streamlit UI ---
 st.title("Health Information Spread Simulation")
@@ -82,12 +77,12 @@ fig, ax = plt.subplots(figsize=(6, 4))
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
 st.pyplot(fig)
 
-# Display the video results from YouTube scraping
-videos, message = scrape_youtube(query="health tips", max_results=5)
-if videos:
-    st.write("Found videos:")
-    for video in videos:
-        st.markdown(f"[Watch video]({video})")
+# Display the video results from health blog scraping
+health_links, message = scrape_health_blog(url="https://www.health.com", max_results=5)
+if health_links:
+    st.write("Found Health Articles:")
+    for link in health_links:
+        st.markdown(f"[Read article]({link})")
 else:
     st.error(message)
 
@@ -123,6 +118,5 @@ for rank, inf in enumerate(top_influencers, 1):
 male_triggered = sum(1 for n in contagion_steps[-1] if G.nodes[n]['gender'] == 'Male')
 female_triggered = sum(1 for n in contagion_steps[-1] if G.nodes[n]['gender'] == 'Female')
 
-st.markdown(f"- **Male Users Triggered**: {male_triggered} shares")
-st.markdown(f"- **Female Users Triggered**: {female_triggered} shares")
-
+st.write(f"Male Users Triggered: {male_triggered} shares")
+st.write(f"Female Users Triggered: {female_triggered} shares")
