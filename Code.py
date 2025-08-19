@@ -7,18 +7,25 @@ from bs4 import BeautifulSoup
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
-# --- Scraping Static Health Blog Page with BeautifulSoup ---
-def scrape_health_blog(url="https://www.health.com", max_results=5):
+# --- Function to Search Health Articles from a Health Site ---
+def search_health_articles(query="health tips", max_results=5):
     try:
-        response = requests.get(url)
+        # Construct the search URL for the Healthline search results page
+        search_url = f"https://www.healthline.com/search?q={query.replace(' ', '+')}"
+        
+        # Send a GET request to fetch the page content
+        response = requests.get(search_url)
+        
+        # Parse the page content using BeautifulSoup
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Find all the links to health articles (assuming <a> tags with a class 'article')
-        links = soup.find_all('a', class_='article')
+        # Extract article links from the search result page
+        articles = soup.find_all('a', class_='css-1mjb5r1')  # Healthline articles have this class for links
         
-        health_links = [link.get('href') for link in links[:max_results]]
+        # Get a list of article URLs (up to max_results)
+        article_links = [article.get('href') for article in articles[:max_results]]
         
-        return health_links, "Success"
+        return article_links, "Success"
     except Exception as e:
         return [], f"Error: {e}"
 
@@ -77,14 +84,18 @@ fig, ax = plt.subplots(figsize=(6, 4))
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
 st.pyplot(fig)
 
-# Display the video results from health blog scraping
-health_links, message = scrape_health_blog(url="https://www.health.com", max_results=5)
+# Display the health articles
+health_links, message = search_health_articles(query="health tips", max_results=5)
 if health_links:
     st.write("Found Health Articles:")
     for link in health_links:
         st.markdown(f"[Read article]({link})")
 else:
     st.error(message)
+
+# Simulate the contagion (for example, starting from node 0 and 1)
+initial_users = [0, 1]  # Example initial triggered users
+contagion_steps = propagate_contagion(G, initial_users, probability=0.6, max_steps=15)
 
 # Display the contagion graph and leaderboard
 left_col, right_col = st.columns([2, 1])
