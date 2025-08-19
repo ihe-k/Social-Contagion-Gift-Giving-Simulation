@@ -1,125 +1,101 @@
-import networkx as nx
-import numpy as np
 import streamlit as st
+import networkx as nx
 import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import confusion_matrix, classification_report
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-
-# --- Sample Data Setup (adjust based on actual simulation logic) ---
-# Create a random graph with 30 nodes and 20% chance of edge creation
-G = nx.erdos_renyi_graph(30, 0.2)  # Example graph with 30 nodes and 20% chance of edge creation
-
-# Add node attributes for gender, score, triggered_count, and shared status
-for node in G.nodes():
-    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'  # Assign gender based on even or odd node
-    G.nodes[node]['score'] = np.random.randint(1, 100)  # Assign random score between 1 and 100
-    G.nodes[node]['triggered_count'] = 0  # Initially no one is triggered
-    G.nodes[node]['shared'] = False  # Initially no one shares the information
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from bs4 import BeautifulSoup
+import time
+import pandas as pd
 
 # --- Streamlit Layout ---
 st.title("Health Information Spread Simulation")
-
-# Model evaluation using dummy values
 st.subheader("Model Evaluation")
 
-# --- Create Features for Model Evaluation ---
-X = []
-y = []
+# Sample data setup
+# Example G (Graph) initialization
+G = nx.erdos_renyi_graph(30, 0.1)  # Random graph for demonstration
+for node in G.nodes:
+    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'  # Random gender
+    G.nodes[node]['score'] = 0  # Dummy score
+    G.nodes[node]['triggered_count'] = 0  # Placeholder trigger count
+    G.nodes[node]['shared'] = False  # Shared info status
 
-for node in G.nodes():
-    # Feature vector (score, gender, degree centrality)
-    score = G.nodes[node]['score']
-    gender = 1 if G.nodes[node]['gender'] == 'Male' else 0  # Male=1, Female=0
-    degree_centrality = nx.degree_centrality(G).get(node, 0)
+# --- Scrape YouTube Data ---
+def get_youtube_triggers(search_query="health tips"):
+    # Setup Selenium WebDriver
+    options = Options()
+    options.headless = True  # Run in headless mode (no browser UI)
+    driver = webdriver.Chrome(executable_path='/path/to/chromedriver', options=options)
+    driver.get(f"https://www.youtube.com/results?search_query={search_query}")
     
-    # Simulate more realistic triggering based on probability (higher score, higher chance of triggering)
-    triggered = 1 if np.random.rand() < (score / 100) else 0  # Probability based on score
+    time.sleep(2)  # Wait for page to load
     
-    # Append features and target
-    X.append([score, gender, degree_centrality])
-    y.append(triggered)
+    # Scroll the page to load more results (simulate user scrolling)
+    for _ in range(3):
+        driver.execute_script("window.scrollBy(0, 1000);")
+        time.sleep(2)
+    
+    # Get page source
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    driver.quit()
+    
+    # Extract video information (titles, views, etc.)
+    video_data = []
+    for video in soup.find_all('ytd-video-renderer', class_='style-scope ytd-item-section-renderer'):
+        title = video.find('a', {'id': 'video-title'}).text
+        views = video.find('span', {'class': 'style-scope ytd-video-meta-block'}).text
+        
+        # Extract number of views
+        views = ''.join(filter(str.isdigit, views))  # Remove non-numeric characters
+        video_data.append({'title': title, 'views': int(views)})
+    
+    # Return the video data
+    return video_data
 
-# Convert to numpy arrays for model fitting
-X = np.array(X)
-y = np.array(y)
+# Get YouTube data and simulate triggered users based on views
+youtube_data = get_youtube_triggers()
 
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+# Add triggered count based on view count
+for video in youtube_data:
+    trigger_count = video['views'] // 100000  # Example: Every 100K views = 1 trigger
+    # Assign a random user for each video and increase their triggered count
+    for i in range(trigger_count):
+        user = i % len(G.nodes)  # Assign users cyclically for simplicity
+        G.nodes[user]['triggered_count'] += 1
 
-# --- Scaling the features for better performance
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+# --- Contagion Step Simulation ---
+contagion_steps = []
+initial_gifted_users = [0, 1, 2]  # Example starting users
 
-# Fit a Random Forest model
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train_scaled, y_train)
+# Simulate contagion spread for X steps
+for step in range(6):  # Assuming 6 steps
+    new_sharers = set()
+    for user in initial_gifted_users:
+        if G.nodes[user]['triggered_count'] > 0:
+            # Simulate sharing the info with others
+            neighbors = list(G.neighbors(user))
+            for neighbor in neighbors:
+                if G.nodes[neighbor]['triggered_count'] == 0:  # Only share if not triggered
+                    new_sharers.add(neighbor)
+    
+    # Update nodes with new share information
+    for user in new_sharers:
+        G.nodes[user]['triggered_count'] += 1
+    
+    contagion_steps.append(new_sharers)
+    initial_gifted_users = list(new_sharers)
 
-# Make predictions
-y_pred = model.predict(X_test_scaled)
+# --- Network Graph ---
+left_col, right_col = st.columns([2, 1])
 
-# --- Model Evaluation ---
-accuracy = (y_test == y_pred).mean()  # Dummy accuracy calculation for illustration
-st.write(f"Accuracy: {accuracy:.2%}")
-st.text("Classification Report:")
-st.text(classification_report(y_test, y_pred))
-
-# Confusion matrix plot
-cm = confusion_matrix(y_test, y_pred)
-fig_cm, ax_cm = plt.subplots(figsize=(4, 3))  # Adjust size of confusion matrix
-sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax_cm)
-ax_cm.set_title("Confusion Matrix")
-st.pyplot(fig_cm)
-
-# --- Contagion Simulation ---
-# Example of gradual contagion steps
-contagion_steps = [
-    {20, 18, 27},  # First contagion step
-    {0, 3, 10, 12, 25},  # Second step
-    {8, 9, 22, 23, 29},  # Third step
-    {21, 15},  # Fourth step
-    {4, 28},  # Fifth step
-    {26},  # Sixth step
-]
-
-# --- Streamlit Layout: Left = Graph | Right = Leaderboard ---
-left_col, right_col = st.columns([2, 1])  # Wider left for graph
-
-# --- LEFT COLUMN: Contagion Step Slider ---
 with left_col:
-    # Slider to control contagion step
-    max_step = len(contagion_steps)
-    step = st.slider("Select contagion step", 1, max_step, max_step, key="step_slider")
-
-    # Track which users are triggered up to the current step
-    shared_up_to_step = set()
-    for i in range(step):
-        shared_up_to_step.update(contagion_steps[i])
-
-    # --- Update Triggered Count for Each Contagion Step ---
-    for user in shared_up_to_step:
-        # Update triggered count and mark as shared
-        if not G.nodes[user]['shared']:  # Only trigger once
-            G.nodes[user]['triggered_count'] += 1
-            G.nodes[user]['shared'] = True
-
-            # Propagate contagion to neighbors
-            for neighbor in G.neighbors(user):
-                if not G.nodes[neighbor]['shared']:  # If neighbor has not been triggered
-                    # Trigger the neighbor with some probability (higher probability to trigger)
-                    if np.random.rand() < 0.7:  # Increased probability to trigger neighbor
-                        G.nodes[neighbor]['triggered_count'] += 1
-                        G.nodes[neighbor]['shared'] = True
-
-    # --- Network Graph ---
-    fig, ax = plt.subplots(figsize=(10, 8))
+    fig, ax = plt.subplots(figsize=(8, 6))
     pos = nx.spring_layout(G, seed=42)
 
     male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
     female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
+    shared_nodes = [n for n in G.nodes if G.nodes[n]['triggered_count'] > 0]
 
     # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
@@ -128,20 +104,21 @@ with left_col:
     nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='#03396c', node_size=300, ax=ax)
     nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
 
-    # Highlight nodes that have shared *up to* current step (red outline)
+    # Highlight nodes that have triggered (red outline)
     nx.draw_networkx_nodes(
-        G, pos, nodelist=list(shared_up_to_step),
+        G, pos, nodelist=shared_nodes,
         node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
     )
 
     # Labels
     nx.draw_networkx_labels(G, pos, labels={n: str(n) for n in G.nodes}, font_size=8, ax=ax)
 
-    ax.set_title(f"Network at Contagion Step {step} (Red outline = Shared)")
+    ax.set_title("Network at Contagion Step (Red outline = Shared)")
     ax.axis('off')
     st.pyplot(fig)
 
-    # --- MOVE INFLUENCER TABLE BELOW NETWORK GRAPH ---
+# --- Leaderboard ---
+with right_col:
     st.markdown("### 🏆 Top Influencers")
 
     influencer_stats = []
@@ -151,15 +128,15 @@ with left_col:
             'score': G.nodes[node]['score'],
             'triggered': G.nodes[node]['triggered_count'],
         })
-
-    # Sort by triggered count (descending), then by score (descending)
     top_influencers = sorted(influencer_stats, key=lambda x: (x['triggered'], x['score']), reverse=True)[:5]
 
     for rank, inf in enumerate(top_influencers, 1):
         st.markdown(f"- **Rank {rank}**: User {inf['user']} — Score: {inf['score']}, Triggered: {inf['triggered']}")
 
-    male_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['gender'] == 'Male')
-    female_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['gender'] == 'Female')
+    st.markdown("---")
+    st.markdown("🕹️ Use the slider to explore the contagion spread over time.")
 
-    st.markdown(f"- **Male Users Triggered**: {male_triggered} shares")
-    st.markdown(f"- **Female Users Triggered**: {female_triggered} shares")
+    # Optional slider to explore contagion steps
+    step = st.slider("Contagion Step", min_value=1, max_value=len(contagion_steps), value=len(contagion_steps))
+    st.markdown(f"Showing step {step} of {len(contagion_steps)}")
+
