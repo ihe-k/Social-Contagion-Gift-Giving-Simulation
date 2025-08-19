@@ -6,6 +6,7 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
 
 # --- Sample Data Setup (adjust based on actual simulation logic) ---
 # Create a random graph with 30 nodes and 20% chance of edge creation
@@ -31,18 +32,41 @@ st.subheader("Model Evaluation")
 # --- Create Features for Model Evaluation ---
 # Let's use 'score' as a feature to predict if a user shares info (triggered)
 # We'll treat sharing info (triggered = 1) as a binary classification task
-X = np.array([[G.nodes[node]['score']] for node in G.nodes()])
-y = np.array([1 if np.random.rand() > 0.5 else 0 for _ in G.nodes()])  # Random binary target variable
+# Adding more features: score, gender (encoded), and degree centrality
+X = []
+y = []
+
+for node in G.nodes():
+    # Feature vector (score, gender, degree centrality)
+    score = G.nodes[node]['score']
+    gender = 1 if G.nodes[node]['gender'] == 'Male' else 0  # Male=1, Female=0
+    degree_centrality = nx.degree_centrality(G).get(node, 0)
+    
+    # Target variable: 1 if user has shared info, else 0 (simulating sharing)
+    triggered = 1 if np.random.rand() > 0.5 else 0  # Randomly assigning triggered value for illustration
+    
+    # Append features and target
+    X.append([score, gender, degree_centrality])
+    y.append(triggered)
+
+# Convert to numpy arrays for model fitting
+X = np.array(X)
+y = np.array(y)
 
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
 
+# --- Scaling the features for better performance
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
 # Fit a Random Forest model
 model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+model.fit(X_train_scaled, y_train)
 
 # Make predictions
-y_pred = model.predict(X_test)
+y_pred = model.predict(X_test_scaled)
 
 # --- Model Evaluation ---
 accuracy = (y_test == y_pred).mean()  # Dummy accuracy calculation for illustration
@@ -52,7 +76,7 @@ st.text(classification_report(y_test, y_pred))
 
 # Confusion matrix plot
 cm = confusion_matrix(y_test, y_pred)
-fig_cm, ax_cm = plt.subplots(figsize=(3, 3))  # Smaller size for confusion matrix
+fig_cm, ax_cm = plt.subplots(figsize=(4, 3))  # Adjust size of confusion matrix
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax_cm)
 ax_cm.set_title("Confusion Matrix")
 st.pyplot(fig_cm)
