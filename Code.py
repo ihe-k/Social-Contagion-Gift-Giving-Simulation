@@ -1,121 +1,80 @@
 import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
-import random
-import numpy as np
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import seaborn as sns
+from sklearn.metrics import classification_report, confusion_matrix
+import numpy as np
 
-st.set_page_config(layout="wide")
+# --- Sample Data Setup (adjust based on actual simulation logic) ---
 
-# --- Setup graph and contagion simulation ---
+# Create a sample graph G (for illustration purposes)
+G = nx.erdos_renyi_graph(30, 0.1, seed=42)  # Graph with 30 nodes and 10% probability of edge creation
 
-# Create example graph (30 nodes, random edges)
-G = nx.erdos_renyi_graph(30, 0.1, seed=42)
-
-# Assign gender, score, and initialize sharing and triggered_count
+# Add sample attributes for nodes (gender and scores)
 for node in G.nodes():
-    G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
-    G.nodes[node]['score'] = random.randint(10, 100)
-    G.nodes[node]['triggered_count'] = 0
-    G.nodes[node]['shared'] = False
+    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'  # Alternating male/female
+    G.nodes[node]['score'] = np.random.randint(50, 100)  # Random score between 50 and 100
+    G.nodes[node]['triggered_count'] = 0  # Initialize triggered count to 0
+    G.nodes[node]['shared'] = False  # Shared info initially set to False
 
-# Simulated contagion steps as sets of nodes sharing info in that step
-contagion_steps = [
-    {18, 20, 27},
-    {0, 3, 10, 12, 25},
-    {8, 9, 22, 23, 29},
-    {15, 21},
-    {4, 28},
-    {26}
-]
+# Simulating more contagion steps (extend as needed)
+contagion_steps = []
+for step in range(10):  # Increase this value for more steps
+    users_triggered = set([i for i in range(30)])  # Example logic for contagion
+    contagion_steps.append(users_triggered)
 
-# Mark nodes as shared and compute triggered counts
-trigger_map = {}  # node -> set of triggered nodes
+# Assuming y_test and y_pred are predefined for classification evaluation
+y_test = np.random.choice([0, 1], size=30)  # Random ground truth (0 or 1 for simplicity)
+y_pred = np.random.choice([0, 1], size=30)  # Random predictions (0 or 1)
 
-for node in contagion_steps[0]:
-    G.nodes[node]['shared'] = True
-    G.nodes[node]['triggered_count'] = 0
-    trigger_map[node] = set()
-
-for i in range(1, len(contagion_steps)):
-    current_step_nodes = contagion_steps[i]
-    prev_step_nodes = contagion_steps[i - 1]
-    prev_list = list(prev_step_nodes)
-    for j, node in enumerate(current_step_nodes):
-        G.nodes[node]['shared'] = True
-        triggered_by = prev_list[j % len(prev_list)]
-        G.nodes[triggered_by]['triggered_count'] += 1
-        trigger_map.setdefault(triggered_by, set()).add(node)
-
-for node in G.nodes():
-    if 'shared' not in G.nodes[node]:
-        G.nodes[node]['shared'] = False
-
-# --- Dummy model evaluation data for demonstration ---
-
-# For simplicity, generate random true/pred labels for nodes shared or not
-y_test = []
-y_pred = []
-for node in G.nodes():
-    y_test.append(1 if G.nodes[node]['shared'] else 0)
-    # Random predictions around actual with some noise
-    y_pred.append(1 if random.random() < (0.7 if G.nodes[node]['shared'] else 0.3) else 0)
-
-accuracy = accuracy_score(y_test, y_pred)
-class_report = classification_report(y_test, y_pred)
-cm = confusion_matrix(y_test, y_pred)
-
-# --- Streamlit UI ---
-
+# --- Streamlit UI with interactive contagion step slider ---
 st.title("Health Information Spread Simulation")
 
-# Layout top: Model evaluation + confusion matrix side-by-side
-eval_col, cm_col = st.columns([1, 1])
+st.subheader("Model Evaluation")
+accuracy = np.mean(y_test == y_pred)  # Simple accuracy calculation
+st.write(f"Accuracy: {accuracy:.2%}")  # Display accuracy
+st.text("Classification Report:")
+st.text(classification_report(y_test, y_pred))
 
-with eval_col:
-    st.subheader("Model Evaluation")
-    st.markdown(f"**Accuracy:** {accuracy:.2%}")
-    st.text("Classification Report:")
-    st.text(class_report)
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)  # Assuming you have the confusion matrix
+fig, ax = plt.subplots(figsize=(6, 4))  # Reduced size for confusion matrix
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, ax=ax)
+st.pyplot(fig)
 
-with cm_col:
-    st.subheader("Confusion Matrix")
-    fig_cm, ax_cm = plt.subplots(figsize=(4, 4))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax_cm)
-    ax_cm.set_xlabel("Predicted")
-    ax_cm.set_ylabel("Actual")
-    st.pyplot(fig_cm)
-
-st.markdown("---")
-
-# Contagion step slider and visualization
+# Slider to pick contagion step
 max_step = len(contagion_steps)
-step = st.slider("Select contagion step", 1, max_step, max_step, key="contagion_step")
+step = st.slider("Select contagion step", 1, max_step, max_step)
 
+# Collect nodes that shared up to current step
 shared_up_to_step = set()
 for i in range(step):
     shared_up_to_step.update(contagion_steps[i])
 
-left_col, right_col = st.columns([1, 0.5])
+# Prepare graph visualization
+left_col, right_col = st.columns([2, 1])  # Wider left for graph
 
 with left_col:
-    fig, ax = plt.subplots(figsize=(5, 10))
+    fig, ax = plt.subplots(figsize=(10, 8))  # Adjusted size for network diagram
     pos = nx.spring_layout(G, seed=42)
 
     male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
     female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
 
+    # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
 
+    # Draw all nodes by gender with new colors
     nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='#03396c', node_size=300, ax=ax)
     nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
 
+    # Highlight nodes that have shared *up to* current step (red outline)
     nx.draw_networkx_nodes(
         G, pos, nodelist=list(shared_up_to_step),
         node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
     )
 
+    # Labels
     nx.draw_networkx_labels(G, pos, labels={n: str(n) for n in G.nodes}, font_size=8, ax=ax)
 
     ax.set_title(f"Network at Contagion Step {step} (Red outline = Shared)")
@@ -125,6 +84,7 @@ with left_col:
 with right_col:
     st.markdown("### 🏆 Top Influencers")
 
+    # Sort first by triggered count (descending), then by score (descending)
     influencer_stats = []
     for node in G.nodes:
         influencer_stats.append({
@@ -132,16 +92,13 @@ with right_col:
             'score': G.nodes[node]['score'],
             'triggered': G.nodes[node]['triggered_count'],
         })
+    top_influencers = sorted(influencer_stats, key=lambda x: (x['triggered'], x['score']), reverse=True)[:5]
 
-    top_influencers = sorted(
-        influencer_stats,
-        key=lambda x: (x['triggered'], x['score']),
-        reverse=True
-    )[:5]
-
+    # Display top influencers
     for rank, inf in enumerate(top_influencers, 1):
         st.markdown(f"- **Rank {rank}**: User {inf['user']} — Score: {inf['score']}, Triggered: {inf['triggered']}")
 
+    # Gender-triggered stats
     male_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['gender'] == 'Male')
     female_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['gender'] == 'Female')
 
@@ -150,3 +107,15 @@ with right_col:
 
     st.markdown("---")
     st.markdown("🕹️ Use the slider to explore the contagion spread over time.")
+
+# Optional Play Animation for Contagion Steps (Auto advance)
+step_container = st.empty()  # Creates an empty placeholder
+current_step = 1
+
+# Play button functionality to auto advance steps
+if st.button("Play Animation"):
+    while current_step <= max_step:
+        step_container.slider("Select contagion step", 1, max_step, current_step, key="slider")
+        current_step += 1
+        st.time.sleep(1)  # Sleep for 1 second between steps
+        st.experimental_rerun()  # Re-run to update the step
