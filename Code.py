@@ -53,11 +53,13 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example feeds (You can add/remove valid RSS feeds here)
+# Example feeds (no error-prone feeds included)
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    "https://rss.art19.com/the-daily",      # The Daily - news podcast example
-    "https://feeds.simplecast.com/54nAGcIl", # Reply All - non-health podcast
+    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health (health)
+    "https://feeds.simplecast.com/54nAGcIl", # The Daily (news)
+    "https://rss.art19.com/apology-line",    # Removed due to errors
+    "https://rss.art19.com/the-daily",       # The Daily (news)
+    "https://feeds.simplecast.com/tOjNXec5"  # Stuff You Should Know (general knowledge)
 ]
 
 podcast_items = []
@@ -77,7 +79,7 @@ counts = {
     'anti-health': podcast_sentiments.count('anti-health'),
     'neutral': podcast_sentiments.count('neutral')
 }
-total = sum(counts.values())
+total = sum(counts.values()) or 1
 weights = {k: v / total for k, v in counts.items()}
 
 for node in G.nodes:
@@ -174,68 +176,74 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Visualization with improved clarity ---
-st.subheader("User Network Contagion Simulation")
+# --- Step 9 & 10: Visualization + Leaderboard ---
 
-fig_net, ax_net = plt.subplots(figsize=(10, 8))
-pos = nx.spring_layout(G, seed=42)  # fixed layout for consistency
+st.subheader("User Network Contagion Simulation & Leaderboard")
 
-# Prepare node shapes/colors by gender
-male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
-female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
+col1, col2 = st.columns([3, 1])  # wide left for graph, narrow right for leaderboard
 
-# Node sizes scaled by triggered_count
-male_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in male_nodes]
-female_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in female_nodes]
+with col1:
+    fig_net, ax_net = plt.subplots(figsize=(10, 8))
 
-# Draw nodes by gender with different shapes
-nx.draw_networkx_nodes(G, pos,
-                       nodelist=male_nodes,
-                       node_color='lightgreen',
-                       node_size=male_sizes,
-                       node_shape='o',
-                       ax=ax_net,
-                       label='Male')
+    male_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Male']
+    female_nodes = [n for n in G.nodes if G.nodes[n]['gender'] == 'Female']
 
-nx.draw_networkx_nodes(G, pos,
-                       nodelist=female_nodes,
-                       node_color='lightblue',
-                       node_size=female_sizes,
-                       node_shape='s',
-                       ax=ax_net,
-                       label='Female')
+    male_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in male_nodes]
+    female_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in female_nodes]
 
-# Draw edges with colors based on gender homophily
-edge_colors = []
-for u, v in G.edges():
-    if G.nodes[u]['gender'] == 'Male' and G.nodes[v]['gender'] == 'Male':
-        edge_colors.append('lightgreen')
-    elif G.nodes[u]['gender'] == 'Female' and G.nodes[v]['gender'] == 'Female':
-        edge_colors.append('lightblue')
-    else:
-        edge_colors.append('gray')
+    nx.draw_networkx_nodes(G, pos,
+                           nodelist=male_nodes,
+                           node_color='lightgreen',
+                           node_size=male_sizes,
+                           node_shape='o',
+                           ax=ax_net,
+                           label='Male')
 
-nx.draw_networkx_edges(G, pos, edge_color=edge_colors, ax=ax_net)
+    nx.draw_networkx_nodes(G, pos,
+                           nodelist=female_nodes,
+                           node_color='lightblue',
+                           node_size=female_sizes,
+                           node_shape='s',
+                           ax=ax_net,
+                           label='Female')
 
-# Draw labels
-nx.draw_networkx_labels(G, pos, font_size=8, ax=ax_net)
+    edge_colors = []
+    for u, v in G.edges():
+        if G.nodes[u]['gender'] == 'Male' and G.nodes[v]['gender'] == 'Male':
+            edge_colors.append('lightgreen')
+        elif G.nodes[u]['gender'] == 'Female' and G.nodes[v]['gender'] == 'Female':
+            edge_colors.append('lightblue')
+        else:
+            edge_colors.append('gray')
 
-# Create legend manually
-legend_elements = [
-    Line2D([0], [0], marker='o', color='w', label='Male',
-           markerfacecolor='lightgreen', markersize=10),
-    Line2D([0], [0], marker='s', color='w', label='Female',
-           markerfacecolor='lightblue', markersize=10),
-    Line2D([0], [0], color='lightgreen', lw=2, label='Male-Male Share'),
-    Line2D([0], [0], color='lightblue', lw=2, label='Female-Female Share'),
-    Line2D([0], [0], color='gray', lw=2, label='Male-Female Share'),
-]
+    nx.draw_networkx_edges(G, pos, edge_color=edge_colors, ax=ax_net)
+    nx.draw_networkx_labels(G, pos, font_size=8, ax=ax_net)
 
-ax_net.legend(handles=legend_elements, loc='best')
+    legend_elements = [
+        Line2D([0], [0], marker='o', color='w', label='Male',
+               markerfacecolor='lightgreen', markersize=10),
+        Line2D([0], [0], marker='s', color='w', label='Female',
+               markerfacecolor='lightblue', markersize=10),
+        Line2D([0], [0], color='lightgreen', lw=2, label='Male-Male Share'),
+        Line2D([0], [0], color='lightblue', lw=2, label='Female-Female Share'),
+        Line2D([0], [0], color='gray', lw=2, label='Male-Female Share'),
+    ]
+    ax_net.legend(handles=legend_elements, loc='best')
+    st.pyplot(fig_net)
 
-st.pyplot(fig_net)
+with col2:
+    st.markdown("🏆 **Top Influencers**")
+    users_sorted = sorted(G.nodes(data=True), key=lambda x: x[1]['triggered_count'], reverse=True)
+    for rank, (user_id, attrs) in enumerate(users_sorted[:5], start=1):
+        st.markdown(f"- Rank {rank}: User {user_id} — Score: {attrs['score']}, Triggered: {attrs['triggered_count']}")
 
-# --- Step 10: Explanatory Notes ---
+    male_triggered_total = sum(G.nodes[n]['triggered_count'] for n in male_nodes)
+    female_triggered_total = sum(G.nodes[n]['triggered_count'] for n in female_nodes)
+
+    st.markdown(f"- Male Users Triggered: {male_triggered_total} shares")
+    st.markdown(f"- Female Users Triggered: {female_triggered_total} shares")
+
+# --- Step 11: Explanatory Notes ---
 st.markdown("""
 ### Interpretation of Network Contagion Results
 
