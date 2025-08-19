@@ -28,11 +28,23 @@ st.title("Health Information Spread Simulation")
 # Model evaluation using dummy values
 st.subheader("Model Evaluation")
 
-# Dummy true and predicted values for classification report and confusion matrix
-y_test = np.random.randint(0, 2, size=30)  # Binary ground truth (0 or 1)
-y_pred = np.random.randint(0, 2, size=30)  # Random predictions (0 or 1)
+# --- Create Features for Model Evaluation ---
+# Let's use 'score' as a feature to predict if a user shares info (triggered)
+# We'll treat sharing info (triggered = 1) as a binary classification task
+X = np.array([[G.nodes[node]['score']] for node in G.nodes()])
+y = np.array([1 if np.random.rand() > 0.5 else 0 for _ in G.nodes()])  # Random binary target variable
 
-# Accuracy
+# Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# Fit a Random Forest model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# --- Model Evaluation ---
 accuracy = (y_test == y_pred).mean()  # Dummy accuracy calculation for illustration
 st.write(f"Accuracy: {accuracy:.2%}")
 st.text("Classification Report:")
@@ -69,6 +81,11 @@ with left_col:
     shared_up_to_step = set()
     for i in range(step):
         shared_up_to_step.update(contagion_steps[i])
+
+    # --- Update Triggered Count for Each Contagion Step ---
+    for user in shared_up_to_step:
+        G.nodes[user]['triggered_count'] += 1
+        G.nodes[user]['shared'] = True
 
     # --- Network Graph ---
     fig, ax = plt.subplots(figsize=(8, 6))
