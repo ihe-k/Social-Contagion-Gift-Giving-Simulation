@@ -1,0 +1,9 @@
+streamlit
+networkx
+matplotlib
+textblob
+snscrape
+youtube-search-python
+tiktokapi
+scikit-learn
+numpy
