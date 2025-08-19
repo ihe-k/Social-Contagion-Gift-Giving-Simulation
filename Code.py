@@ -36,7 +36,7 @@ def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
     return 'pro-health' if polarity > 0.5 else ('anti-health' if polarity < -0.5 else 'neutral')
 
-# --- Step 3: Fetch Podcasts via RSS (simple without error handling) ---
+# --- Step 3: Fetch Podcasts via RSS ---
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
@@ -49,11 +49,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# Example RSS feed (NPR Life Kit Health)
 rss_url = "https://feeds.npr.org/510307/rss.xml"
 podcast_items = get_podcasts_from_rss(rss_url)
 
-# --- Step 4: Scrape podcast metadata example (optional) ---
+# --- Step 4: Scrape podcast metadata example ---
 def scrape_listennotes_show(show_url):
     resp = requests.get(show_url)
     if resp.status_code != 200:
@@ -68,7 +67,7 @@ scraped = scrape_listennotes_show(ln_url)
 if scraped:
     podcast_items.append(scraped)
 
-# --- Add static podcasts as requested ---
+# --- Add static podcasts ---
 static_podcasts = [
     {"user": "The Mel Robbins Podcast", "content": "Empowering insights and advice.", "platform": "Static", "url": "https://melrobbinspodcast.com/"},
     {"user": "The Daily", "content": "News and current events podcast.", "platform": "Static", "url": "https://www.nytimes.com/column/the-daily"},
@@ -78,12 +77,8 @@ static_podcasts = [
     {"user": "Tucker Carlson Show", "content": "Political commentary.", "platform": "Static", "url": "https://www.foxnews.com/person/c/tucker-carlson"},
     {"user": "New Heights with Jason and Travis Kelce", "content": "Sports, motivation, and leadership.", "platform": "Static", "url": "https://newheightspodcast.com/"},
 ]
-all_content = podcast_items + static_podcasts
 
-# --- Display loaded podcasts ---
-st.subheader("Loaded Podcasts")
-for p in all_content:
-    st.markdown(f"- [{p['user']}]({p['url']}) — {p['content'][:60]}{'...' if len(p['content'])>60 else ''}")
+all_content = podcast_items + static_podcasts
 
 # --- Step 5: Assign User Attributes ---
 user_data = []
@@ -139,7 +134,6 @@ y_pred = best.predict(X_test)
 # --- Step 8: Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"Accuracy: {accuracy_score(y_test,y_pred):.2%}")
-st.text("Classification Report:")
 st.text(classification_report(y_test,y_pred))
 fig, ax = plt.subplots()
 ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax)
