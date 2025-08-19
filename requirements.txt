@@ -2,7 +2,6 @@ streamlit
 networkx
 matplotlib
 textblob
-git+https://github.com/JustAnotherArchivist/snscrape.git
 youtube-search-python
 tiktokapi
 scikit-learn
