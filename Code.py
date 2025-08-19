@@ -5,6 +5,7 @@ import seaborn as sns
 from sklearn.metrics import confusion_matrix, classification_report
 import numpy as np
 import pandas as pd
+import random
 
 # --- Sample Data Setup (adjust based on actual simulation logic) ---
 # Create a simple random graph with sample data
@@ -17,11 +18,42 @@ for node in G.nodes():
     # Initialize triggered count to 0
     G.nodes[node]['triggered_count'] = 0
     # Shared state based on a random chance (simulate contagion)
-    G.nodes[node]['shared'] = np.random.choice([True, False])
+    G.nodes[node]['shared'] = False  # No user initially shared the info
 
-# Dummy classification data for evaluation
-y_test = np.random.randint(0, 2, size=30)  # Random binary classification labels (0 or 1)
-y_pred = np.random.randint(0, 2, size=30)  # Random predictions (0 or 1)
+# --- Simulate Contagion Process ---
+# Set initial triggered nodes (for example, nodes 0, 1, 2)
+initial_triggered_nodes = [0, 1, 2]
+contagion_steps = []  # List to track which nodes shared information in each step
+
+# Simulate the contagion spread process
+def simulate_contagion():
+    global G, initial_triggered_nodes, contagion_steps
+    triggered_nodes = set(initial_triggered_nodes)
+    contagion_steps = []
+
+    # Simulate for a defined number of steps
+    for step in range(10):  # Number of contagion steps
+        new_triggered_nodes = set()
+
+        # Spread contagion to neighbors
+        for node in triggered_nodes:
+            if not G.nodes[node]['shared']:  # Only trigger if the node hasn't shared yet
+                # Mark this node as having shared information
+                G.nodes[node]['shared'] = True
+                G.nodes[node]['triggered_count'] += 1
+                contagion_steps.append(triggered_nodes)
+
+            # Spread to neighbors with a probability (e.g., 60%)
+            for neighbor in G.neighbors(node):
+                if random.random() < 0.6:  # 60% chance to trigger a neighbor
+                    new_triggered_nodes.add(neighbor)
+
+        triggered_nodes.update(new_triggered_nodes)
+        if not new_triggered_nodes:  # Stop if no new nodes are triggered
+            break
+
+# Run the simulation
+simulate_contagion()
 
 # --- Streamlit Layout ---
 st.title("Health Information Spread Simulation")
@@ -59,6 +91,12 @@ with left_col:
     nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='#03396c', node_size=300, ax=ax)
     nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
 
+    # Highlight nodes that have shared *up to* current step (red outline)
+    nx.draw_networkx_nodes(
+        G, pos, nodelist=list(initial_triggered_nodes),
+        node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
+    )
+
     # Labels for nodes
     nx.draw_networkx_labels(G, pos, labels={n: str(n) for n in G.nodes}, font_size=8, ax=ax)
 
@@ -95,7 +133,7 @@ with right_col:
     st.markdown("🕹️ Use the slider to explore the contagion spread over time.")
 
     # Slider for contagion step
-    max_step = 10  # Update with actual number of steps you have
+    max_step = len(contagion_steps)  # Set based on how many steps were simulated
     step = st.slider("Select contagion step", 1, max_step, 1)
 
     # Logic for displaying network visualization based on the selected step can go here
