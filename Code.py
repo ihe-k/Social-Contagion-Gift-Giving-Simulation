@@ -10,6 +10,8 @@ import numpy as np
 import requests
 from bs4 import BeautifulSoup
 import feedparser
+import pandas as pd
+import seaborn as sns
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -49,10 +51,11 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-rss_url = "https://feeds.npr.org/510307/rss.xml"
+# Example feeds (NPR Life Kit Health)
+rss_url = "https://feeds.npr.org/510307/rss.xml"  # mock public RSS :contentReference[oaicite:2]{index=2}
 podcast_items = get_podcasts_from_rss(rss_url)
 
-# --- Step 4: Scrape podcast metadata example ---
+# --- Step 4: Scrape Podcast Metadata from Listen Notes Pages ---
 def scrape_listennotes_show(show_url):
     resp = requests.get(show_url)
     if resp.status_code != 200:
@@ -62,23 +65,14 @@ def scrape_listennotes_show(show_url):
     desc = soup.find('p').text if soup.find('p') else ""
     return {"user": title.split()[0], "content": desc, "platform": "Web", "url": show_url}
 
+# Example scraping *Health Insights Podcast* page
 ln_url = "https://www.listennotes.com/podcasts/health-insights-podcast-wellness-and-BTgZb84DPEH/"
 scraped = scrape_listennotes_show(ln_url)
 if scraped:
     podcast_items.append(scraped)
 
-# --- Add static podcasts ---
-static_podcasts = [
-    {"user": "The Mel Robbins Podcast", "content": "Empowering insights and advice.", "platform": "Static", "url": "https://melrobbinspodcast.com/"},
-    {"user": "The Daily", "content": "News and current events podcast.", "platform": "Static", "url": "https://www.nytimes.com/column/the-daily"},
-    {"user": "Huberman Lab", "content": "Neuroscience, health and performance insights.", "platform": "Static", "url": "https://hubermanlab.com/"},
-    {"user": "SmartLess", "content": "Humor and celebrity interviews.", "platform": "Static", "url": "https://smartless.com/"},
-    {"user": "The Diary Of A CEO", "content": "Entrepreneurship and success stories.", "platform": "Static", "url": "https://thediaryofaceo.com/"},
-    {"user": "Tucker Carlson Show", "content": "Political commentary.", "platform": "Static", "url": "https://www.foxnews.com/person/c/tucker-carlson"},
-    {"user": "New Heights with Jason and Travis Kelce", "content": "Sports, motivation, and leadership.", "platform": "Static", "url": "https://newheightspodcast.com/"},
-]
-
-all_content = podcast_items + static_podcasts
+# --- Combine Content ---
+all_content = podcast_items  # Only podcasts now
 
 # --- Step 5: Assign User Attributes ---
 user_data = []
@@ -131,15 +125,13 @@ grid.fit(X_train, y_train)
 best = grid.best_estimator_
 y_pred = best.predict(X_test)
 
-# --- Step 8: Evaluation ---
-st.subheader("Model Evaluation")
-st.write(f"Accuracy: {accuracy_score(y_test,y_pred):.2%}")
-st.text(classification_report(y_test,y_pred))
-fig, ax = plt.subplots()
-ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax)
-st.pyplot(fig)
-
 # --- Step 9: Contagion Simulation ---
+
+# Initialize counters for shares by group
+shares_by_gender = {'Male': 0, 'Female': 0}
+shares_by_ideology = {'pro-health': 0, 'anti-health': 0, 'neutral': 0}
+shares_by_chronic = {True: 0, False: 0}
+
 pos = nx.spring_layout(G, seed=42)
 seed = random.sample(list(G.nodes), INIT_SHARED)
 for node in seed:
@@ -152,22 +144,42 @@ while current:
     for u in current:
         for v in G.neighbors(u):
             if not G.nodes[v]['shared']:
-                prob = SHARE_PROB + (GIFT_BONUS/100 if G.nodes[u]['gifted'] else 0)
+                prob = SHARE_PROB
+                # Gift bonus: user u gifted => higher chance to share
+                if G.nodes[u]['gifted']:
+                    prob += GIFT_BONUS / 100
+                
+                # Cross ideology bonus: users with different ideology interact more
                 if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
                     prob += IDEOLOGY_CROSS_BONUS
+                
+                # Chronic disease users have higher baseline propensity to share
                 if G.nodes[v]['has_chronic_disease']:
                     prob = max(prob, CHRONIC_PROPENSITY)
+                
+                # Gender homophily: same gender boosts sharing chance
                 if G.nodes[u]['gender'] == G.nodes[v]['gender']:
                     prob += GENDER_HOMOPHILY_BONUS
-                if random.random() < min(max(prob,0),1):
+                
+                # Clamp probability to [0,1]
+                prob = min(max(prob, 0), 1)
+                
+                if random.random() < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[v]['triggered_count'] += 1
                     next_step.add(v)
+                    
+                    # Track shares by attributes
+                    shares_by_gender[G.nodes[v]['gender']] += 1
+                    shares_by_ideology[G.nodes[v]['ideology']] += 1
+                    shares_by_chronic[G.nodes[v]['has_chronic_disease']] += 1
+
     if not next_step:
         break
     contagion.append(next_step)
     current = next_step
 
+# --- Visualization of network ---
 st.subheader("Podcast-Based Health Info Spread Simulation")
 fig, ax = plt.subplots(figsize=(8,6))
 nx.draw(G, pos, with_labels=True,
@@ -179,3 +191,36 @@ nx.draw(G, pos, with_labels=True,
         font_size=8,
         ax=ax)
 st.pyplot(fig)
+
+# --- Display share stats by group ---
+st.subheader("Sharing Statistics by Group")
+
+df_stats = pd.DataFrame({
+    "Group": ["Male", "Female", "Pro-Health", "Anti-Health", "Neutral", "Chronic Disease", "No Chronic Disease"],
+    "Shares": [
+        shares_by_gender['Male'],
+        shares_by_gender['Female'],
+        shares_by_ideology['pro-health'],
+        shares_by_ideology['anti-health'],
+        shares_by_ideology['neutral'],
+        shares_by_chronic[True],
+        shares_by_chronic[False]
+    ]
+})
+
+st.write(df_stats)
+
+fig2, ax2 = plt.subplots(figsize=(8,4))
+sns.barplot(x='Group', y='Shares', data=df_stats, palette='pastel', ax=ax2)
+ax2.set_title("Information Shares by User Groups")
+ax2.set_ylabel("Number of Shares")
+ax2.set_xlabel("")
+st.pyplot(fig2)
+
+# --- Step 8: Evaluation ---
+st.subheader("Model Evaluation")
+st.write(f"Accuracy: {accuracy_score(y_test,y_pred):.2%}")
+st.text(classification_report(y_test,y_pred))
+fig3, ax3 = plt.subplots()
+ConfusionMatrixDisplay.from_estimator(best, X_test, y_test, ax=ax3)
+st.pyplot(fig3)
