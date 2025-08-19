@@ -5,6 +5,8 @@ import random
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns  # Import seaborn for the confusion matrix heatmap
+import requests
+from bs4 import BeautifulSoup  # Import BeautifulSoup for scraping data
 
 # --- Sample Data Setup (adjust based on actual simulation logic) ---
 # Assuming you already have G (Graph), y_test, and y_pred defined
@@ -23,6 +25,29 @@ contagion_steps = [
     {6, 7, 8},  # Step 3: Users 6, 7, 8 share info
     # Add more steps based on the simulation logic
 ]
+
+# --- Scraping YouTube using BeautifulSoup (without API) ---
+def scrape_youtube(query="health tips"):
+    # Define search URL
+    search_url = f'https://www.youtube.com/results?search_query={query}'
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+
+    # Make a request to fetch HTML of the search results page
+    response = requests.get(search_url, headers=headers)
+
+    # Parse the HTML response using BeautifulSoup
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Extract video titles and URLs
+    video_data = []
+    for video in soup.find_all('a', {'class': 'yt-simple-endpoint style-scope ytd-video-renderer'}):
+        title = video.get('title')
+        url = "https://www.youtube.com" + video.get('href')
+        video_data.append({"title": title, "url": url})
+
+    return video_data
 
 # --- Streamlit UI with interactive contagion step slider ---
 st.title("Health Information Spread Simulation")
@@ -49,6 +74,11 @@ step = st.slider("Select contagion step", 1, max_step, max_step)
 shared_up_to_step = set()
 for i in range(step):
     shared_up_to_step.update(contagion_steps[i])
+
+# --- Update trigger count based on shared nodes ---
+# If a node shares info, increase its triggered count
+for node in shared_up_to_step:
+    G.nodes[node]['triggered_count'] += 1  # Increment the trigger count for each node
 
 # Prepare graph visualization
 left_col, right_col = st.columns([2, 1])  # Wider left for network diagram
@@ -111,3 +141,10 @@ with right_col:
     fig, ax = plt.subplots(figsize=(6, 4))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
     st.pyplot(fig)
+
+    # Scrape YouTube for "health tips" as an example
+    st.markdown("### YouTube Scraped Data (Health Tips)")
+    videos = scrape_youtube("health tips")
+    for video in videos:
+        st.markdown(f"[{video['title']}]({video['url']})")
+
