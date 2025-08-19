@@ -22,18 +22,22 @@ accuracy = np.mean(np.array(y_test) == np.array(y_pred))
 
 st.title("Health Information Spread Simulation")
 
-# Model evaluation section
-st.subheader("Model Evaluation")
-st.write(f"Accuracy: {accuracy:.2%}")
-st.text("Classification Report:")
-st.text(classification_report(y_test, y_pred))
+# --- Model Evaluation and Confusion Matrix side by side ---
+eval_col, cm_col = st.columns([2, 1])
 
-# Confusion Matrix with controlled size
-cm = confusion_matrix(y_test, y_pred)
-fig_cm, ax_cm = plt.subplots(figsize=(4, 4))
-disp = ConfusionMatrixDisplay(confusion_matrix=cm)
-disp.plot(ax=ax_cm)
-st.pyplot(fig_cm)
+with eval_col:
+    st.subheader("Model Evaluation")
+    st.write(f"Accuracy: {accuracy:.2%}")
+    st.text("Classification Report:")
+    st.text(classification_report(y_test, y_pred))
+
+with cm_col:
+    cm = confusion_matrix(y_test, y_pred)
+    fig_cm, ax_cm = plt.subplots(figsize=(4, 4))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp.plot(ax=ax_cm)
+    ax_cm.set_title("Confusion Matrix")
+    st.pyplot(fig_cm)
 
 # Slider for contagion step
 max_step = len(contagion_steps)
@@ -57,9 +61,9 @@ with left_col:
     # Draw edges lightly
     nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
 
-    # Draw male/female nodes with colors
-    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='lightgreen', node_size=300, ax=ax)
-    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='lightblue', node_size=300, ax=ax)
+    # Updated node colors: male=blue, female=pink
+    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='blue', node_size=300, ax=ax)
+    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='pink', node_size=300, ax=ax)
 
     # Highlight nodes that shared info up to current step (red outline)
     nx.draw_networkx_nodes(
