@@ -12,3 +12,4 @@ seaborn
 requests
 beautifulsoup4
 praw
+feedparser
