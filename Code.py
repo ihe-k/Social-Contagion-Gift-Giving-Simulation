@@ -1,133 +1,133 @@
 import streamlit as st
 import networkx as nx
-import random
 import matplotlib.pyplot as plt
+from sklearn.metrics import confusion_matrix, classification_report
+import numpy as np
 import requests
 from bs4 import BeautifulSoup
-import seaborn as sns
-from sklearn.metrics import confusion_matrix
 
-# --- Function to Search Health Articles from a Health Site ---
-def search_health_articles(query="health tips", max_results=5):
-    try:
-        # Construct the search URL for the Healthline search results page
-        search_url = f"https://www.healthline.com/search?q={query.replace(' ', '+')}"
-        
-        # Send a GET request to fetch the page content
-        response = requests.get(search_url)
-        
-        # Parse the page content using BeautifulSoup
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Extract article links from the search result page
-        articles = soup.find_all('a', class_='css-1mjb5r1')  # Healthline articles have this class for links
-        
-        # Get a list of article URLs (up to max_results)
-        article_links = [article.get('href') for article in articles[:max_results]]
-        
-        return article_links, "Success"
-    except Exception as e:
-        return [], f"Error: {e}"
-
-# --- Graph and Contagion Setup ---
-G = nx.erdos_renyi_graph(30, 0.1)  # Example graph with 30 nodes
-for node in G.nodes:
-    G.nodes[node]['gender'] = 'Male' if node % 2 == 0 else 'Female'
-    G.nodes[node]['score'] = random.randint(50, 100)
-    G.nodes[node]['triggered_count'] = 0
-    G.nodes[node]['shared'] = False
-
-# --- Contagion Propagation ---
-def propagate_contagion(G, initial_users, probability=0.6, max_steps=15):
-    contagion_steps = []
-    triggered = set(initial_users)
+# --- Scraping YouTube using BeautifulSoup ---
+def scrape_youtube(query="health"):
+    base_url = f"https://www.youtube.com/results?search_query={query}"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(base_url, headers=headers)
     
-    # Mark initial users as triggered
-    for user in initial_users:
-        G.nodes[user]['triggered_count'] += 1
-    
-    for step in range(max_steps):
-        new_triggered = set()
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, "html.parser")
+        videos = []
         
-        for user in triggered:
-            for neighbor in G.neighbors(user):
-                if neighbor not in triggered and random.random() < probability:
-                    new_triggered.add(neighbor)
+        for video in soup.find_all("a", {"class": "yt-uix-tile-link"}):
+            title = video.get("title")
+            url = "https://www.youtube.com" + video.get("href")
+            videos.append({"title": title, "url": url})
         
-        if not new_triggered:
-            break
-        
-        triggered.update(new_triggered)
-        
-        # Increment the triggered count for newly triggered users
-        for user in new_triggered:
-            G.nodes[user]['triggered_count'] += 1
-        
-        contagion_steps.append(new_triggered)
-    
-    return contagion_steps
+        return videos
+    else:
+        return []
 
-# --- Streamlit UI ---
-st.title("Health Information Spread Simulation")
-st.subheader("Model Evaluation")
+# --- Model Evaluation Section (Dummy data for now) ---
+y_test = [1, 0, 1, 1, 0]  # Actual values (dummy for illustration)
+y_pred = [1, 0, 1, 0, 1]  # Predicted values (dummy for illustration)
 
-# Simulate a confusion matrix (for illustration purposes)
-y_test = [1, 0, 1, 1, 0]
-y_pred = [1, 0, 1, 0, 1]
-
-# Use sklearn's confusion_matrix function
+# Calculate confusion matrix
 cm = confusion_matrix(y_test, y_pred)
+classification_rep = classification_report(y_test, y_pred)
 
-# Display the confusion matrix
+# --- Streamlit Layout: Left = Graph | Right = Leaderboard ---
+st.title("Health Information Spread Simulation")
+
+st.subheader("Model Evaluation")
+st.write(f"Classification Report:\n{classification_rep}")
+
+# Display Confusion Matrix
 st.subheader("Confusion Matrix")
 fig, ax = plt.subplots(figsize=(6, 4))
 sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
 st.pyplot(fig)
 
-# Display the health articles
-health_links, message = search_health_articles(query="health tips", max_results=5)
-if health_links:
-    st.write("Found Health Articles:")
-    for link in health_links:
-        st.markdown(f"[Read article]({link})")
+# --- Scrape YouTube for Health Videos ---
+st.subheader("Health Information from YouTube")
+videos = scrape_youtube(query="health")  # Search query for health-related videos
+
+if videos:
+    st.write("Found the following health videos:")
+    for video in videos[:5]:  # Show top 5 videos
+        st.markdown(f"[{video['title']}]({video['url']})")
 else:
-    st.error(message)
+    st.write("No videos found. Check the search query or page structure.")
 
-# Simulate the contagion (for example, starting from node 0 and 1)
-initial_users = [0, 1]  # Example initial triggered users
-contagion_steps = propagate_contagion(G, initial_users, probability=0.6, max_steps=15)
+# --- Contagion Simulation ---
+# Example Network (You can modify this part based on your real data)
+G = nx.erdos_renyi_graph(30, 0.1)  # A random graph with 30 nodes and a 10% chance of edge creation
+for node in G.nodes:
+    G.nodes[node]['score'] = np.random.randint(50, 100)  # Random scores for nodes
+    G.nodes[node]['triggered_count'] = np.random.randint(0, 5)  # Random trigger count for nodes
 
-# Display the contagion graph and leaderboard
-left_col, right_col = st.columns([2, 1])
+# Contagion Steps (Dummy example)
+contagion_steps = [{0, 1}, {2, 3, 4}, {5, 6, 7, 8}]
+
+# Slider for Contagion Step
+max_step = len(contagion_steps)
+step = st.slider("Select contagion step", 1, max_step, max_step)
+
+# Collect nodes that shared up to current step
+shared_up_to_step = set()
+for i in range(step):
+    shared_up_to_step.update(contagion_steps[i])
+
+# Network Graph Visualization
+left_col, right_col = st.columns([2, 1])  # Wider left for graph
 
 with left_col:
     fig, ax = plt.subplots(figsize=(8, 6))
     pos = nx.spring_layout(G, seed=42)
-    nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=300, ax=ax)
+
+    male_nodes = [n for n in G.nodes if G.nodes[n]['score'] % 2 == 0]  # Random condition for males
+    female_nodes = [n for n in G.nodes if G.nodes[n]['score'] % 2 != 0]  # Random condition for females
+
+    # Draw edges
     nx.draw_networkx_edges(G, pos, alpha=0.3, edge_color='gray', ax=ax)
+
+    # Draw all nodes by gender (male: blue, female: pink)
+    nx.draw_networkx_nodes(G, pos, nodelist=male_nodes, node_color='#03396c', node_size=300, ax=ax)
+    nx.draw_networkx_nodes(G, pos, nodelist=female_nodes, node_color='#6497b1', node_size=300, ax=ax)
+
+    # Highlight nodes that have shared *up to* current step (red outline)
+    nx.draw_networkx_nodes(
+        G, pos, nodelist=list(shared_up_to_step),
+        node_color='none', edgecolors='red', node_size=330, linewidths=2, ax=ax
+    )
+
+    # Labels
     nx.draw_networkx_labels(G, pos, labels={n: str(n) for n in G.nodes}, font_size=8, ax=ax)
-    ax.set_title(f"Network at Contagion Step (Red outline = Shaped by triggers)")
+
+    ax.set_title(f"Network at Contagion Step {step} (Red outline = Shared)")
     ax.axis('off')
     st.pyplot(fig)
 
-# Rank the influencers
-influencer_stats = []
-for node in G.nodes:
-    influencer_stats.append({
-        'user': node,
-        'score': G.nodes[node]['score'],
-        'triggered': G.nodes[node]['triggered_count'],
-    })
-top_influencers = sorted(influencer_stats, key=lambda x: (x['triggered'], x['score']), reverse=True)[:5]
+# --- Leaderboard Panel: Influencers ---
+with right_col:
+    st.markdown("### 🏆 Top Influencers")
 
-# Display top influencers
-st.markdown("### 🏆 Top Influencers")
-for rank, inf in enumerate(top_influencers, 1):
-    st.markdown(f"- **Rank {rank}**: User {inf['user']} — Score: {inf['score']}, Triggered: {inf['triggered']}")
+    influencer_stats = []
+    for node in G.nodes:
+        influencer_stats.append({
+            'user': node,
+            'score': G.nodes[node]['score'],
+            'triggered': G.nodes[node]['triggered_count'],
+        })
+    top_influencers = sorted(influencer_stats, key=lambda x: (x['triggered'], x['score']), reverse=True)[:5]
 
-# Display triggered users
-male_triggered = sum(1 for n in contagion_steps[-1] if G.nodes[n]['gender'] == 'Male')
-female_triggered = sum(1 for n in contagion_steps[-1] if G.nodes[n]['gender'] == 'Female')
+    for rank, inf in enumerate(top_influencers, 1):
+        st.markdown(f"- **Rank {rank}**: User {inf['user']} — Score: {inf['score']}, Triggered: {inf['triggered']}")
 
-st.write(f"Male Users Triggered: {male_triggered} shares")
-st.write(f"Female Users Triggered: {female_triggered} shares")
+    # Gender-triggered stats
+    male_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['score'] % 2 == 0)
+    female_triggered = sum(1 for n in shared_up_to_step if G.nodes[n]['score'] % 2 != 0)
+
+    st.markdown(f"- **Male Users Triggered**: {male_triggered} shares")
+    st.markdown(f"- **Female Users Triggered**: {female_triggered} shares")
+
+    st.markdown("---")
+    st.markdown("🕹️ *Use the slider to explore the contagion spread over time*")
+
