@@ -52,7 +52,7 @@ st.text(classification_report(y_test, y_pred))
 
 # Confusion matrix plot
 cm = confusion_matrix(y_test, y_pred)
-fig_cm, ax_cm = plt.subplots(figsize=(5, 4))  # Set smaller size for confusion matrix
+fig_cm, ax_cm = plt.subplots(figsize=(3, 3))  # Smaller size for confusion matrix
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax_cm)
 ax_cm.set_title("Confusion Matrix")
 st.pyplot(fig_cm)
