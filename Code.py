@@ -110,8 +110,9 @@ with left_col:
     # --- Update Triggered Count for Each Contagion Step ---
     for user in shared_up_to_step:
         # Update triggered count and mark as shared
-        G.nodes[user]['triggered_count'] += 1
-        G.nodes[user]['shared'] = True
+        if not G.nodes[user]['shared']:  # Only trigger once
+            G.nodes[user]['triggered_count'] += 1
+            G.nodes[user]['shared'] = True
 
     # --- Network Graph ---
     fig, ax = plt.subplots(figsize=(8, 6))
