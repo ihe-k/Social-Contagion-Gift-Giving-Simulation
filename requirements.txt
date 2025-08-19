@@ -7,3 +7,4 @@ tiktokapi
 scikit-learn
 numpy
 git+https://github.com/alexmercerind/youtube-search-python.git
+httpx>=0.23.0
