@@ -5,8 +5,41 @@ import random
 import numpy as np
 from sklearn.metrics import classification_report, confusion_matrix
 import seaborn as sns  # Import seaborn for the confusion matrix heatmap
-import requests
-from bs4 import BeautifulSoup  # Import BeautifulSoup for scraping data
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+import time
+
+# --- Setup Selenium WebDriver ---
+def setup_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # Run headless (without GUI)
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
+
+# --- Scraping YouTube using Selenium ---
+def scrape_youtube(query="health tips"):
+    driver = setup_driver()
+
+    # Define YouTube search URL
+    search_url = f'https://www.youtube.com/results?search_query={query}'
+    driver.get(search_url)
+
+    # Wait for the page to load
+    time.sleep(2)
+
+    # Scrape video titles and URLs
+    video_data = []
+    videos = driver.find_elements(By.CSS_SELECTOR, 'a#video-title')
+    for video in videos:
+        title = video.get_attribute('title')
+        url = video.get_attribute('href')
+        video_data.append({"title": title, "url": url})
+
+    driver.quit()
+    return video_data
 
 # --- Sample Data Setup (adjust based on actual simulation logic) ---
 # Assuming you already have G (Graph), y_test, and y_pred defined
@@ -25,29 +58,6 @@ contagion_steps = [
     {6, 7, 8},  # Step 3: Users 6, 7, 8 share info
     # Add more steps based on the simulation logic
 ]
-
-# --- Scraping YouTube using BeautifulSoup (without API) ---
-def scrape_youtube(query="health tips"):
-    # Define search URL
-    search_url = f'https://www.youtube.com/results?search_query={query}'
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    }
-
-    # Make a request to fetch HTML of the search results page
-    response = requests.get(search_url, headers=headers)
-
-    # Parse the HTML response using BeautifulSoup
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    # Extract video titles and URLs
-    video_data = []
-    for video in soup.find_all('a', {'class': 'yt-simple-endpoint style-scope ytd-video-renderer'}):
-        title = video.get('title')
-        url = "https://www.youtube.com" + video.get('href')
-        video_data.append({"title": title, "url": url})
-
-    return video_data
 
 # --- Streamlit UI with interactive contagion step slider ---
 st.title("Health Information Spread Simulation")
