@@ -78,12 +78,14 @@ with left_col:
     max_step = len(contagion_steps)
     step = st.slider("Select contagion step", 1, max_step, max_step, key="step_slider")
 
+    # Track which users are triggered up to the current step
     shared_up_to_step = set()
     for i in range(step):
         shared_up_to_step.update(contagion_steps[i])
 
     # --- Update Triggered Count for Each Contagion Step ---
     for user in shared_up_to_step:
+        # Update triggered count and mark as shared
         G.nodes[user]['triggered_count'] += 1
         G.nodes[user]['shared'] = True
 
