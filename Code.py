@@ -13,7 +13,7 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 
 # --- Parameters ---
-NUM_USERS = 30
+NUM_USERS = 300
 INIT_SHARED = 3
 GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
@@ -21,8 +21,6 @@ CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
 
 st.title("Health Information Contagion Network Simulation")
-st.write("Streamlit app is starting...")
-
 
 # --- Step 1: Network Setup (Users Only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.5, seed=42)
