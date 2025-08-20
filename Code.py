@@ -137,6 +137,9 @@ def calc_sentiment_trends():
 sentiment_trends = calc_sentiment_trends()
 betweenness_centrality = nx.betweenness_centrality(G)
 
+pagerank = nx.pagerank(G)
+closeness = nx.closeness_centrality(G)
+
 user_features = []
 user_labels = []
 
@@ -154,21 +157,25 @@ for node in G.nodes:
     else:
         neighbor_health_alignment = 0
 
-    features = [
-        1 if u['gender'] == 'Female' else 0,
-        1 if u['has_chronic_disease'] else 0,
-        sentiment_trends[node],
-        betweenness_centrality[node],
-        clustering_coeff,
-        degree,
-        neighbor_health_alignment
-    ]
-
+  features = [
+    1 if u['gender'] == 'Female' else 0,
+    1 if u['has_chronic_disease'] else 0,
+    1 if u['ideology'] == 'pro-health' else 0,
+    1 if u['ideology'] == 'anti-health' else 0,
+    1 if u['ideology'] == 'neutral' else 0,
+    sentiment_trends[node],
+    betweenness_centrality[node],
+    pagerank[node],
+    closeness[node]
+]
     user_features.append(features)
     user_labels.append(u['ideology'])  # this is the target, not a feature
 
+from collections import Counter
+print("Label distribution:", Counter(user_labels))
+
 X_train, X_test, y_train, y_test = train_test_split(
-    user_features, user_labels, test_size=0.2, random_state=42
+    user_features, user_labels, test_size=0.2, random_state=42, stratify=user_labels
 )
 
 # --- Step 6: Model Training ---
