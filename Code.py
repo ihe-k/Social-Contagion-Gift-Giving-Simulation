@@ -261,12 +261,6 @@ st.pyplot(fig_net)
 
 # --- Step 10: Network Visualization ---
 
-# Legend
-male_patch = mpatches.Patch(color='lightgreen', label='Male')
-female_patch = mpatches.Patch(color='lightblue', label='Female')
-ax_net.legend(handles=[male_patch, female_patch], loc='best')
-
-st.pyplot(fig_net)
 
 # --- Step 11: Explanation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
