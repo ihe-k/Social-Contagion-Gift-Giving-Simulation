@@ -151,19 +151,34 @@ st.write(f"**Accuracy:** {accuracy:.2%}")
 st.dataframe(report_df)
 
 # --- Step 8: Contagion Simulation ---
+# --- Step 8: Contagion Simulation ---
+
+# First, identify and gift users who bridge ideology and gender boundaries
+for node in G.nodes:
+    neighbors = list(G.neighbors(node))
+    cross_ideology_neighbors = [n for n in neighbors if G.nodes[n]['ideology'] != G.nodes[node]['ideology']]
+    cross_gender_neighbors = [n for n in neighbors if G.nodes[n]['gender'] != G.nodes[node]['gender']]
+    
+    # Gift if user has neighbors with both different ideology and different gender
+    if cross_ideology_neighbors and cross_gender_neighbors:
+        G.nodes[node]['gifted'] = True
+    else:
+        G.nodes[node]['gifted'] = False
+
 st.sidebar.header("Simulation Parameters")
 SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
+
+# Reset contagion status for all nodes
 for node in G.nodes:
     G.nodes[node]['shared'] = False
-    G.nodes[node]['gifted'] = False
     G.nodes[node]['triggered_count'] = 0
 
+# Seed initial spreaders
 for node in seed_nodes:
     G.nodes[node]['shared'] = True
-    G.nodes[node]['gifted'] = True
 
 contagion, current = [set(seed_nodes)], set(seed_nodes)
 while current:
@@ -187,8 +202,6 @@ while current:
         break
     contagion.append(next_step)
     current = next_step
-
-
 # --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
