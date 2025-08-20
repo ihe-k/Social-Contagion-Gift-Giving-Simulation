@@ -57,20 +57,30 @@ def get_podcasts_from_rss(feed_url, max_items=5):
     return podcasts
 
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",          # NPR Life Kit Health
-    "https://feeds.simplecast.com/54nAGcIl",         # Stuff You Should Know
-    "https://rss.art19.com/the-daily",                # The Daily by NYT
+    # Existing feeds (neutral/other)
+    "https://feeds.npr.org/510307/rss.xml",           # NPR Life Kit Health
+    "https://feeds.simplecast.com/54nAGcIl",          # Stuff You Should Know
+    "https://rss.art19.com/the-daily",                 # The Daily by NYT
     "https://feeds.megaphone.fm/ADL9840290619",       # Revisionist History
-
-    # --- Added Pro-Health Podcast RSS Feeds ---
-    "https://drhyman.com/feed/podcast/",              # The Doctor’s Farmacy
-    "https://feeds.megaphone.fm/nutritiondiva",       # Nutrition Diva
-    "https://feeds.megaphone.fm/foundmyfitness",      # FoundMyFitness
-    "https://themodelhealthshow.libsyn.com/rss",      # The Model Health Show
-    "https://wellnessmama.com/feed/podcast/",         # Wellness Mama Podcast
-    "https://mindbodygreen.com/feed/podcast",         # Mindbodygreen Podcast
-    "https://peterattiamd.com/feed/podcast/",         # The Peter Attia Drive
-    "https://ultimatehealthpodcast.com/feed/podcast/" # The Ultimate Health Podcast
+    "https://drhyman.com/feed/podcast/",                      # The Doctor’s Farmacy
+    "https://feeds.megaphone.fm/nutritiondiva",               # Nutrition Diva
+    "https://feeds.megaphone.fm/foundmyfitness",              # FoundMyFitness
+    "https://themodelhealthshow.libsyn.com/rss",              # The Model Health Show
+    "https://wellnessmama.com/feed/podcast/",                 # Wellness Mama Podcast
+    "https://mindbodygreen.com/feed/podcast",                 # Mindbodygreen Podcast
+    "https://peterattiamd.com/feed/podcast/",                 # The Peter Attia Drive
+    "https://ultimatehealthpodcast.com/feed/podcast/",        # The Ultimate Health Podcast
+    
+    # Additional pro-health podcasts:
+    "https://feeds.simplecast.com/6SZWJjdx",                  # FoundMyFitness Deep Dives
+    "https://anchor.fm/s/7a0e3b4c/podcast/rss",               # The Balanced Life with Robin Long
+    "https://feeds.feedburner.com/WellnessForce",             # Wellness Force Podcast
+    "https://feeds.simplecast.com/WU9gBqT3",                  # The Health Code
+    "https://feeds.megaphone.fm/HSW1741400476",               # Happier with Gretchen Rubin
+    "https://feeds.simplecast.com/tOjNXec5",                  # The Rich Roll Podcast
+    "https://feeds.megaphone.fm/NFL7271905056",               # The Ultimate Health Podcast
+    "https://feeds.soundcloud.com/users/soundcloud:users:32216449/sounds.rss",  # NutritionFacts.org Podcast
+    "https://podcast.wellness.com/feed.xml",                   # Wellness.com Podcast
 ]
 
 
