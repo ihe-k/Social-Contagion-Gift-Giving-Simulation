@@ -260,61 +260,6 @@ st.pyplot(fig_net)
 
 
 # --- Step 10: Network Visualization ---
-st.subheader("User Network Contagion Simulation")
-
-fig_net, ax_net = plt.subplots(figsize=(8, 6))
-
-def darken_color(color, amount=0.6):
-    c = mcolors.to_rgb(color)
-    darkened = tuple(max(min(x * amount, 1), 0) for x in c)
-    return darkened
-
-node_colors = []
-node_sizes = []
-node_border_widths = []
-edge_colors = []
-
-# Normalize betweenness centrality for border widths (scale 1 to 6)
-bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
-if bc_values.max() > 0:
-    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
-else:
-    norm_bc = np.ones(len(G.nodes))
-
-for idx, n in enumerate(G.nodes):
-    color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
-    node_colors.append(color)
-    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
-    node_border_widths.append(norm_bc[idx])
-
-for u, v in G.edges:
-    color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
-    color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
-    rgb_u = mcolors.to_rgb(color_u)
-    rgb_v = mcolors.to_rgb(color_v)
-    mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
-    dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
-    edge_colors.append(dark_edge_color)
-
-nx.draw(G, pos,
-        with_labels=False,  # disable built-in labels because we will add custom colored ones
-        node_size=node_sizes,
-        node_color=node_colors,
-        edge_color=edge_colors,
-        linewidths=node_border_widths,
-        font_size=8,
-        ax=ax_net,
-        edgecolors='gray')
-
-# Now draw labels with colors per node
-for node in G.nodes:
-    nx.draw_networkx_labels(
-        G, pos,
-        labels={node: str(node)},
-        font_color=label_colors[node],
-        font_size=8,
-        ax=ax_net
-    )
 
 # Legend
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
