@@ -252,7 +252,32 @@ with col3:
     st.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
 
 # --- Step 9: Visualization ---
+# --- Step 9: Rewarded Bridgers Dashboard ---
+gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
+gifted_influences = [G.nodes[n]['triggered_count'] for n in gifted_nodes]
+other_nodes = [n for n in G.nodes if not G.nodes[n]['gifted']]
+other_influences = [G.nodes[n]['triggered_count'] for n in other_nodes]
+
+total_users = len(G.nodes)
+num_gifted = len(gifted_nodes)
+avg_influence_gifted = np.mean(gifted_influences) if gifted_influences else 0
+avg_influence_others = np.mean(other_influences) if other_influences else 0
+avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
+avg_influence = np.mean([G.nodes[n]['triggered_count'] for n in G.nodes])
+
+st.subheader("🎁 Rewarded & Influential Users Overview")
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Users", total_users)
+col2.metric("Gifted Bridgers", num_gifted)
+col3.metric("Avg Influence (Gifted)", f"{avg_influence_gifted:.2f}")
+
+col1.metric("Avg Influence (Others)", f"{avg_influence_others:.2f}")
+col2.metric("Average User Score", f"{avg_score:.2f}")
+col3.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
+
+# --- Step 10: Network Visualization ---
 st.subheader("User Network Contagion Simulation")
+
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
 
 def darken_color(color, amount=0.6):
@@ -261,23 +286,25 @@ def darken_color(color, amount=0.6):
     return darkened
 
 node_colors = []
-edge_colors = []
 node_sizes = []
 node_border_widths = []
+edge_colors = []
 
-# Normalize betweenness centrality for border widths (scale 1 to 6 for visibility)
+# Normalize betweenness centrality for border widths (scale 1 to 6)
 bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
 if bc_values.max() > 0:
     norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
 else:
     norm_bc = np.ones(len(G.nodes))
 
+# Node visual properties
 for idx, n in enumerate(G.nodes):
     color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
 
+# Edge colors
 for u, v in G.edges:
     color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
     color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
@@ -288,65 +315,40 @@ for u, v in G.edges:
     edge_colors.append(dark_edge_color)
 
 # Draw nodes
-nx.draw_networkx_nodes(G, pos,
-                       node_size=node_sizes,
-                       node_color=node_colors,
-                       linewidths=node_border_widths,
-                       edgecolors='gray',
-                       ax=ax_net)
-
-for n in G.nodes:
-    # Gifted users get a gold border and bigger size
-    if G.nodes[n]['gifted']:
-        node_border_colors.append('gold')
-        node_sizes.append(500)
-    else:
-        node_border_colors.append('gray')
-        node_sizes.append(300)
-        
-    # Node fill color by gender
-    if G.nodes[n]['gender'] == 'Male':
-        node_colors.append('lightgreen')
-    else:
-        node_colors.append('lightblue')
-
 nx.draw_networkx_nodes(
     G, pos,
-    node_color=node_colors,
     node_size=node_sizes,
-    edgecolors=node_border_colors,
-    linewidths=2,
+    node_color=node_colors,
+    linewidths=node_border_widths,
+    edgecolors='gray',
     ax=ax_net
 )
 
 # Draw edges
-nx.draw_networkx_edges(G, pos,
-                       edge_color=edge_colors,
-                       ax=ax_net)
+nx.draw_networkx_edges(
+    G, pos,
+    edge_color=edge_colors,
+    ax=ax_net
+)
 
-# Prepare label colors by gender
+# Label colors by gender
 label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
 
-# Draw labels with gender-specific colors
-for node in G.nodes:
-    nx.draw_networkx_labels(
-        G, pos,
-        labels={node: str(node)},
-        font_color=label_colors[node],
-        font_size=8,
-        ax=ax_net
-    )
-    
-# Legend for genders
+# Draw labels
+nx.draw_networkx_labels(
+    G, pos,
+    labels={n: str(n) for n in G.nodes},
+    font_color=[label_colors[n] for n in G.nodes],
+    font_size=8,
+    ax=ax_net
+)
+
+# Legend
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
 female_patch = mpatches.Patch(color='lightblue', label='Female')
 ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
-
-
-# --- Step 10: Network Visualization ---
-
 
 # --- Step 11: Explanation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
