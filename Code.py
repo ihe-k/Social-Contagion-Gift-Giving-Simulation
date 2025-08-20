@@ -152,105 +152,24 @@ st.dataframe(report_df)
 
 
 # --- Enhanced Dashboard Summary for Gifted & Influential Users ---
-st.subheader("🎁 Rewarded & Influential Users Overview")
+# --- Step 8: Contagion Simulation with Bridging Gifts ---
+st.subheader("Contagion Simulation")
 
-# Collect data for gifted users
-gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
-num_gifted = len(gifted_nodes)
-
-# Average triggered shares for gifted vs non-gifted users
-gifted_triggered = np.mean([G.nodes[n]['triggered_count'] for n in gifted_nodes]) if gifted_nodes else 0
-non_gifted_nodes = [n for n in G.nodes if not G.nodes[n]['gifted']]
-non_gifted_triggered = np.mean([G.nodes[n]['triggered_count'] for n in non_gifted_nodes]) if non_gifted_nodes else 0
-
-# Scores distribution
-scores = [G.nodes[n]['score'] for n in G.nodes]
-avg_score = np.mean(scores)
-
-# Influence = triggered_count (how many they influenced)
-influence = [G.nodes[n]['triggered_count'] for n in G.nodes]
-avg_influence = np.mean(influence)
-
-# Gender and ideology counts
-gender_counts = pd.Series([G.nodes[n]['gender'] for n in G.nodes]).value_counts()
-ideology_counts = pd.Series([G.nodes[n]['ideology'] for n in G.nodes]).value_counts()
-chronic_counts = pd.Series([G.nodes[n]['has_chronic_disease'] for n in G.nodes]).value_counts()
-
-# Top gifted users table
-top_gifted = sorted(gifted_nodes, key=lambda n: G.nodes[n]['triggered_count'], reverse=True)[:5]
-top_gifted_data = [{
-    'User': n,
-    'Triggered Shares': G.nodes[n]['triggered_count'],
-    'Score': G.nodes[n]['score'],
-    'Gender': G.nodes[n]['gender'],
-    'Ideology': G.nodes[n]['ideology']
-} for n in top_gifted]
-
-# Metrics row
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Users", NUM_USERS)
-col2.metric("Gifted Bridgers", num_gifted)
-col3.metric("Avg Influence (Gifted)", f"{gifted_triggered:.2f}")
-col4.metric("Avg Influence (Others)", f"{non_gifted_triggered:.2f}")
-
-st.markdown(f"**Average User Score:** {avg_score:.2f}")
-st.markdown(f"**Average Influence (Triggered Shares):** {avg_influence:.2f}")
-
-# Plots row
-colg, coli, colc = st.columns(3)
-
-with colg:
-    st.markdown("### Gender Distribution")
-    st.bar_chart(gender_counts)
-
-with coli:
-    st.markdown("### Ideology Distribution")
-    st.bar_chart(ideology_counts)
-
-with colc:
-    st.markdown("### Chronic Disease Status")
-    st.bar_chart(chronic_counts)
-
-# Gifted vs non-gifted users bar chart
-counts = {'Gifted': num_gifted, 'Non-Gifted': NUM_USERS - num_gifted}
-st.markdown("### Gifted vs Non-Gifted Users")
-st.bar_chart(pd.DataFrame.from_dict(counts, orient='index', columns=['Count']))
-
-# Top gifted users table
-if top_gifted_data:
-    st.markdown("#### Top Gifted Users by Influence")
-    st.table(top_gifted_data)
-else:
-    st.write("No gifted users detected yet.")
-
-# --- Step 8: Contagion Simulation ---
-
-# First, identify and gift users who bridge ideology and gender boundaries
-for node in G.nodes:
-    neighbors = list(G.neighbors(node))
-    cross_ideology_neighbors = [n for n in neighbors if G.nodes[n]['ideology'] != G.nodes[node]['ideology']]
-    cross_gender_neighbors = [n for n in neighbors if G.nodes[n]['gender'] != G.nodes[node]['gender']]
-    
-    # Gift if user has neighbors with both different ideology and different gender
-    if cross_ideology_neighbors and cross_gender_neighbors:
-        G.nodes[node]['gifted'] = True
-    else:
-        G.nodes[node]['gifted'] = False
-
-st.sidebar.header("Simulation Parameters")
 SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 
-# Reset contagion status for all nodes
+# Reset contagion-related attributes
 for node in G.nodes:
     G.nodes[node]['shared'] = False
+    G.nodes[node]['gifted'] = False
     G.nodes[node]['triggered_count'] = 0
+    G.nodes[node]['score'] = 0
 
-# Seed initial spreaders
 for node in seed_nodes:
     G.nodes[node]['shared'] = True
+    G.nodes[node]['gifted'] = True
 
 contagion, current = [set(seed_nodes)], set(seed_nodes)
 while current:
@@ -269,11 +188,41 @@ while current:
                 if random.random() < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[u]['triggered_count'] += 1
+                    
+                    # Reward users who bridge both gender and ideology boundaries
+                    if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
+                        G.nodes[u]['gifted'] = True
+                    
                     next_step.add(v)
     if not next_step:
         break
     contagion.append(next_step)
     current = next_step
+
+# --- Dashboard: Show Reward & Influence Stats ---
+gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
+gifted_influences = [G.nodes[n]['triggered_count'] for n in gifted_nodes]
+other_nodes = [n for n in G.nodes if not G.nodes[n]['gifted']]
+other_influences = [G.nodes[n]['triggered_count'] for n in other_nodes]
+
+total_users = len(G.nodes)
+num_gifted = len(gifted_nodes)
+avg_influence_gifted = np.mean(gifted_influences) if gifted_influences else 0
+avg_influence_others = np.mean(other_influences) if other_influences else 0
+avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
+avg_influence = np.mean([G.nodes[n]['triggered_count'] for n in G.nodes])
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("Total Users", total_users)
+    st.metric("Gifted Bridgers", num_gifted)
+with col2:
+    st.metric("Avg Influence (Gifted)", f"{avg_influence_gifted:.2f}")
+    st.metric("Avg Influence (Others)", f"{avg_influence_others:.2f}")
+with col3:
+    st.metric("Average User Score", f"{avg_score:.2f}")
+    st.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
+
 # --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
