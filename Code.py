@@ -192,6 +192,7 @@ while current:
                     # Reward users who bridge both gender and ideology boundaries
                     if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
                         G.nodes[u]['gifted'] = True
+                        print(f"Gifted user {u} bridged to {v}")
                     
                     next_step.add(v)
     if not next_step:
