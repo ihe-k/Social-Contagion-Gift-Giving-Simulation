@@ -139,25 +139,33 @@ betweenness_centrality = nx.betweenness_centrality(G)
 
 user_features = []
 user_labels = []
+
 for node in G.nodes:
     u = G.nodes[node]
-  clustering_coeff = nx.clustering(G, node)
-degree = G.degree[node]
-neighbor_health_alignment = np.mean([
-    1 if G.nodes[n]['sentiment'] == 'pro-health' else 0 for n in G.neighbors(node)
-]) if list(G.neighbors(node)) else 0
 
-features = [
-    1 if u['gender'] == 'Female' else 0,
-    1 if u['has_chronic_disease'] else 0,
-    sentiment_trends[node],
-    betweenness_centrality[node],
-    clustering_coeff,
-    degree,
-    neighbor_health_alignment
-]
+    clustering_coeff = nx.clustering(G, node)
+    degree = G.degree[node]
+
+    neighbors = list(G.neighbors(node))
+    if neighbors:
+        neighbor_health_alignment = np.mean([
+            1 if G.nodes[n]['sentiment'] == 'pro-health' else 0 for n in neighbors
+        ])
+    else:
+        neighbor_health_alignment = 0
+
+    features = [
+        1 if u['gender'] == 'Female' else 0,
+        1 if u['has_chronic_disease'] else 0,
+        sentiment_trends[node],
+        betweenness_centrality[node],
+        clustering_coeff,
+        degree,
+        neighbor_health_alignment
+    ]
+
     user_features.append(features)
-    user_labels.append(u['ideology'])
+    user_labels.append(u['ideology'])  # this is the target, not a feature
 
 X_train, X_test, y_train, y_test = train_test_split(
     user_features, user_labels, test_size=0.2, random_state=42
