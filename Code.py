@@ -290,7 +290,7 @@ total_users = len(G.nodes)
 num_gifted = len(gifted_nodes)
 avg_influence_gifted = np.mean(gifted_influences) if gifted_influences else 0
 avg_influence_others = np.mean(other_influences) if other_influences else 0
-avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
+#avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
 avg_influence = np.mean([G.nodes[n]['triggered_count'] for n in G.nodes])
 
 # --- Step 10: Network Visualization ---
