@@ -25,7 +25,7 @@ st.title("Health Information Contagion Network Simulation")
 # --- Step 1: Network Setup (Users Only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.5, seed=42)
 nx.set_node_attributes(G, False, 'shared')
-nx.set_node_attributes(G, 0, 'score')
+#nx.set_node_attributes(G, 0, 'score')
 nx.set_node_attributes(G, False, 'gifted')
 nx.set_node_attributes(G, 0, 'triggered_count')
 nx.set_node_attributes(G, '', 'gender')
@@ -114,7 +114,7 @@ for node in G.nodes:
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
     G.nodes[node]['shared'] = False
-    G.nodes[node]['score'] = 0
+    #G.nodes[node]['score'] = 0
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
@@ -262,7 +262,7 @@ total_users = len(G.nodes)
 num_gifted = len(gifted_nodes)
 avg_influence_gifted = np.mean(gifted_influences) if gifted_influences else 0
 avg_influence_others = np.mean(other_influences) if other_influences else 0
-avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
+#avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
 avg_influence = np.mean([G.nodes[n]['triggered_count'] for n in G.nodes])
 
 st.subheader("🎁 Rewarded & Influential Users Overview")
@@ -274,7 +274,7 @@ with col2:
     st.metric("Avg Influence (Gifted)", f"{avg_influence_gifted:.2f}")
     st.metric("Avg Influence (Others)", f"{avg_influence_others:.2f}")
 with col3:
-    st.metric("Average User Score", f"{avg_score:.2f}")
+   # st.metric("Average User Score", f"{avg_score:.2f}")
     st.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
 
 # --- Step 9: Visualization ---
