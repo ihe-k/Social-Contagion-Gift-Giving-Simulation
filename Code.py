@@ -5,8 +5,9 @@ from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
+import pandas as pd
 import feedparser
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
@@ -14,11 +15,12 @@ import matplotlib.patches as mpatches
 # --- Parameters ---
 NUM_USERS = 30
 INIT_SHARED = 3
-SHARE_PROB = 0.3
 GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
+
+st.title("Health Information Contagion Network Simulation")
 
 # --- Step 1: Network Setup (Users Only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
@@ -41,7 +43,7 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Fetch Podcasts via RSS (Content Source Only) ---
+# --- Step 3: Fetch Podcasts via RSS ---
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
@@ -59,6 +61,7 @@ rss_urls = [
     "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
     "https://rss.art19.com/the-daily",        # The Daily by NYT
     "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
+    # Add your other podcast RSS URLs here as needed
 ]
 
 podcast_items = []
@@ -137,25 +140,27 @@ grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
-# --- Step 7: Evaluation ---
-#import pandas as pd  # Make sure this is at the top of your script
-
 # --- Step 7: Model Evaluation ---
-#st.subheader("Model Evaluation")
-#accuracy = accuracy_score(y_test, y_pred)
-#report_dict = classification_report(y_test, y_pred, output_dict=True)
-#report_df = pd.DataFrame(report_dict).transpose()
+st.subheader("Model Evaluation")
 
-# Round numeric values for better readability
-#report_df = report_df.round(2)
+accuracy = accuracy_score(y_test, y_pred)
+report_dict = classification_report(y_test, y_pred, output_dict=True)
+report_df = pd.DataFrame(report_dict).transpose().round(2)
 
-# Display accuracy and detailed report
-#st.write(f"**Accuracy:** {accuracy:.2%}")
-#st.dataframe(report_df)
+st.write(f"**Accuracy:** {accuracy:.2%}")
+st.dataframe(report_df)
 
 # --- Step 8: Contagion Simulation ---
+st.sidebar.header("Simulation Parameters")
+SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
+
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
+for node in G.nodes:
+    G.nodes[node]['shared'] = False
+    G.nodes[node]['gifted'] = False
+    G.nodes[node]['triggered_count'] = 0
+
 for node in seed_nodes:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
@@ -183,6 +188,7 @@ while current:
     contagion.append(next_step)
     current = next_step
 
+-
 # --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
@@ -219,16 +225,28 @@ for u, v in G.edges:
     dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
     edge_colors.append(dark_edge_color)
 
-nx.draw(G, pos,
-        with_labels=True,  # Show user number
-        labels={n: str(n) for n in G.nodes},  # user number as label
-        node_size=node_sizes,
-        node_color=node_colors,
-        edge_color=edge_colors,
-        linewidths=node_border_widths,
-        font_size=8,
-        ax=ax_net,
-        edgecolors='gray')  # node border color
+# Draw nodes
+nx.draw_networkx_nodes(G, pos,
+                       node_size=node_sizes,
+                       node_color=node_colors,
+                       linewidths=node_border_widths,
+                       edgecolors='gray',
+                       ax=ax_net)
+
+# Draw edges
+nx.draw_networkx_edges(G, pos,
+                       edge_color=edge_colors,
+                       ax=ax_net)
+
+# Prepare label colors by gender
+label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
+
+# Draw labels with gender-specific colors
+nx.draw_networkx_labels(G, pos,
+                        labels={n: str(n) for n in G.nodes},
+                        font_color=[label_colors[n] for n in G.nodes],
+                        font_size=8,
+                        ax=ax_net)
 
 # Legend for genders
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
@@ -237,12 +255,68 @@ ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
 
-# --- Toggleable Network Diagram Explanation ---
+
+# --- Step 10: Network Visualization ---
+st.subheader("User Network Contagion Simulation")
+
+fig_net, ax_net = plt.subplots(figsize=(8, 6))
+
+def darken_color(color, amount=0.6):
+    c = mcolors.to_rgb(color)
+    darkened = tuple(max(min(x * amount, 1), 0) for x in c)
+    return darkened
+
+node_colors = []
+node_sizes = []
+node_border_widths = []
+edge_colors = []
+
+# Normalize betweenness centrality for border widths (scale 1 to 6)
+bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
+if bc_values.max() > 0:
+    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
+else:
+    norm_bc = np.ones(len(G.nodes))
+
+for idx, n in enumerate(G.nodes):
+    color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
+    node_colors.append(color)
+    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+    node_border_widths.append(norm_bc[idx])
+
+for u, v in G.edges:
+    color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
+    color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
+    rgb_u = mcolors.to_rgb(color_u)
+    rgb_v = mcolors.to_rgb(color_v)
+    mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
+    dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
+    edge_colors.append(dark_edge_color)
+
+nx.draw(G, pos,
+        with_labels=True,
+        labels={n: str(n) for n in G.nodes},
+        node_size=node_sizes,
+        node_color=node_colors,
+        edge_color=edge_colors,
+        linewidths=node_border_widths,
+        font_size=8,
+        ax=ax_net,
+        edgecolors='gray')
+
+# Legend
+male_patch = mpatches.Patch(color='lightgreen', label='Male')
+female_patch = mpatches.Patch(color='lightblue', label='Female')
+ax_net.legend(handles=[male_patch, female_patch], loc='best')
+
+st.pyplot(fig_net)
+
+# --- Step 11: Explanation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
 
-    - **Node Shapes and Colors:**  
+    - **Node Colors:**  
       - **Green circles** represent **Male users**  
       - **Blue circles** represent **Female users**  
 
@@ -251,7 +325,7 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
       Larger nodes = more shares triggered.
 
     - **Node Border Width:**  
-      Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts of the network and playing a key role in information spread.
+      Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
 
     - **Edge Colors (Connections):**  
       - **Light green edges** = Male-to-Male connections (**gender homophily**)  
@@ -259,10 +333,10 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
       - **Gray edges** = Male-to-Female or Female-to-Male (**cross-gender ties**)
 
     - **Clusters:**  
-      The **green cluster in the center** highlights a group of male users who are densely interconnected. This is likely a result of **gender homophily** as well as shared ideology and leads to more efficient information diffusion within that subgroup.
+      The network shows **gender homophily** and **ideological alignment** influencing connections and information diffusion.
 
     - **Overall Insights:**  
-      - The network demonstrates **homophily effects** where users are more likely to connect and influence others of the **same gender and ideology**.  
-      - Users with higher **centrality** (thicker borders) act as **key influencers** or bridges in the network and are essential for spreading health-related information beyond their immediate circles.  
-      - **Ideological alignment** and **chronic health conditions** also influence the probability of sharing, shaping the contagion dynamics.
+      - Users with higher **centrality** act as **key influencers** or bridges.  
+      - **Chronic disease status** and **ideological differences** impact sharing probabilities and contagion dynamics.
     """)
+
