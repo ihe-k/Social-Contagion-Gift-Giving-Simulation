@@ -242,12 +242,15 @@ nx.draw_networkx_edges(G, pos,
 label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
 
 # Draw labels with gender-specific colors
-nx.draw_networkx_labels(G, pos,
-                        labels={n: str(n) for n in G.nodes},
-                        font_color=[label_colors[n] for n in G.nodes],
-                        font_size=8,
-                        ax=ax_net)
-
+for node in G.nodes:
+    nx.draw_networkx_labels(
+        G, pos,
+        labels={node: str(node)},
+        font_color=label_colors[node],
+        font_size=8,
+        ax=ax_net
+    )
+    
 # Legend for genders
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
 female_patch = mpatches.Patch(color='lightblue', label='Female')
