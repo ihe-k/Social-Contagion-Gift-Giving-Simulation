@@ -150,8 +150,8 @@ report_df = pd.DataFrame(report_dict).transpose().round(2)
 st.write(f"**Accuracy:** {accuracy:.2%}")
 st.dataframe(report_df)
 
-# --- 
-# --- Dashboard Summary for Gifted & Influential Users ---
+
+# --- Enhanced Dashboard Summary for Gifted & Influential Users ---
 st.subheader("🎁 Rewarded & Influential Users Overview")
 
 # Collect data for gifted users
@@ -171,21 +171,12 @@ avg_score = np.mean(scores)
 influence = [G.nodes[n]['triggered_count'] for n in G.nodes]
 avg_influence = np.mean(influence)
 
-# Create dashboard metrics
-col1, col2, col3, col4 = st.columns(4)
-col1.metric("Total Users", NUM_USERS)
-col2.metric("Gifted Bridgers", num_gifted)
-col3.metric("Avg Influence (Gifted)", f"{gifted_triggered:.2f}")
-col4.metric("Avg Influence (Others)", f"{non_gifted_triggered:.2f}")
+# Gender and ideology counts
+gender_counts = pd.Series([G.nodes[n]['gender'] for n in G.nodes]).value_counts()
+ideology_counts = pd.Series([G.nodes[n]['ideology'] for n in G.nodes]).value_counts()
+chronic_counts = pd.Series([G.nodes[n]['has_chronic_disease'] for n in G.nodes]).value_counts()
 
-st.markdown(f"**Average User Score:** {avg_score:.2f}")
-st.markdown(f"**Average Influence (Triggered Shares):** {avg_influence:.2f}")
-
-# Bar chart: Number of gifted vs non-gifted users
-counts = {'Gifted': num_gifted, 'Non-Gifted': NUM_USERS - num_gifted}
-st.bar_chart(pd.DataFrame.from_dict(counts, orient='index', columns=['Count']))
-
-# Optional: Show a table of top influential gifted users
+# Top gifted users table
 top_gifted = sorted(gifted_nodes, key=lambda n: G.nodes[n]['triggered_count'], reverse=True)[:5]
 top_gifted_data = [{
     'User': n,
@@ -195,6 +186,37 @@ top_gifted_data = [{
     'Ideology': G.nodes[n]['ideology']
 } for n in top_gifted]
 
+# Metrics row
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Total Users", NUM_USERS)
+col2.metric("Gifted Bridgers", num_gifted)
+col3.metric("Avg Influence (Gifted)", f"{gifted_triggered:.2f}")
+col4.metric("Avg Influence (Others)", f"{non_gifted_triggered:.2f}")
+
+st.markdown(f"**Average User Score:** {avg_score:.2f}")
+st.markdown(f"**Average Influence (Triggered Shares):** {avg_influence:.2f}")
+
+# Plots row
+colg, coli, colc = st.columns(3)
+
+with colg:
+    st.markdown("### Gender Distribution")
+    st.bar_chart(gender_counts)
+
+with coli:
+    st.markdown("### Ideology Distribution")
+    st.bar_chart(ideology_counts)
+
+with colc:
+    st.markdown("### Chronic Disease Status")
+    st.bar_chart(chronic_counts)
+
+# Gifted vs non-gifted users bar chart
+counts = {'Gifted': num_gifted, 'Non-Gifted': NUM_USERS - num_gifted}
+st.markdown("### Gifted vs Non-Gifted Users")
+st.bar_chart(pd.DataFrame.from_dict(counts, orient='index', columns=['Count']))
+
+# Top gifted users table
 if top_gifted_data:
     st.markdown("#### Top Gifted Users by Influence")
     st.table(top_gifted_data)
