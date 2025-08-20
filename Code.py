@@ -259,10 +259,10 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
       - **Gray edges** = Male-to-Female or Female-to-Male (**cross-gender ties**)
 
     - **Clusters:**  
-      The **green cluster in the center** highlights a group of male users who are densely interconnected. This is likely a result of **gender homophily** and shared ideology, leading to more efficient information diffusion within that subgroup.
+      The **green cluster in the center** highlights a group of male users who are densely interconnected. This is likely a result of **gender homophily** as well as shared ideology and leads to more efficient information diffusion within that subgroup.
 
     - **Overall Insights:**  
-      - The network demonstrates **homophily effects**, where users are more likely to connect and influence others of the **same gender and ideology**.  
-      - Users with higher **centrality** (thicker borders) act as **key influencers** or bridges in the network, essential for spreading health-related information beyond their immediate circles.  
+      - The network demonstrates **homophily effects** where users are more likely to connect and influence others of the **same gender and ideology**.  
+      - Users with higher **centrality** (thicker borders) act as **key influencers** or bridges in the network and are essential for spreading health-related information beyond their immediate circles.  
       - **Ideological alignment** and **chronic health conditions** also influence the probability of sharing, shaping the contagion dynamics.
     """)
