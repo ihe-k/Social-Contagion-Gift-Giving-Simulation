@@ -236,16 +236,12 @@ y_test = [user_labels[i] for i in test_index]
 
 # --- Expanded hyperparameter grid ---
 
-from imblearn.over_sampling import SMOTE
-from collections import Counter
-from sklearn.ensemble import RandomForestClassifier
-
-# After your train/test split
-
-print("Original training class distribution:", Counter(y_train))
+print("Original training label distribution:", Counter(y_train))
 
 smote = SMOTE(random_state=42)
 X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
+
+print("Resampled training label distribution:", Counter(y_train_resampled))
 
 print("Resampled training class distribution:", Counter(y_train_resampled))
 
@@ -257,9 +253,14 @@ param_grid = {
     'class_weight': ['balanced']  # Add class_weight to param_grid to ensure balanced weighting
 }
 
-grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, n_jobs=-1)
-grid.fit(X_train_resampled, y_train_resampled)
+grid = GridSearchCV(
+    RandomForestClassifier(class_weight='balanced', random_state=42),  # <-- add class_weight here
+    param_grid,
+    cv=3,
+    n_jobs=-1
+)
 
+grid.fit(X_train_resampled, y_train_resampled)  # <-- fit on resampled data
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
