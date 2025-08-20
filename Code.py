@@ -220,7 +220,7 @@ feature_names = [
     'Pro_Health_Neighbor_Proportion',
     'Anti_Health_Neighbor_Proportion',
     'Gender_Chronic_Interaction'
-]
+
 ]
 
 # --- Feature scaling for continuous features (indexes 5-8) ---
