@@ -57,12 +57,22 @@ def get_podcasts_from_rss(feed_url, max_items=5):
     return podcasts
 
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
-    "https://rss.art19.com/the-daily",        # The Daily by NYT
-    "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
-    # Add your other podcast RSS URLs here as needed
+    "https://feeds.npr.org/510307/rss.xml",          # NPR Life Kit Health
+    "https://feeds.simplecast.com/54nAGcIl",         # Stuff You Should Know
+    "https://rss.art19.com/the-daily",                # The Daily by NYT
+    "https://feeds.megaphone.fm/ADL9840290619",       # Revisionist History
+
+    # --- Added Pro-Health Podcast RSS Feeds ---
+    "https://drhyman.com/feed/podcast/",              # The Doctor’s Farmacy
+    "https://feeds.megaphone.fm/nutritiondiva",       # Nutrition Diva
+    "https://feeds.megaphone.fm/foundmyfitness",      # FoundMyFitness
+    "https://themodelhealthshow.libsyn.com/rss",      # The Model Health Show
+    "https://wellnessmama.com/feed/podcast/",         # Wellness Mama Podcast
+    "https://mindbodygreen.com/feed/podcast",         # Mindbodygreen Podcast
+    "https://peterattiamd.com/feed/podcast/",         # The Peter Attia Drive
+    "https://ultimatehealthpodcast.com/feed/podcast/" # The Ultimate Health Podcast
 ]
+
 
 podcast_items = []
 for url in rss_urls:
