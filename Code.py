@@ -167,9 +167,9 @@ for node in G.nodes:
         betweenness_centrality[node],
         pagerank[node],
         closeness[node]
-]
-    user_features.append(features)
-    user_labels.append(u['ideology'])  # this is the target, not a feature
+    ]
+        user_features.append(features)
+        user_labels.append(u['ideology'])  # this is the target, not a feature
 
 from collections import Counter
 print("Label distribution:", Counter(user_labels))
