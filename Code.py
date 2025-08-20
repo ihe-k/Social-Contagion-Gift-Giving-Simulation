@@ -172,8 +172,12 @@ for node in seed_nodes:
     G.nodes[node]['gifted'] = True
 
 contagion, current = [set(seed_nodes)], set(seed_nodes)
+contagion, current = [set(seed_nodes)], set(seed_nodes)
 while current:
     next_step = set()
+    print(f"Current step nodes: {current}")
+    print(f"Number of nodes in next step before update: {len(next_step)}")
+
     for u in current:
         for v in G.neighbors(u):
             if not G.nodes[v]['shared']:
@@ -185,16 +189,21 @@ while current:
                 if G.nodes[u]['gender'] == G.nodes[v]['gender']:
                     prob += GENDER_HOMOPHILY_BONUS
                 prob = min(max(prob, 0), 1)
-                if random.random() < prob:
+
+                rand_val = random.random()
+                print(f"Trying to share from {u} to {v}: prob={prob:.2f}, rand={rand_val:.2f}")
+
+                if rand_val < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[u]['triggered_count'] += 1
-                    
-                    # Reward users who bridge both gender and ideology boundaries
+
                     if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
                         G.nodes[u]['gifted'] = True
-                        print(f"Gifted user {u} bridged to {v}")
-                    
+                        print(f"User {u} gifted for bridging to {v}")
+
                     next_step.add(v)
+
+    print(f"Number of nodes in next step after update: {len(next_step)}")
     if not next_step:
         break
     contagion.append(next_step)
