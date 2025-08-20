@@ -147,11 +147,11 @@ y_pred = best_model.predict(X_test)
 #report_df = pd.DataFrame(report_dict).transpose()
 
 # Round numeric values for better readability
-report_df = report_df.round(2)
+#report_df = report_df.round(2)
 
 # Display accuracy and detailed report
-st.write(f"**Accuracy:** {accuracy:.2%}")
-st.dataframe(report_df)
+#st.write(f"**Accuracy:** {accuracy:.2%}")
+#st.dataframe(report_df)
 
 # --- Step 8: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
