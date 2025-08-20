@@ -36,9 +36,9 @@ nx.set_node_attributes(G, '', 'sentiment')
 # --- Step 2: Sentiment Analyzer ---
 def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
-    if polarity > 0.5:
+    if polarity > 0.2:
         return 'pro-health'
-    elif polarity < -0.5:
+    elif polarity < -0.2:
         return 'anti-health'
     else:
         return 'neutral'
@@ -70,7 +70,12 @@ rss_urls = [
     "https://mindbodygreen.com/feed/podcast",                 # Mindbodygreen Podcast
     "https://peterattiamd.com/feed/podcast/",                 # The Peter Attia Drive
     "https://ultimatehealthpodcast.com/feed/podcast/",        # The Ultimate Health Podcast
-    
+    "https://feeds.megaphone.fm/sem-podcast",                  # Seminars in Integrative Medicine
+    "https://feeds.simplecast.com/2fo6fiz5",                   # The Plant Proof Podcast
+    "https://feeds.megaphone.fm/mindpump",                     # Mind Pump: Raw Fitness Truth
+]
+rss_urls.extend(pro_health_feeds)
+
     # Additional pro-health podcasts:
     "https://feeds.simplecast.com/6SZWJjdx",                  # FoundMyFitness Deep Dives
     "https://anchor.fm/s/7a0e3b4c/podcast/rss",               # The Balanced Life with Robin Long
