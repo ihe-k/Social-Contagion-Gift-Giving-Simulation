@@ -241,6 +241,12 @@ grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
+accuracy = accuracy_score(y_test, y_pred)
+st.write(f"Test Accuracy: {accuracy:.3f}")
+
+report = classification_report(y_test, y_pred)
+st.text(report)
+
 # --- Feature Importance ---
 importances = best_model.feature_importances_
 feat_imp = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
