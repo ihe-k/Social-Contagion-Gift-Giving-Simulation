@@ -21,6 +21,8 @@ CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
 
 st.title("Health Information Contagion Network Simulation")
+st.write("Hello! Streamlit output is working.")
+
 
 # --- Step 1: Network Setup (Users Only) ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.5, seed=42)
