@@ -164,17 +164,28 @@ for node in G.nodes:
     
     gender_female = 1 if u['gender'] == 'Female' else 0
     has_chronic = 1 if u['has_chronic_disease'] else 0
-    ideology_pro = 1 if u['ideology'] == 'pro-health' else 0
-    ideology_anti = 1 if u['ideology'] == 'anti-health' else 0
-    ideology_neutral = 1 if u['ideology'] == 'neutral' else 0
-    ideology_num = ideology_to_num(u['ideology'])
+    #ideology_pro = 1 if u['ideology'] == 'pro-health' else 0
+    #ideology_anti = 1 if u['ideology'] == 'anti-health' else 0
+   # ideology_neutral = 1 if u['ideology'] == 'neutral' else 0
+   # ideology_num = ideology_to_num(u['ideology'])
+
+    neighbors = list(G.neighbors(node))
+    if neighbors:
+        pro_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'pro-health') / len(neighbors)
+        anti_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'anti-health') / len(neighbors)
+    else:
+        pro_health_neighbors = 0
+        anti_health_neighbors = 0
+
+features.extend([pro_health_neighbors, anti_health_neighbors])
+
     
     features = [
         gender_female,
         has_chronic,
-        ideology_pro,
-        ideology_anti,
-        ideology_neutral,
+        #ideology_pro,
+        #ideology_anti,
+        #ideology_neutral,
         sentiment_trends[node],
         betweenness_centrality[node],
         eigenvector_centrality[node],    # new feature
@@ -184,8 +195,8 @@ for node in G.nodes:
     ]
     
     # Interaction features
-    features.append(gender_female * ideology_num)
-    features.append(has_chronic * ideology_num)
+    #features.append(gender_female * ideology_num)
+    #features.append(has_chronic * ideology_num)
     features.append(gender_female * has_chronic)
     
     user_features.append(features)
@@ -194,18 +205,22 @@ for node in G.nodes:
 feature_names = [
     'Gender_Female',
     'Has_Chronic_Disease',
-    'Ideology_Pro-Health',
-    'Ideology_Anti-Health',
-    'Ideology_Neutral',
+    #'Ideology_Pro-Health',
+    #'Ideology_Anti-Health',
+    #'Ideology_Neutral',
     'Sentiment_Trend',
     'Betweenness_Centrality',
     'Eigenvector_Centrality',      # new
     'Degree_Centrality',           # new
     'Pagerank',
     'Closeness_Centrality',
-    'Gender_Ideology_Interaction',
-    'Chronic_Ideology_Interaction',
+    #'Gender_Ideology_Interaction',
+    #'Chronic_Ideology_Interaction',
+    #'Gender_Chronic_Interaction'
+    'Pro_Health_Neighbor_Proportion',
+    'Anti_Health_Neighbor_Proportion',
     'Gender_Chronic_Interaction'
+]
 ]
 
 # --- Feature scaling for continuous features (indexes 5-8) ---
@@ -247,19 +262,6 @@ st.write(f"Test Accuracy: {accuracy:.3f}")
 report = classification_report(y_test, y_pred)
 st.text(report)
 
-# --- Feature Importance ---
-importances = best_model.feature_importances_
-feat_imp = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
-
-st.subheader("Feature Importances")
-for name, importance in feat_imp:
-    st.write(f"{name}: {importance:.4f}")
-
-
-
-
-
-# --- Enhanced Dashboard Summary for Gifted & Influential Users ---
 # --- Step 8: Contagion Simulation with Bridging Gifts ---
 #st.subheader("Contagion Simulation")
 
