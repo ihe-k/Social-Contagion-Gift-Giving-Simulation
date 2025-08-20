@@ -23,7 +23,7 @@ GENDER_HOMOPHILY_BONUS = 0.2
 st.title("Health Information Contagion Network Simulation")
 
 # --- Step 1: Network Setup (Users Only) ---
-G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
+G = nx.erdos_renyi_graph(NUM_USERS, 0.5, seed=42)
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
 nx.set_node_attributes(G, False, 'gifted')
