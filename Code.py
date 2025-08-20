@@ -268,7 +268,7 @@ while current:
                 prob = min(max(prob, 0), 1)
                 if random.random() < prob:
                     G.nodes[v]['shared'] = True
-                    G.nodes[v]['triggered_count'] += 1
+                    G.nodes[u]['triggered_count'] += 1
                     next_step.add(v)
     if not next_step:
         break
