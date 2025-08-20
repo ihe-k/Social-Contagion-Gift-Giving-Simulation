@@ -206,10 +206,10 @@ while current:
                     next_step.add(v)
 
    # print(f"Number of nodes in next step after update: {len(next_step)}")
-   # if not next_step:
-   #     break
-   # contagion.append(next_step)
-   # current = next_step
+    if not next_step:
+        break
+    contagion.append(next_step)
+    current = next_step
 
 import streamlit as st
 
