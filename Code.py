@@ -209,6 +209,22 @@ while current:
     contagion.append(next_step)
     current = next_step
 
+import streamlit as st
+
+# --- Debug info for Streamlit ---
+
+shared_count = sum(1 for n in G.nodes if G.nodes[n]['shared'])
+st.write(f"Total shared nodes: {shared_count} out of {NUM_USERS}")
+
+st.write("Seed nodes and their 'shared' status:")
+for sn in seed_nodes:
+    st.write(f"  Node {sn}: shared = {G.nodes[sn]['shared']}")
+
+st.write("\nSample node details (first 10):")
+for n in list(G.nodes)[:10]:
+    u = G.nodes[n]
+    st.write(f"Node {n}: shared={u['shared']}, triggered_count={u['triggered_count']}, gifted={u['gifted']}, gender={u['gender']}, ideology={u['ideology']}")
+
 # --- Dashboard: Show Reward & Influence Stats ---
 gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
 gifted_influences = [G.nodes[n]['triggered_count'] for n in gifted_nodes]
