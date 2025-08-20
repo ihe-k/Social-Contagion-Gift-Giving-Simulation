@@ -290,9 +290,10 @@ for u, v in G.edges:
 # Draw nodes
 nx.draw_networkx_nodes(G, pos,
                        node_size=node_sizes,
-                       node_colors = []
-node_border_colors = []
-node_sizes = []
+                       node_color=node_colors,
+                       linewidths=node_border_widths,
+                       edgecolors='gray',
+                       ax=ax_net)
 
 for n in G.nodes:
     # Gifted users get a gold border and bigger size
