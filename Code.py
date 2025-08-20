@@ -138,9 +138,20 @@ best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
 # --- Step 7: Evaluation ---
+import pandas as pd  # Make sure this is at the top of your script
+
+# --- Step 7: Model Evaluation ---
 st.subheader("Model Evaluation")
-st.write(f"Accuracy: {accuracy_score(y_test, y_pred):.2%}")
-st.text(classification_report(y_test, y_pred))
+accuracy = accuracy_score(y_test, y_pred)
+report_dict = classification_report(y_test, y_pred, output_dict=True)
+report_df = pd.DataFrame(report_dict).transpose()
+
+# Round numeric values for better readability
+report_df = report_df.round(2)
+
+# Display accuracy and detailed report
+st.write(f"**Accuracy:** {accuracy:.2%}")
+st.dataframe(report_df)
 
 # --- Step 8: Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
