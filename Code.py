@@ -177,7 +177,7 @@ for node in G.nodes:
         pro_health_neighbors = 0
         anti_health_neighbors = 0
 
-features.extend([pro_health_neighbors, anti_health_neighbors])
+    features.extend([pro_health_neighbors, anti_health_neighbors])
 
     
     features = [
