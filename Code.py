@@ -157,7 +157,7 @@ for node in G.nodes:
     else:
         neighbor_health_alignment = 0
 
-      features = [
+    features = [
         1 if u['gender'] == 'Female' else 0,
         1 if u['has_chronic_disease'] else 0,
         1 if u['ideology'] == 'pro-health' else 0,
@@ -170,6 +170,10 @@ for node in G.nodes:
     ]
         user_features.append(features)
         user_labels.append(u['ideology'])  # this is the target, not a feature
+
+    user_features.append(features)
+    user_labels.append(u['ideology'])
+
 
 from collections import Counter
 print("Label distribution:", Counter(user_labels))
