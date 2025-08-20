@@ -21,7 +21,7 @@ CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
 
 st.title("Health Information Contagion Network Simulation")
-st.write("Hello! Streamlit output is working.")
+st.write("Streamlit app is starting...")
 
 
 # --- Step 1: Network Setup (Users Only) ---
