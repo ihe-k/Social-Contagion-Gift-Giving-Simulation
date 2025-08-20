@@ -188,7 +188,7 @@ while current:
     contagion.append(next_step)
     current = next_step
 
--
+
 # --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
