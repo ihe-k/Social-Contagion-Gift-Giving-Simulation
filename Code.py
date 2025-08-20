@@ -148,7 +148,9 @@ betweenness_centrality = nx.betweenness_centrality(G)
 
 pagerank = nx.pagerank(G)
 closeness = nx.closeness_centrality(G)
-
+betweenness_centrality = nx.betweenness_centrality(G)
+eigenvector_centrality = nx.eigenvector_centrality(G)
+degree_centrality = nx.degree_centrality(G)
 
 def ideology_to_num(ideology):
     mapping = {'pro-health': 0, 'neutral': 1, 'anti-health': 2}
@@ -175,6 +177,8 @@ for node in G.nodes:
         ideology_neutral,
         sentiment_trends[node],
         betweenness_centrality[node],
+        eigenvector_centrality[node],    # new feature
+        degree_centrality[node],         # new feature
         pagerank[node],
         closeness[node]
     ]
@@ -195,6 +199,8 @@ feature_names = [
     'Ideology_Neutral',
     'Sentiment_Trend',
     'Betweenness_Centrality',
+    'Eigenvector_Centrality',      # new
+    'Degree_Centrality',           # new
     'Pagerank',
     'Closeness_Centrality',
     'Gender_Ideology_Interaction',
