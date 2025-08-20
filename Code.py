@@ -150,7 +150,57 @@ report_df = pd.DataFrame(report_dict).transpose().round(2)
 st.write(f"**Accuracy:** {accuracy:.2%}")
 st.dataframe(report_df)
 
-# --- Step 8: Contagion Simulation ---
+# --- 
+# --- Dashboard Summary for Gifted & Influential Users ---
+st.subheader("🎁 Rewarded & Influential Users Overview")
+
+# Collect data for gifted users
+gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
+num_gifted = len(gifted_nodes)
+
+# Average triggered shares for gifted vs non-gifted users
+gifted_triggered = np.mean([G.nodes[n]['triggered_count'] for n in gifted_nodes]) if gifted_nodes else 0
+non_gifted_nodes = [n for n in G.nodes if not G.nodes[n]['gifted']]
+non_gifted_triggered = np.mean([G.nodes[n]['triggered_count'] for n in non_gifted_nodes]) if non_gifted_nodes else 0
+
+# Scores distribution
+scores = [G.nodes[n]['score'] for n in G.nodes]
+avg_score = np.mean(scores)
+
+# Influence = triggered_count (how many they influenced)
+influence = [G.nodes[n]['triggered_count'] for n in G.nodes]
+avg_influence = np.mean(influence)
+
+# Create dashboard metrics
+col1, col2, col3, col4 = st.columns(4)
+col1.metric("Total Users", NUM_USERS)
+col2.metric("Gifted Bridgers", num_gifted)
+col3.metric("Avg Influence (Gifted)", f"{gifted_triggered:.2f}")
+col4.metric("Avg Influence (Others)", f"{non_gifted_triggered:.2f}")
+
+st.markdown(f"**Average User Score:** {avg_score:.2f}")
+st.markdown(f"**Average Influence (Triggered Shares):** {avg_influence:.2f}")
+
+# Bar chart: Number of gifted vs non-gifted users
+counts = {'Gifted': num_gifted, 'Non-Gifted': NUM_USERS - num_gifted}
+st.bar_chart(pd.DataFrame.from_dict(counts, orient='index', columns=['Count']))
+
+# Optional: Show a table of top influential gifted users
+top_gifted = sorted(gifted_nodes, key=lambda n: G.nodes[n]['triggered_count'], reverse=True)[:5]
+top_gifted_data = [{
+    'User': n,
+    'Triggered Shares': G.nodes[n]['triggered_count'],
+    'Score': G.nodes[n]['score'],
+    'Gender': G.nodes[n]['gender'],
+    'Ideology': G.nodes[n]['ideology']
+} for n in top_gifted]
+
+if top_gifted_data:
+    st.markdown("#### Top Gifted Users by Influence")
+    st.table(top_gifted_data)
+else:
+    st.write("No gifted users detected yet.")
+
 # --- Step 8: Contagion Simulation ---
 
 # First, identify and gift users who bridge ideology and gender boundaries
