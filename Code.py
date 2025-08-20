@@ -236,3 +236,33 @@ female_patch = mpatches.Patch(color='lightblue', label='Female')
 ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
+
+# --- Toggleable Network Diagram Explanation ---
+with st.expander("ℹ️ Interpretation of the Network Diagram"):
+    st.markdown("""
+    ### **Network Diagram Interpretation**
+
+    - **Node Shapes and Colors:**  
+      - **Green circles** represent **Male users**  
+      - **Blue circles** represent **Female users**  
+
+    - **Node Size:**  
+      Reflects how many other users this node has **influenced or triggered**.  
+      Larger nodes = more shares triggered.
+
+    - **Node Border Width:**  
+      Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts of the network and playing a key role in information spread.
+
+    - **Edge Colors (Connections):**  
+      - **Light green edges** = Male-to-Male connections (**gender homophily**)  
+      - **Light blue edges** = Female-to-Female connections (**gender homophily**)  
+      - **Gray edges** = Male-to-Female or Female-to-Male (**cross-gender ties**)
+
+    - **Clusters:**  
+      The **green cluster in the center** highlights a group of male users who are densely interconnected. This is likely a result of **gender homophily** and shared ideology, leading to more efficient information diffusion within that subgroup.
+
+    - **Overall Insights:**  
+      - The network demonstrates **homophily effects**, where users are more likely to connect and influence others of the **same gender and ideology**.  
+      - Users with higher **centrality** (thicker borders) act as **key influencers** or bridges in the network, essential for spreading health-related information beyond their immediate circles.  
+      - **Ideological alignment** and **chronic health conditions** also influence the probability of sharing, shaping the contagion dynamics.
+    """)
