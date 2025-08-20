@@ -216,12 +216,15 @@ while current:
                 if rand_val < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[u]['triggered_count'] += 1
+                    G.nodes[u]['score'] += 1   # <-- Add this line to update score
 
-                    if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
-                        G.nodes[u]['gifted'] = True
-                        print(f"User {u} gifted for bridging to {v}")
+                if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
+                    G.nodes[u]['gifted'] = True
+                    print(f"User {u} gifted for bridging to {v}")
 
-                    next_step.add(v)
+                next_step.add(v)
+
+
 
    # print(f"Number of nodes in next step after update: {len(next_step)}")
     if not next_step:
