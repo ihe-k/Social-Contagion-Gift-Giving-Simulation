@@ -16,6 +16,7 @@ import matplotlib.patches as mpatches
 NUM_USERS = 300
 INIT_SHARED = 3
 GIFT_BONUS = 10
+BONUS_POINTS = 5
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
@@ -73,8 +74,6 @@ rss_urls = [
     "https://feeds.megaphone.fm/sem-podcast",                  # Seminars in Integrative Medicine
     "https://feeds.simplecast.com/2fo6fiz5",                   # The Plant Proof Podcast
     "https://feeds.megaphone.fm/mindpump",                     # Mind Pump: Raw Fitness Truth
-]
-rss_urls.extend(pro_health_feeds)
 
     # Additional pro-health podcasts:
     "https://feeds.simplecast.com/6SZWJjdx",                  # FoundMyFitness Deep Dives
@@ -190,13 +189,12 @@ for node in G.nodes:
     G.nodes[node]['shared'] = False
     G.nodes[node]['gifted'] = False
     G.nodes[node]['triggered_count'] = 0
-    G.nodes[node]['score'] = 0
+    #G.nodes[node]['score'] = 0
 
 for node in seed_nodes:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
 
-contagion, current = [set(seed_nodes)], set(seed_nodes)
 contagion, current = [set(seed_nodes)], set(seed_nodes)
 while current:
     next_step = set()
@@ -227,7 +225,6 @@ while current:
                     if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
                         G.nodes[u]['gifted'] = True
                         G.nodes[u]['triggered_count'] += BONUS_POINTS  # add extra points here
-                    BONUS_POINTS = 5
 
                     print(f"User {u} gifted for bridging to {v}")
 
