@@ -241,21 +241,6 @@ grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
-# --- Evaluation ---
-accuracy = accuracy_score(y_test, y_pred)
-st.subheader("Model Evaluation")
-st.write(f"Accuracy: {accuracy:.2%}")
-
-report_dict = classification_report(y_test, y_pred, output_dict=True)
-report_df = pd.DataFrame(report_dict).transpose().round(2)
-st.dataframe(report_df)
-
-# --- Confusion Matrix ---
-st.subheader("Confusion Matrix")
-fig, ax = plt.subplots()
-ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax)
-st.pyplot(fig)
-
 # --- Feature Importance ---
 importances = best_model.feature_importances_
 feat_imp = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
