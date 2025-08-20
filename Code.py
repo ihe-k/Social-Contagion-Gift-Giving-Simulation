@@ -164,25 +164,10 @@ for node in G.nodes:
     
     gender_female = 1 if u['gender'] == 'Female' else 0
     has_chronic = 1 if u['has_chronic_disease'] else 0
-    #ideology_pro = 1 if u['ideology'] == 'pro-health' else 0
-    #ideology_anti = 1 if u['ideology'] == 'anti-health' else 0
-   # ideology_neutral = 1 if u['ideology'] == 'neutral' else 0
-   # ideology_num = ideology_to_num(u['ideology'])
-
-    neighbors = list(G.neighbors(node))
-    if neighbors:
-        pro_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'pro-health') / len(neighbors)
-        anti_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'anti-health') / len(neighbors)
- for node in G.nodes:
-    u = G.nodes[node]
-    
-    gender_female = 1 if u['gender'] == 'Female' else 0
-    has_chronic = 1 if u['has_chronic_disease'] else 0
     
     features = [
         gender_female,
         has_chronic,
-        # existing features like sentiment_trends, centralities, etc.
         sentiment_trends[node],
         betweenness_centrality[node],
         eigenvector_centrality[node],
@@ -191,7 +176,6 @@ for node in G.nodes:
         closeness[node]
     ]
     
-    # Calculate neighbor ideology proportions here
     neighbors = list(G.neighbors(node))
     if neighbors:
         pro_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'pro-health') / len(neighbors)
@@ -200,11 +184,8 @@ for node in G.nodes:
         pro_health_neighbors = 0
         anti_health_neighbors = 0
 
-    # Add these neighbor features
     features.extend([pro_health_neighbors, anti_health_neighbors])
-    
-    # Continue with interaction features or label assignment if needed
-    
+
     user_features.append(features)
     user_labels.append(u['ideology'])
 
