@@ -297,8 +297,7 @@ for u, v in G.edges:
     edge_colors.append(dark_edge_color)
 
 nx.draw(G, pos,
-        with_labels=True,
-        labels={n: str(n) for n in G.nodes},
+        with_labels=False,  # disable built-in labels because we will add custom colored ones
         node_size=node_sizes,
         node_color=node_colors,
         edge_color=edge_colors,
@@ -306,6 +305,16 @@ nx.draw(G, pos,
         font_size=8,
         ax=ax_net,
         edgecolors='gray')
+
+# Now draw labels with colors per node
+for node in G.nodes:
+    nx.draw_networkx_labels(
+        G, pos,
+        labels={node: str(node)},
+        font_color=label_colors[node],
+        font_size=8,
+        ax=ax_net
+    )
 
 # Legend
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
