@@ -19,7 +19,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
-
+from imblearn.over_sampling import SMOTE
+from collections import Counter
+from sklearn.model_selection import train_test_split
 
 # --- Parameters ---
 NUM_USERS = 300
@@ -233,14 +235,31 @@ y_train = [user_labels[i] for i in train_index]
 y_test = [user_labels[i] for i in test_index]
 
 # --- Expanded hyperparameter grid ---
+
+from imblearn.over_sampling import SMOTE
+from collections import Counter
+from sklearn.ensemble import RandomForestClassifier
+
+# After your train/test split
+
+print("Original training class distribution:", Counter(y_train))
+
+smote = SMOTE(random_state=42)
+X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
+
+print("Resampled training class distribution:", Counter(y_train_resampled))
+
+# Update param_grid and model with class_weight
 param_grid = {
     'n_estimators': [100, 200],
     'max_depth': [10, 20, None],
-    'min_samples_split': [2, 5]
+    'min_samples_split': [2, 5],
+    'class_weight': ['balanced']  # Add class_weight to param_grid to ensure balanced weighting
 }
 
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, n_jobs=-1)
-grid.fit(X_train, y_train)
+grid.fit(X_train_resampled, y_train_resampled)
+
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
