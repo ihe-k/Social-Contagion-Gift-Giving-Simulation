@@ -184,7 +184,35 @@ param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
+
+grid.fit(X_train, y_train)
+best_model = grid.best_estimator_
+
+importances = best_model.feature_importances_
+feature_names = [
+    'Gender_Female',
+    'Has_Chronic_Disease',
+    'Ideology_Pro-Health',
+    'Ideology_Anti-Health',
+    'Ideology_Neutral',
+    'Sentiment_Trend',
+    'Betweenness_Centrality',
+    'Pagerank',
+    'Closeness_Centrality'
+]
+
+feat_imp = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
+
+st.subheader("Feature Importances")
+for name, importance in feat_imp:
+    st.write(f"{name}: {importance:.4f}")
+
 y_pred = best_model.predict(X_test)
+
+
+y_pred = best_model.predict(X_test)
+
+
 
 # --- Step 7: Model Evaluation ---
 st.subheader("Model Evaluation")
