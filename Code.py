@@ -335,13 +335,14 @@ nx.draw_networkx_edges(
 label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
 
 # Draw labels
-nx.draw_networkx_labels(
-    G, pos,
-    labels={n: str(n) for n in G.nodes},
-    font_color=[label_colors[n] for n in G.nodes],
-    font_size=8,
-    ax=ax_net
-)
+for n in G.nodes:
+    nx.draw_networkx_labels(
+        G, pos,
+        labels={n: str(n)},
+        font_color=label_colors[n],  # ✅ Now a single string per call
+        font_size=8,
+        ax=ax_net
+    )
 
 # Legend
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
