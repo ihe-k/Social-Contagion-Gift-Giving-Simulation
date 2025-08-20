@@ -240,6 +240,7 @@ avg_influence_others = np.mean(other_influences) if other_influences else 0
 avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
 avg_influence = np.mean([G.nodes[n]['triggered_count'] for n in G.nodes])
 
+st.subheader("🎁 Rewarded & Influential Users Overview")
 col1, col2, col3 = st.columns(3)
 with col1:
     st.metric("Total Users", total_users)
@@ -264,16 +265,6 @@ avg_influence_gifted = np.mean(gifted_influences) if gifted_influences else 0
 avg_influence_others = np.mean(other_influences) if other_influences else 0
 avg_score = np.mean([G.nodes[n]['score'] for n in G.nodes])
 avg_influence = np.mean([G.nodes[n]['triggered_count'] for n in G.nodes])
-
-st.subheader("🎁 Rewarded & Influential Users Overview")
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Users", total_users)
-col2.metric("Gifted Bridgers", num_gifted)
-col3.metric("Avg Influence (Gifted)", f"{avg_influence_gifted:.2f}")
-
-col1.metric("Avg Influence (Others)", f"{avg_influence_others:.2f}")
-col2.metric("Average User Score", f"{avg_score:.2f}")
-col3.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
 
 # --- Step 10: Network Visualization ---
 st.subheader("User Network Contagion Simulation")
