@@ -11,6 +11,15 @@ import pandas as pd
 import feedparser
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import StratifiedShuffleSplit, GridSearchCV
+from sklearn.metrics import ConfusionMatrixDisplay, accuracy_score, classification_report
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import streamlit as st
+from sklearn.ensemble import RandomForestClassifier
+
 
 # --- Parameters ---
 NUM_USERS = 300
@@ -139,6 +148,116 @@ betweenness_centrality = nx.betweenness_centrality(G)
 
 pagerank = nx.pagerank(G)
 closeness = nx.closeness_centrality(G)
+
+
+def ideology_to_num(ideology):
+    mapping = {'pro-health': 0, 'neutral': 1, 'anti-health': 2}
+    return mapping.get(ideology, 1)
+
+user_features = []
+user_labels = []
+
+for node in G.nodes:
+    u = G.nodes[node]
+    
+    gender_female = 1 if u['gender'] == 'Female' else 0
+    has_chronic = 1 if u['has_chronic_disease'] else 0
+    ideology_pro = 1 if u['ideology'] == 'pro-health' else 0
+    ideology_anti = 1 if u['ideology'] == 'anti-health' else 0
+    ideology_neutral = 1 if u['ideology'] == 'neutral' else 0
+    ideology_num = ideology_to_num(u['ideology'])
+    
+    features = [
+        gender_female,
+        has_chronic,
+        ideology_pro,
+        ideology_anti,
+        ideology_neutral,
+        sentiment_trends[node],
+        betweenness_centrality[node],
+        pagerank[node],
+        closeness[node]
+    ]
+    
+    # Interaction features
+    features.append(gender_female * ideology_num)
+    features.append(has_chronic * ideology_num)
+    features.append(gender_female * has_chronic)
+    
+    user_features.append(features)
+    user_labels.append(u['ideology'])
+
+feature_names = [
+    'Gender_Female',
+    'Has_Chronic_Disease',
+    'Ideology_Pro-Health',
+    'Ideology_Anti-Health',
+    'Ideology_Neutral',
+    'Sentiment_Trend',
+    'Betweenness_Centrality',
+    'Pagerank',
+    'Closeness_Centrality',
+    'Gender_Ideology_Interaction',
+    'Chronic_Ideology_Interaction',
+    'Gender_Chronic_Interaction'
+]
+
+# --- Feature scaling for continuous features (indexes 5-8) ---
+scaler = StandardScaler()
+continuous_features = np.array(user_features)[:, 5:9]
+scaled_continuous = scaler.fit_transform(continuous_features)
+
+# Replace continuous features with scaled versions
+user_features_np = np.array(user_features)
+user_features_np[:, 5:9] = scaled_continuous
+
+# Convert back to list of lists for sklearn compatibility
+user_features = user_features_np.tolist()
+
+# --- Stratified train/test split ---
+sss = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+train_index, test_index = next(sss.split(user_features, user_labels))
+
+X_train = [user_features[i] for i in train_index]
+X_test = [user_features[i] for i in test_index]
+y_train = [user_labels[i] for i in train_index]
+y_test = [user_labels[i] for i in test_index]
+
+# --- Expanded hyperparameter grid ---
+param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [10, 20, None],
+    'min_samples_split': [2, 5]
+}
+
+grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=3, n_jobs=-1)
+grid.fit(X_train, y_train)
+best_model = grid.best_estimator_
+y_pred = best_model.predict(X_test)
+
+# --- Evaluation ---
+accuracy = accuracy_score(y_test, y_pred)
+st.subheader("Model Evaluation")
+st.write(f"Accuracy: {accuracy:.2%}")
+
+report_dict = classification_report(y_test, y_pred, output_dict=True)
+report_df = pd.DataFrame(report_dict).transpose().round(2)
+st.dataframe(report_df)
+
+# --- Confusion Matrix ---
+st.subheader("Confusion Matrix")
+fig, ax = plt.subplots()
+ConfusionMatrixDisplay.from_estimator(best_model, X_test, y_test, ax=ax)
+st.pyplot(fig)
+
+# --- Feature Importance ---
+importances = best_model.feature_importances_
+feat_imp = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
+
+st.subheader("Feature Importances")
+for name, importance in feat_imp:
+    st.write(f"{name}: {importance:.4f}")
+
 
 user_features = []
 user_labels = []
