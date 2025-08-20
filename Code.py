@@ -155,7 +155,7 @@ st.dataframe(report_df)
 
 # --- Enhanced Dashboard Summary for Gifted & Influential Users ---
 # --- Step 8: Contagion Simulation with Bridging Gifts ---
-st.subheader("Contagion Simulation")
+#st.subheader("Contagion Simulation")
 
 SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 
@@ -177,8 +177,8 @@ contagion, current = [set(seed_nodes)], set(seed_nodes)
 contagion, current = [set(seed_nodes)], set(seed_nodes)
 while current:
     next_step = set()
-    print(f"Current step nodes: {current}")
-    print(f"Number of nodes in next step before update: {len(next_step)}")
+ #   print(f"Current step nodes: {current}")
+  #  print(f"Number of nodes in next step before update: {len(next_step)}")
 
     for u in current:
         for v in G.neighbors(u):
@@ -205,27 +205,27 @@ while current:
 
                     next_step.add(v)
 
-    print(f"Number of nodes in next step after update: {len(next_step)}")
-    if not next_step:
-        break
-    contagion.append(next_step)
-    current = next_step
+   # print(f"Number of nodes in next step after update: {len(next_step)}")
+   # if not next_step:
+   #     break
+   # contagion.append(next_step)
+   # current = next_step
 
 import streamlit as st
 
 # --- Debug info for Streamlit ---
 
-shared_count = sum(1 for n in G.nodes if G.nodes[n]['shared'])
-st.write(f"Total shared nodes: {shared_count} out of {NUM_USERS}")
+#shared_count = sum(1 for n in G.nodes if G.nodes[n]['shared'])
+#st.write(f"Total shared nodes: {shared_count} out of {NUM_USERS}")
 
-st.write("Seed nodes and their 'shared' status:")
-for sn in seed_nodes:
-    st.write(f"  Node {sn}: shared = {G.nodes[sn]['shared']}")
+#st.write("Seed nodes and their 'shared' status:")
+#for sn in seed_nodes:
+#    st.write(f"  Node {sn}: shared = {G.nodes[sn]['shared']}")
 
-st.write("\nSample node details (first 10):")
-for n in list(G.nodes)[:10]:
-    u = G.nodes[n]
-    st.write(f"Node {n}: shared={u['shared']}, triggered_count={u['triggered_count']}, gifted={u['gifted']}, gender={u['gender']}, ideology={u['ideology']}")
+#st.write("\nSample node details (first 10):")
+#for n in list(G.nodes)[:10]:
+#    u = G.nodes[n]
+ #   st.write(f"Node {n}: shared={u['shared']}, triggered_count={u['triggered_count']}, gifted={u['gifted']}, gender={u['gender']}, ideology={u['ideology']}")
 
 # --- Dashboard: Show Reward & Influence Stats ---
 gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
@@ -290,10 +290,33 @@ for u, v in G.edges:
 # Draw nodes
 nx.draw_networkx_nodes(G, pos,
                        node_size=node_sizes,
-                       node_color=node_colors,
-                       linewidths=node_border_widths,
-                       edgecolors='gray',
-                       ax=ax_net)
+                       node_colors = []
+node_border_colors = []
+node_sizes = []
+
+for n in G.nodes:
+    # Gifted users get a gold border and bigger size
+    if G.nodes[n]['gifted']:
+        node_border_colors.append('gold')
+        node_sizes.append(500)
+    else:
+        node_border_colors.append('gray')
+        node_sizes.append(300)
+        
+    # Node fill color by gender
+    if G.nodes[n]['gender'] == 'Male':
+        node_colors.append('lightgreen')
+    else:
+        node_colors.append('lightblue')
+
+nx.draw_networkx_nodes(
+    G, pos,
+    node_color=node_colors,
+    node_size=node_sizes,
+    edgecolors=node_border_colors,
+    linewidths=2,
+    ax=ax_net
+)
 
 # Draw edges
 nx.draw_networkx_edges(G, pos,
