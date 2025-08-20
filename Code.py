@@ -215,11 +215,15 @@ while current:
 
                 if rand_val < prob:
                     G.nodes[v]['shared'] = True
+                    # Base increment for any triggered share
                     G.nodes[u]['triggered_count'] += 1
-                    G.nodes[u]['score'] += 1   # <-- Add this line to update score
 
-                if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
-                    G.nodes[u]['gifted'] = True
+                # Bonus points for bridging both gender and ideology boundaries
+                    if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
+                        G.nodes[u]['gifted'] = True
+                        G.nodes[u]['triggered_count'] += BONUS_POINTS  # add extra points here
+                    BONUS_POINTS = 5
+
                     print(f"User {u} gifted for bridging to {v}")
 
                 next_step.add(v)
