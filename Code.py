@@ -173,34 +173,41 @@ for node in G.nodes:
     if neighbors:
         pro_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'pro-health') / len(neighbors)
         anti_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'anti-health') / len(neighbors)
-    else:
-        pro_health_neighbors = 0
-        anti_health_neighbors = 0
-
-    features.extend([pro_health_neighbors, anti_health_neighbors])
-
+ for node in G.nodes:
+    u = G.nodes[node]
+    
+    gender_female = 1 if u['gender'] == 'Female' else 0
+    has_chronic = 1 if u['has_chronic_disease'] else 0
     
     features = [
         gender_female,
         has_chronic,
-        #ideology_pro,
-        #ideology_anti,
-        #ideology_neutral,
+        # existing features like sentiment_trends, centralities, etc.
         sentiment_trends[node],
         betweenness_centrality[node],
-        eigenvector_centrality[node],    # new feature
-        degree_centrality[node],         # new feature
+        eigenvector_centrality[node],
+        degree_centrality[node],
         pagerank[node],
         closeness[node]
     ]
     
-    # Interaction features
-    #features.append(gender_female * ideology_num)
-    #features.append(has_chronic * ideology_num)
-    features.append(gender_female * has_chronic)
+    # Calculate neighbor ideology proportions here
+    neighbors = list(G.neighbors(node))
+    if neighbors:
+        pro_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'pro-health') / len(neighbors)
+        anti_health_neighbors = sum(1 for n in neighbors if G.nodes[n]['ideology'] == 'anti-health') / len(neighbors)
+    else:
+        pro_health_neighbors = 0
+        anti_health_neighbors = 0
+
+    # Add these neighbor features
+    features.extend([pro_health_neighbors, anti_health_neighbors])
+    
+    # Continue with interaction features or label assignment if needed
     
     user_features.append(features)
     user_labels.append(u['ideology'])
+
 
 feature_names = [
     'Gender_Female',
