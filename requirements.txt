@@ -16,3 +16,4 @@ feedparser
 imbalanced-learn
 xgboost
 node2vec
+pandas
