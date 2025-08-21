@@ -117,15 +117,13 @@ user_features = []
 user_labels = []
 for node in G.nodes:
     u = G.nodes[node]
-    features = [
-        1 if u['gender'] == 'Female' else 0,
-        1 if u['has_chronic_disease'] else 0,
-        1 if u['ideology'] == 'pro-health' else 0,
-        1 if u['ideology'] == 'anti-health' else 0,
-        1 if u['ideology'] == 'neutral' else 0,
-        sentiment_trends[node],
-        betweenness_centrality[node]
-    ]
+features = [
+    1 if u['gender'] == 'Female' else 0,
+    1 if u['has_chronic_disease'] else 0,
+    sentiment_trends[node],
+    betweenness_centrality[node]
+]
+
     user_features.append(features)
     user_labels.append(u['ideology'])
 
