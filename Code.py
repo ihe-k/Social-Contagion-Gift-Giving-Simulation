@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold, cross_val_score
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.preprocessing import LabelEncoder
+from xgboost import XGBClassifier
 import numpy as np
 import pandas as pd
 import feedparser
@@ -22,7 +24,7 @@ GENDER_HOMOPHILY_BONUS = 0.2
 
 st.title("Health Information Contagion Network Simulation")
 
-# --- Step 1: Network Setup (Users Only) ---
+# --- Step 1: Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
@@ -43,7 +45,8 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Fetch Podcasts via RSS ---
+# --- Step 3: RSS Feed ---
+@st.cache_data
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
@@ -57,11 +60,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
     return podcasts
 
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
-    "https://rss.art19.com/the-daily",        # The Daily by NYT
-    "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
-    # Add your other podcast RSS URLs here as needed
+    "https://feeds.npr.org/510307/rss.xml",
+    "https://feeds.simplecast.com/54nAGcIl",
+    "https://rss.art19.com/the-daily",
+    "https://feeds.megaphone.fm/ADL9840290619"
 ]
 
 podcast_items = []
@@ -69,7 +71,7 @@ for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception:
-        pass  # silently ignore feeds that fail
+        pass
 
 # --- Step 4: Assign User Attributes ---
 podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
@@ -82,7 +84,10 @@ counts = {
     'neutral': podcast_sentiments.count('neutral')
 }
 total = sum(counts.values())
-weights = {k: v / total for k, v in counts.items()}
+if total == 0:
+    weights = {'pro-health': 0.33, 'anti-health': 0.33, 'neutral': 0.34}
+else:
+    weights = {k: v / total for k, v in counts.items()}
 
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
@@ -93,12 +98,8 @@ for node in G.nodes:
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
-    G.nodes[node]['shared'] = False
-    G.nodes[node]['score'] = 0
-    G.nodes[node]['triggered_count'] = 0
-    G.nodes[node]['gifted'] = False
 
-# --- Step 5: Features & Labels ---
+# --- Step 5: Feature Engineering ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -133,34 +134,39 @@ X_train, X_test, y_train, y_test = train_test_split(
     user_features, user_labels, test_size=0.2, random_state=42
 )
 
-# --- Step 6: Model Training with XGBoost (Overfitting Protected) ---
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import StratifiedKFold, cross_val_score
-from xgboost import XGBClassifier
+# --- Step 6: Model Training (XGBoost) ---
+le = LabelEncoder()
+y_train_enc = le.fit_transform(y_train)
+y_test_enc = le.transform(y_test)
+
+xgb_param_grid = {
+    'n_estimators': [50, 100],
+    'max_depth': [3, 5],
+    'learning_rate': [0.01, 0.1],
+    'subsample': [0.8, 1.0]
+}
 
 grid = GridSearchCV(
-    XGBClassifier(
-        objective='multi:softmax',
-        num_class=3,
-        eval_metric='mlogloss',
-        use_label_encoder=False
-    ),
+    XGBClassifier(objective='multi:softmax', num_class=3,
+                  eval_metric='mlogloss', use_label_encoder=False),
     xgb_param_grid,
     cv=3,
     n_jobs=-1,
-    error_score='raise'  # This will raise error if there's an issue again
+    error_score='raise'
 )
 grid.fit(X_train, y_train_enc)
 
+best_model = grid.best_estimator_
+y_pred = best_model.predict(X_test)
+y_pred_labels = le.inverse_transform(y_pred)
 
-# --- Step 7: Model Evaluation with Cross-Validation ---
+# --- Step 7: Evaluation ---
 st.subheader("Model Evaluation (XGBoost)")
 
 accuracy = accuracy_score(y_test, y_pred_labels)
 report_dict = classification_report(y_test, y_pred_labels, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
 
-# Cross-validation
 skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 cv_scores = cross_val_score(best_model, X_train, y_train_enc, cv=skf)
 cv_mean = cv_scores.mean()
@@ -170,8 +176,7 @@ st.write(f"**Test Accuracy:** {accuracy:.2%}")
 st.write(f"**Cross-validated Accuracy:** {cv_mean:.2%} ± {cv_std:.2%}")
 st.dataframe(report_df)
 
-# --- Enhanced Dashboard Summary for Gifted & Influential Users ---
-# --- Step 8: Contagion Simulation with Bridging Gifts ---
+# --- Step 8: Contagion Simulation ---
 st.subheader("Contagion Simulation")
 
 SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
@@ -179,7 +184,6 @@ SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 
-# Reset contagion-related attributes
 for node in G.nodes:
     G.nodes[node]['shared'] = False
     G.nodes[node]['gifted'] = False
@@ -207,18 +211,15 @@ while current:
                 if random.random() < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[u]['triggered_count'] += 1
-                    
-                    # Reward users who bridge both gender and ideology boundaries
                     if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
                         G.nodes[u]['gifted'] = True
-                    
                     next_step.add(v)
     if not next_step:
         break
     contagion.append(next_step)
     current = next_step
 
-# --- Dashboard: Show Reward & Influence Stats ---
+# --- Dashboard Metrics ---
 gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
 gifted_influences = [G.nodes[n]['triggered_count'] for n in gifted_nodes]
 other_nodes = [n for n in G.nodes if not G.nodes[n]['gifted']]
@@ -240,7 +241,7 @@ with col2:
     st.metric("Avg Influence (Others)", f"{avg_influence_others:.2f}")
 with col3:
     st.metric("Average User Score", f"{avg_score:.2f}")
-    st.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
+    st.metric("Average Influence", f"{avg_influence:.2f}")
 
 # --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
@@ -256,7 +257,6 @@ edge_colors = []
 node_sizes = []
 node_border_widths = []
 
-# Normalize betweenness centrality for border widths (scale 1 to 6 for visibility)
 bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
 if bc_values.max() > 0:
     norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
@@ -278,7 +278,6 @@ for u, v in G.edges:
     dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
     edge_colors.append(dark_edge_color)
 
-# Draw nodes
 nx.draw_networkx_nodes(G, pos,
                        node_size=node_sizes,
                        node_color=node_colors,
@@ -286,15 +285,11 @@ nx.draw_networkx_nodes(G, pos,
                        edgecolors='gray',
                        ax=ax_net)
 
-# Draw edges
 nx.draw_networkx_edges(G, pos,
                        edge_color=edge_colors,
                        ax=ax_net)
 
-# Prepare label colors by gender
 label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
-
-# Draw labels with gender-specific colors
 for node in G.nodes:
     nx.draw_networkx_labels(
         G, pos,
@@ -303,44 +298,22 @@ for node in G.nodes:
         font_size=8,
         ax=ax_net
     )
-    
-# Legend for genders
+
 male_patch = mpatches.Patch(color='lightgreen', label='Male')
 female_patch = mpatches.Patch(color='lightblue', label='Female')
 ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
 
-
-# --- Step 10: Network Visualization ---
-
-
-# --- Step 11: Explanation ---
+# --- Step 10: Explanation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
-
-    - **Node Colors:**  
-      - **Green circles** represent **Male users**  
-      - **Blue circles** represent **Female users**  
-
-    - **Node Size:**  
-      Reflects how many other users this node has **influenced or triggered**.  
-      Larger nodes = more shares triggered.
-
-    - **Node Border Width:**  
-      Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
-
-    - **Edge Colors (Connections):**  
-      - **Light green edges** = Male-to-Male connections (**gender homophily**)  
-      - **Light blue edges** = Female-to-Female connections (**gender homophily**)  
-      - **Gray edges** = Male-to-Female or Female-to-Male (**cross-gender ties**)
-
-    - **Clusters:**  
-      The network shows **gender homophily** and **ideological alignment** influencing connections and information diffusion.
-
-    - **Overall Insights:**  
-      - Users with higher **centrality** act as **key influencers** or bridges.  
-      - **Chronic disease status** and **ideological differences** impact sharing probabilities and contagion dynamics.
+    - **Node Colors:** Green = Male, Blue = Female  
+    - **Node Size:** Indicates influence (triggered shares)  
+    - **Node Border Width:** Indicates betweenness centrality (importance as a bridge)  
+    - **Edge Colors:**  
+        - Green = Male–Male  
+        - Blue = Female–Female  
+        - Gray = Mixed-gender  
     """)
-
