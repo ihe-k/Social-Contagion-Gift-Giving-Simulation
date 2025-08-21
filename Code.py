@@ -15,7 +15,7 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 
 # --- Parameters ---
-NUM_USERS = 30
+NUM_USERS = 350
 INIT_SHARED = 3
 GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
