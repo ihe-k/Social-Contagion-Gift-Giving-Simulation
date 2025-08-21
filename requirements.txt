@@ -1,6 +1,4 @@
-import nltk
-nltk.download('punkt')
-nltk.download('averaged_perceptron_tagger')
+
 streamlit==1.35.0
 networkx==3.2.1
 matplotlib==3.9.0
