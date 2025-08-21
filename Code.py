@@ -218,23 +218,19 @@ scaler = StandardScaler()
 continuous_features = np.array(user_features)[:, 5:9]
 scaled_continuous = scaler.fit_transform(continuous_features)
 
-# Replace continuous features with scaled versions
+from imblearn.over_sampling import SMOTE
+from collections import Counter
+
+# Convert to np arrays
 user_features_np = np.array(user_features)
-user_features_np[:, 5:9] = scaled_continuous
+user_labels_np = np.array(user_labels)
 
-# Convert back to list of lists for sklearn compatibility
-user_features = user_features_np.tolist()
-
-# --- Stratified train/test split ---
+# Stratified split
 sss = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-train_index, test_index = next(sss.split(user_features, user_labels))
+train_index, test_index = next(sss.split(user_features_np, user_labels_np))
 
-X_train = [user_features[i] for i in train_index]
-X_test = [user_features[i] for i in test_index]
-y_train = [user_labels[i] for i in train_index]
-y_test = [user_labels[i] for i in test_index]
-
-# --- Expanded hyperparameter grid ---
+X_train, X_test = user_features_np[train_index], user_features_np[test_index]
+y_train, y_test = user_labels_np[train_index], user_labels_np[test_index]
 
 print("Original training label distribution:", Counter(y_train))
 
@@ -243,24 +239,20 @@ X_train_resampled, y_train_resampled = smote.fit_resample(X_train, y_train)
 
 print("Resampled training label distribution:", Counter(y_train_resampled))
 
-print("Resampled training class distribution:", Counter(y_train_resampled))
-
-# Update param_grid and model with class_weight
 param_grid = {
     'n_estimators': [100, 200],
     'max_depth': [10, 20, None],
-    'min_samples_split': [2, 5],
-    'class_weight': ['balanced']  # Add class_weight to param_grid to ensure balanced weighting
+    'min_samples_split': [2, 5]
 }
 
 grid = GridSearchCV(
-    RandomForestClassifier(class_weight='balanced', random_state=42),  # <-- add class_weight here
+    RandomForestClassifier(class_weight='balanced', random_state=42),
     param_grid,
     cv=3,
     n_jobs=-1
 )
 
-grid.fit(X_train_resampled, y_train_resampled)  # <-- fit on resampled data
+grid.fit(X_train_resampled, y_train_resampled)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
