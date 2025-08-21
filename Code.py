@@ -268,20 +268,44 @@ grid.fit(X_train_resampled, y_train_resampled)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
+from sklearn.preprocessing import LabelEncoder
+from xgboost import XGBClassifier
+from sklearn.model_selection import GridSearchCV
+
+# Label encoding
 le = LabelEncoder()
 y_train_encoded = le.fit_transform(y_train_resampled)
 y_test_encoded = le.transform(y_test)
 
+# Define XGBoost and hyperparameters
+xgb_model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42)
+
+xgb_param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [4, 6, 8],
+    'learning_rate': [0.01, 0.1],
+    'subsample': [0.8, 1.0],
+}
+
+grid = GridSearchCV(
+    estimator=xgb_model,
+    param_grid=xgb_param_grid,
+    cv=3,
+    n_jobs=-1,
+    error_score='raise'  # Optional for debugging
+)
+
+# Fit using encoded labels
 grid.fit(X_train_resampled, y_train_encoded)
+
+# Predict and decode
 y_pred_encoded = grid.best_estimator_.predict(X_test)
 y_pred = le.inverse_transform(y_pred_encoded)
 
-
+# Evaluate
 accuracy = accuracy_score(y_test, y_pred)
 st.write(f"Test Accuracy: {accuracy:.3f}")
-
-report = classification_report(y_test, y_pred)
-st.text(report)
+st.text(classification_report(y_test, y_pred))
 
 # --- Step 8: Contagion Simulation with Bridging Gifts ---
 #st.subheader("Contagion Simulation")
