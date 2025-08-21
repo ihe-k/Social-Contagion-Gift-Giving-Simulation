@@ -1,4 +1,4 @@
---upgrade pip setuptools wheel
+
 streamlit==1.35.0
 rich==14.1.0
 pygments==2.19.2
