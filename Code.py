@@ -10,16 +10,17 @@ import streamlit as st
 
 # --- Parameters ---
 NUM_USERS = 300
+EDGE_PROB = 0.05  # Adjust network density as you like
 
 # --- Step 1: Create Graph ---
-G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)
+G = nx.erdos_renyi_graph(NUM_USERS, EDGE_PROB, seed=42)
 
-# Example attribute assignment (simplified for clarity)
+# Assign node attributes
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
     G.nodes[node]['ideology'] = random.choice(['pro-health', 'anti-health', 'neutral'])
-    G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
+    G.nodes[node]['sentiment'] = G.nodes[node]['ideology']  # For simplicity, sentiment = ideology
 
 # --- Calculate betweenness centrality and sentiment trends ---
 betweenness_centrality = nx.betweenness_centrality(G)
@@ -45,9 +46,6 @@ for node in G.nodes:
     features = [
         1 if u['gender'] == 'Female' else 0,
         1 if u['has_chronic_disease'] else 0,
-        1 if u['ideology'] == 'pro-health' else 0,
-        1 if u['ideology'] == 'anti-health' else 0,
-        1 if u['ideology'] == 'neutral' else 0,
         sentiment_trends[node],
         betweenness_centrality[node]
     ]
@@ -57,8 +55,8 @@ for node in G.nodes:
 X = np.array(user_features)
 y = np.array(user_labels)
 
-# --- Remove duplicates if any (rare in this setup) ---
-df = pd.DataFrame(X)
+# Remove duplicates if any (optional)
+df = pd.DataFrame(X, columns=['is_female', 'has_chronic_disease', 'sentiment_trend', 'betweenness_centrality'])
 df['label'] = y
 df = df.drop_duplicates()
 X = df.drop('label', axis=1).values
@@ -99,14 +97,20 @@ test_accuracy = accuracy_score(y_test, y_pred)
 report = classification_report(y_test, y_pred, target_names=le.classes_, output_dict=True)
 report_df = pd.DataFrame(report).transpose()
 
-# --- Streamlit output ---
-st.subheader("Model Evaluation (XGBoost)")
+# --- Streamlit UI ---
+st.title("Health Ideology Classification")
 
+st.subheader("Model Evaluation (XGBoost)")
 st.write(f"Test Accuracy: {test_accuracy:.2%}")
 st.write(f"Cross-validated Accuracy (train set): {cv_mean:.2%} ± {cv_std:.2%}")
+
 st.dataframe(report_df.style.format("{:.2f}"))
 
-# --- Additional sanity checks ---
-st.write("Class distribution in dataset:", dict(zip(le.classes_, np.bincount(y_enc))))
-st.write("Class distribution in training set:", dict(zip(le.classes_, np.bincount(y_train))))
-st.write("Class distribution in test set:", dict(zip(le.classes_, np.bincount(y_test))))
+st.write("### Class distribution in dataset:")
+st.json({k: int(v) for k, v in zip(le.classes_, np.bincount(y_enc))})
+
+st.write("### Class distribution in training set:")
+st.json({k: int(v) for k, v in zip(le.classes_, np.bincount(y_train))})
+
+st.write("### Class distribution in test set:")
+st.json({k: int(v) for k, v in zip(le.classes_, np.bincount(y_test))})
