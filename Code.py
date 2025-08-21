@@ -167,14 +167,9 @@ st.write(f"**Cross-validated Accuracy (train set):** {cv_scores.mean():.2%} ± {
 # --- Step 7: Contagion Simulation with Bridging Gifts ---
 st.subheader("Contagion Simulation")
 
-SHARE_PROB = st.sidebar.slider(
-    "How likely is a user to share health information?", 
-    min_value=0.0, max_value=1.0, value=0.3, step=0.05,
-    help="Adjust the basic chance that a user will share a health-related message with their connections."
-)
+SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 
-pos = nx.spring_layout(G, seed=42, k=0.15)  # increased k for more spread
-
+pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 
 # Reset contagion-related attributes
@@ -241,72 +236,40 @@ with col3:
     st.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
 
 # --- Step 9: Visualization ---
-st.subheader("User Network Contagion Simulation")
-fig_net, ax_net = plt.subplots(figsize=(12, 10))  # bigger figure for clarity
+# --- Step 9: Simplified Influencer Visualization by Ideology ---
+st.subheader("Influencer Network (Clustered by Ideology)")
 
-# Filter edges to reduce clutter (only edges connected to influential nodes)
 influence_threshold = 2
 influential_nodes = [n for n in G.nodes if G.nodes[n]['triggered_count'] >= influence_threshold]
-filtered_edges = [(u, v) for u, v in G.edges if u in influential_nodes or v in influential_nodes]
+H = G.subgraph(influential_nodes).copy()
 
-node_colors = []
-node_sizes = []
-node_border_widths = []
-
-bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
-if bc_values.max() > 0:
-    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
+if len(H.nodes) < 2:
+    st.warning("Not enough influential nodes to display a network. Try increasing SHARE_PROB or adjusting parameters.")
 else:
-    norm_bc = np.ones(len(G.nodes))
+    # Positioning with cluster-aware layout
+    pos = nx.spring_layout(H, seed=42, k=0.3)
 
-for idx, n in enumerate(G.nodes):
-    color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
-    node_colors.append(color)
-    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
-    node_border_widths.append(norm_bc[idx])
+    # Color by ideology
+    ideology_colors = {
+        'pro-health': '#2ca02c',
+        'anti-health': '#d62728',
+        'neutral': '#1f77b4'
+    }
+    node_colors = [ideology_colors.get(H.nodes[n]['ideology'], '#999999') for n in H.nodes]
+    node_sizes = [400 + 100 * H.nodes[n]['triggered_count'] for n in H.nodes]
 
-def darken_color(color, amount=0.6):
-    c = mcolors.to_rgb(color)
-    return tuple(max(min(x * amount, 1), 0) for x in c)
+    fig, ax = plt.subplots(figsize=(10, 8))
+    nx.draw_networkx_nodes(H, pos, node_color=node_colors, node_size=node_sizes, ax=ax, alpha=0.85, edgecolors='black')
+    nx.draw_networkx_edges(H, pos, ax=ax, alpha=0.3)
+    nx.draw_networkx_labels(H, pos, font_size=8, ax=ax)
 
-edge_colors = []
-for u, v in filtered_edges:
-    color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
-    color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
-    rgb_u = mcolors.to_rgb(color_u)
-    rgb_v = mcolors.to_rgb(color_v)
-    mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
-    edge_colors.append(darken_color(mcolors.to_hex(mixed_rgb), amount=0.6))
+    # Legend
+    patches = [mpatches.Patch(color=color, label=ideology) for ideology, color in ideology_colors.items()]
+    ax.legend(handles=patches, loc='best')
 
-nx.draw_networkx_nodes(G, pos,
-                       node_size=node_sizes,
-                       node_color=node_colors,
-                       linewidths=node_border_widths,
-                       edgecolors='gray',
-                       ax=ax_net)
-
-nx.draw_networkx_edges(G, pos,
-                       edgelist=filtered_edges,
-                       edge_color=edge_colors,
-                       ax=ax_net)
-
-# Draw labels only for influential nodes
-label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in influential_nodes}
-nx.draw_networkx_labels(
-    G, pos,
-    labels={n: str(n) for n in influential_nodes},
-    font_color=[label_colors[n] for n in influential_nodes],
-    font_size=9,
-    ax=ax_net
-)
-
-male_patch = mpatches.Patch(color='lightgreen', label='Male')
-female_patch = mpatches.Patch(color='lightblue', label='Female')
-ax_net.legend(handles=[male_patch, female_patch], loc='best')
-
-ax_net.set_title("Network Contagion Simulation (only nodes with shares ≥ 2 labeled)")
-ax_net.axis('off')
-st.pyplot(fig_net)
+    ax.set_title("Influencer Subgraph (Clustered by Ideology)")
+    ax.axis('off')
+    st.pyplot(fig)
 
 # --- Step 10: Interpretation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
@@ -320,5 +283,4 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     - **Gifted Bridgers** are users who helped spread information across different genders and ideologies.
 
     This visualization helps identify influential users and information pathways in the network.
-    """)
-
+    """)  # <--- Make sure to close triple quotes here
