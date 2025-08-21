@@ -121,48 +121,6 @@ total = sum(counts.values())
 weights = {k: v / total for k, v in counts.items()}
 
 for node in G.nodes:
-    G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
-    G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
-    G.nodes[node]['ideology'] = random.choices(
-        population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
-        k=1
-    )[0]
-    G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
-    G.nodes[node]['shared'] = False
-    #G.nodes[node]['score'] = 0
-    G.nodes[node]['triggered_count'] = 0
-    G.nodes[node]['gifted'] = False
-
-# --- Step 5: Features & Labels ---
-def calc_sentiment_trends():
-    trends = []
-    for node in G.nodes:
-        neighbors = list(G.neighbors(node))
-        if neighbors:
-            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
-            trends.append(pro_health_count / len(neighbors))
-        else:
-            trends.append(0)
-    return trends
-
-sentiment_trends = calc_sentiment_trends()
-betweenness_centrality = nx.betweenness_centrality(G)
-
-pagerank = nx.pagerank(G)
-closeness = nx.closeness_centrality(G)
-betweenness_centrality = nx.betweenness_centrality(G)
-eigenvector_centrality = nx.eigenvector_centrality(G)
-degree_centrality = nx.degree_centrality(G)
-
-def ideology_to_num(ideology):
-    mapping = {'pro-health': 0, 'neutral': 1, 'anti-health': 2}
-    return mapping.get(ideology, 1)
-
-user_features = []
-user_labels = []
-
-for node in G.nodes:
     u = G.nodes[node]
     
     gender_female = 1 if u['gender'] == 'Female' else 0
@@ -188,33 +146,10 @@ for node in G.nodes:
         anti_health_neighbors = 0
 
     features.extend([pro_health_neighbors, anti_health_neighbors])
-    gender_chronic_interaction = gender_female * has_chronic
-    features.append(gender_chronic_interaction)
 
     user_features.append(features)
     user_labels.append(u['ideology'])
 
-
-feature_names = [
-    'Gender_Female',
-    'Has_Chronic_Disease',
-    #'Ideology_Pro-Health',
-    #'Ideology_Anti-Health',
-    #'Ideology_Neutral',
-    'Sentiment_Trend',
-    'Betweenness_Centrality',
-    'Eigenvector_Centrality',      # new
-    'Degree_Centrality',           # new
-    'Pagerank',
-    'Closeness_Centrality',
-    #'Gender_Ideology_Interaction',
-    #'Chronic_Ideology_Interaction',
-    #'Gender_Chronic_Interaction'
-    'Pro_Health_Neighbor_Proportion',
-    'Anti_Health_Neighbor_Proportion',
-    'Gender_Chronic_Interaction'
-
-]
 
 # --- Feature scaling for continuous features (indexes 5-8) ---
 scaler = StandardScaler()
