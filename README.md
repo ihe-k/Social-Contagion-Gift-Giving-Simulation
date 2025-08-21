@@ -19,7 +19,7 @@ The goal is to understand how users with varying health conditions, ideologies, 
 
 ## Industry Use Cases
 * Public Health Communication: This model can help design targeted public health campaigns by predicting which users (e.g., influencers or patients) are more likely to share health information.
-* Social Media Platforms: YouTube, TikTok, and Twitter can use this model to better understand content virality and sentiment-driven user behaviour, enhancing content recommendation systems.
+* Social Media Platforms: Spotify or Apple Podcasts might use this model to better understand content virality and sentiment-driven user behaviour, enhancing content recommendation systems.
 * Behavioural Insights: By studying the influence of ideology and chronic health conditions on information dissemination, this work can assist in targeted marketing, health campaigns, or consumer behaviour analysis.
 * Real-Time Decision-Making: Organisations like Microsoft and Google can integrate this model into real-time analytics for digital health platforms, recommendation engines, and user behaviour prediction.
 
@@ -31,40 +31,16 @@ The goal is to understand how users with varying health conditions, ideologies, 
 ## Project Structure
 ```plaintext
 gift-contagion-simulation/
-├── contagion_sim_with_snscrape_animated.py  # Main simulation script
+├── contagion_sim.py  # Main simulation and Streamlit dashboard script
 ├── requirements.txt                         # List of required Python packages
 ├── README.md                                # Project overview and instructions
-├── data/
-│   ├── twitter/                             # Scraped tweet data
-│   ├── youtube/                             # Scraped YouTube video data
-│   └── tiktok/                              # Scraped TikTok video data
-├── network/
-│   ├── network_builder.py                   # Erdős–Rényi network generation
-│   └── user_assignment.py                   # Gender, ideology, chronic condition assignments
-├── analysis/
-│   ├── sentiment_analysis.py                # Sentiment & ideology classification
-│   ├── centrality_metrics.py                # Betweenness centrality calculations
-│   └── feature_engineering.py               # Sentiment trends, feature extraction
-├── modelling/
-│   ├── train_model.py                       # Model training and hyperparameter tuning
-│   └── evaluation.py                        # Accuracy, confusion matrix, classification report
-├── visualisation/
-│   ├── animate_spread.py                    # Contagion animation logic (Matplotlib + FuncAnimation)
-│   └── streamlit_dashboard.py               # Streamlit app for visualisation and interactivity
-├── utils/
-│   ├── scraper_twitter.py                   # Twitter scraping using snscrape
-│   ├── scraper_youtube.py                   # YouTube video scraping
-│   └── scraper_tiktok.py                    # TikTok API integration
-└── assets/
-    ├── figures/                             # Saved figures or animations
-    └── styles/                              # Custom CSS or configuration files
 ```
 
 ## Requirements
 Before running the app, make sure you have the following libraries installed:
 
 ```plaintext
-pip install streamlit networkx matplotlib snscrape instaloader facebook-sdk
+pip install streamlit networkx matplotlib
 ```
 
 ### Step 1: Clone the Repository
@@ -112,11 +88,6 @@ st.write(f"Model Accuracy: {accuracy:.2%}")
 report = classification_report(y_test, y_pred, output_dict=False)
 st.text("Classification Report:")
 st.text(report)
-
-# Confusion Matrix
-fig_cm, ax_cm = plt.subplots()
-ConfusionMatrixDisplay.from_estimator(model, X_test, y_test, ax=ax_cm)
-st.pyplot(fig_cm)
 ```
 2. Visualisation Updates: The Streamlit visualisation for the contagion process will remain the same, but you can further enhance it by adding labels for clarity on user attributes (e.g., gender, health conditions) and contagion status.
 
