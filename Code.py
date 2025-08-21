@@ -9,37 +9,32 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import pandas as pd
-import feedparser
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 
 # --- Parameters ---
-NUM_USERS = 300  # nodes
-EDGE_PROB = 0.02  # lower edge prob for faster layout & less clutter
-INIT_SHARED = 3
+NUM_USERS = 50        # Reduced from 300 for fast debugging
+EDGE_PROB = 0.01      # Sparse graph
+INIT_SHARED = 2       # Starting seeds
 GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
-MAX_CONTAGION_STEPS = 50  # safety cap on contagion simulation steps
 
-st.title("Health Information Contagion Network Simulation")
+st.title("Health Information Contagion Network Simulation (Debug Mode)")
 
-# --- Step 1: Cached graph generation ---
-@st.cache_data(show_spinner=False)
-def generate_graph(num_nodes, edge_prob):
-    G = nx.erdos_renyi_graph(num_nodes, edge_prob, seed=42)
-    nx.set_node_attributes(G, False, 'shared')
-    nx.set_node_attributes(G, 0, 'score')
-    nx.set_node_attributes(G, False, 'gifted')
-    nx.set_node_attributes(G, 0, 'triggered_count')
-    nx.set_node_attributes(G, '', 'gender')
-    nx.set_node_attributes(G, False, 'has_chronic_disease')
-    nx.set_node_attributes(G, '', 'ideology')
-    nx.set_node_attributes(G, '', 'sentiment')
-    return G
+# --- Step 1: Network Setup (Users Only) ---
+G = nx.erdos_renyi_graph(NUM_USERS, EDGE_PROB, seed=42)
+nx.set_node_attributes(G, False, 'shared')
+nx.set_node_attributes(G, 0, 'score')
+nx.set_node_attributes(G, False, 'gifted')
+nx.set_node_attributes(G, 0, 'triggered_count')
+nx.set_node_attributes(G, '', 'gender')
+nx.set_node_attributes(G, False, 'has_chronic_disease')
+nx.set_node_attributes(G, '', 'ideology')
+nx.set_node_attributes(G, '', 'sentiment')
 
-G = generate_graph(NUM_USERS, EDGE_PROB)
+st.write(f"Graph with {len(G.nodes)} nodes and {len(G.edges)} edges generated")
 
 # --- Step 2: Sentiment Analyzer ---
 def analyze_sentiment(text):
@@ -51,57 +46,19 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Cached fetching podcasts via RSS ---
-@st.cache_data(show_spinner=False)
-def get_podcasts_from_rss(feed_url, max_items=5):
-    feed = feedparser.parse(feed_url)
-    podcasts = []
-    for entry in feed.entries[:max_items]:
-        podcasts.append({
-            "user": entry.get('author', 'podcaster'),
-            "content": entry.title,
-            "platform": "RSS",
-            "url": entry.link
-        })
-    return podcasts
+# --- Step 3: Fetch Podcasts via RSS (Disabled for speed) ---
+podcast_sentiments = ['neutral'] * 10  # Fixed sentiments for debugging
+st.write("Podcast fetching skipped for debugging")
 
-@st.cache_data(show_spinner=False)
-def fetch_all_podcasts():
-    rss_urls = [
-        "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-        "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
-        "https://rss.art19.com/the-daily",        # The Daily by NYT
-        "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
-    ]
-    all_podcasts = []
-    for url in rss_urls:
-        try:
-            all_podcasts.extend(get_podcasts_from_rss(url))
-        except Exception:
-            pass
-    return all_podcasts
-
-podcast_items = fetch_all_podcasts()
-
-# --- Step 4: Assign User Attributes based on podcast sentiment distribution ---
-podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
-if not podcast_sentiments:
-    podcast_sentiments = ['neutral'] * 10
-
-counts = {
-    'pro-health': podcast_sentiments.count('pro-health'),
-    'anti-health': podcast_sentiments.count('anti-health'),
-    'neutral': podcast_sentiments.count('neutral')
-}
-total = sum(counts.values()) or 1
-weights = {k: v / total for k, v in counts.items()}
+# --- Step 4: Assign User Attributes ---
+weights = {'pro-health': 0.33, 'anti-health': 0.33, 'neutral': 0.34}
 
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
     G.nodes[node]['ideology'] = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
+        weights=[weights['pro-health'], weights['anti-health'], weights['neutral']],
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
@@ -110,14 +67,9 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Step 5: Cached network layout ---
-@st.cache_data(show_spinner=False)
-def get_layout(G):
-    return nx.spring_layout(G, seed=42)
+st.write("User attributes assigned")
 
-pos = get_layout(G)
-
-# --- Step 6: Feature engineering for ML ---
+# --- Step 5: Features & Labels ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -145,7 +97,7 @@ for node in G.nodes:
     user_features.append(features)
     user_labels.append(u['ideology'])
 
-# --- Step 7: Logistic Regression Model Training & Evaluation ---
+# --- Step 6: Logistic Regression Model Training & Evaluation ---
 le = LabelEncoder()
 y_encoded = le.fit_transform(user_labels)
 
@@ -159,11 +111,11 @@ logreg = LogisticRegression(
     max_iter=1000,
     random_state=42
 )
-
 logreg.fit(X_train, y_train)
-y_pred = logreg.predict(X_test)
 
+y_pred = logreg.predict(X_test)
 test_accuracy = accuracy_score(y_test, y_pred)
+
 st.subheader("Model Evaluation (Logistic Regression)")
 st.write(f"**Test Accuracy:** {test_accuracy:.2%}")
 
@@ -175,11 +127,14 @@ skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 cv_scores = cross_val_score(logreg, X_train, y_train, cv=skf)
 st.write(f"**Cross-validated Accuracy (train set):** {cv_scores.mean():.2%} ± {cv_scores.std():.2%}")
 
-# --- Step 8: Contagion Simulation with capped iterations ---
+st.write("Model trained successfully")
+
+# --- Step 7: Contagion Simulation with Bridging Gifts ---
 st.subheader("Contagion Simulation")
 
 SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 
+pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 
 # Reset contagion-related attributes
@@ -193,38 +148,36 @@ for node in seed_nodes:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
 
-with st.spinner('Running contagion simulation...'):
-    contagion, current = [set(seed_nodes)], set(seed_nodes)
-    steps = 0
-    while current and steps < MAX_CONTAGION_STEPS:
-        next_step = set()
-        for u in current:
-            for v in G.neighbors(u):
-                if not G.nodes[v]['shared']:
-                    prob = SHARE_PROB + (GIFT_BONUS / 100 if G.nodes[u]['gifted'] else 0)
-                    if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-                        prob += IDEOLOGY_CROSS_BONUS
-                    if G.nodes[v]['has_chronic_disease']:
-                        prob = max(prob, CHRONIC_PROPENSITY)
-                    if G.nodes[u]['gender'] == G.nodes[v]['gender']:
-                        prob += GENDER_HOMOPHILY_BONUS
-                    prob = min(max(prob, 0), 1)
-                    if random.random() < prob:
-                        G.nodes[v]['shared'] = True
-                        G.nodes[u]['triggered_count'] += 1
+contagion, current = [set(seed_nodes)], set(seed_nodes)
+steps = 0
+while current and steps < 20:  # max 20 steps to prevent infinite loop
+    next_step = set()
+    for u in current:
+        for v in G.neighbors(u):
+            if not G.nodes[v]['shared']:
+                prob = SHARE_PROB + (GIFT_BONUS / 100 if G.nodes[u]['gifted'] else 0)
+                if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+                    prob += IDEOLOGY_CROSS_BONUS
+                if G.nodes[v]['has_chronic_disease']:
+                    prob = max(prob, CHRONIC_PROPENSITY)
+                if G.nodes[u]['gender'] == G.nodes[v]['gender']:
+                    prob += GENDER_HOMOPHILY_BONUS
+                prob = min(max(prob, 0), 1)
+                if random.random() < prob:
+                    G.nodes[v]['shared'] = True
+                    G.nodes[u]['triggered_count'] += 1
+                    if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
+                        G.nodes[u]['gifted'] = True
+                    next_step.add(v)
+    if not next_step:
+        break
+    contagion.append(next_step)
+    current = next_step
+    steps += 1
 
-                        # Reward bridging users
-                        if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
-                            G.nodes[u]['gifted'] = True
+st.write(f"Contagion simulation ran for {steps} steps")
 
-                        next_step.add(v)
-        if not next_step:
-            break
-        contagion.append(next_step)
-        current = next_step
-        steps += 1
-
-# --- Step 9: Dashboard Stats ---
+# --- Step 8: Dashboard: Show Reward & Influence Stats ---
 gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
 gifted_influences = [G.nodes[n]['triggered_count'] for n in gifted_nodes]
 other_nodes = [n for n in G.nodes if not G.nodes[n]['gifted']]
@@ -248,69 +201,70 @@ with col3:
     st.metric("Average User Score", f"{avg_score:.2f}")
     st.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
 
-# --- Step 10: Visualization ---
-st.subheader("User Network Contagion Simulation")
-fig_net, ax_net = plt.subplots(figsize=(10, 8))
+# --- Step 9: Visualization (Optional, Comment Out if Slow) ---
+if st.checkbox("Show Network Visualization"):
+    st.subheader("User Network Contagion Simulation")
+    fig_net, ax_net = plt.subplots(figsize=(10, 8))
 
-def darken_color(color, amount=0.6):
-    c = mcolors.to_rgb(color)
-    darkened = tuple(max(min(x * amount, 1), 0) for x in c)
-    return darkened
+    def darken_color(color, amount=0.6):
+        c = mcolors.to_rgb(color)
+        darkened = tuple(max(min(x * amount, 1), 0) for x in c)
+        return darkened
 
-node_colors = []
-node_sizes = []
-node_border_widths = []
+    node_colors = []
+    node_sizes = []
+    node_border_widths = []
 
-bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
-if bc_values.max() > 0:
-    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
-else:
-    norm_bc = np.ones(len(G.nodes))
+    bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
+    if bc_values.max() > 0:
+        norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
+    else:
+        norm_bc = np.ones(len(G.nodes))
 
-for idx, n in enumerate(G.nodes):
-    color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
-    node_colors.append(color)
-    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
-    node_border_widths.append(norm_bc[idx])
+    for idx, n in enumerate(G.nodes):
+        color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
+        node_colors.append(color)
+        node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+        node_border_widths.append(norm_bc[idx])
 
-edge_colors = []
-for u, v in G.edges:
-    color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
-    color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
-    rgb_u = mcolors.to_rgb(color_u)
-    rgb_v = mcolors.to_rgb(color_v)
-    mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
-    dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
-    edge_colors.append(dark_edge_color)
+    edge_colors = []
+    for u, v in G.edges:
+        color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
+        color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
+        rgb_u = mcolors.to_rgb(color_u)
+        rgb_v = mcolors.to_rgb(color_v)
+        mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
+        dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
+        edge_colors.append(dark_edge_color)
 
-nx.draw_networkx_nodes(G, pos,
-                       node_size=node_sizes,
-                       node_color=node_colors,
-                       linewidths=node_border_widths,
-                       edgecolors='gray',
-                       ax=ax_net)
+    nx.draw_networkx_nodes(G, pos,
+                           node_size=node_sizes,
+                           node_color=node_colors,
+                           linewidths=node_border_widths,
+                           edgecolors='gray',
+                           ax=ax_net)
 
-nx.draw_networkx_edges(G, pos,
-                       edge_color=edge_colors,
-                       ax=ax_net)
+    nx.draw_networkx_edges(G, pos,
+                           edge_color=edge_colors,
+                           ax=ax_net)
 
-label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
-for node in G.nodes:
-    nx.draw_networkx_labels(
-        G, pos,
-        labels={node: str(node)},
-        font_color=label_colors[node],
-        font_size=8,
-        ax=ax_net
-    )
-    
-male_patch = mpatches.Patch(color='lightgreen', label='Male')
-female_patch = mpatches.Patch(color='lightblue', label='Female')
-ax_net.legend(handles=[male_patch, female_patch], loc='best')
+    label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
+    for node in G.nodes:
+        nx.draw_networkx_labels(
+            G, pos,
+            labels={node: str(node)},
+            font_color=label_colors[node],
+            font_size=8,
+            ax=ax_net
+        )
 
-st.pyplot(fig_net)
+    male_patch = mpatches.Patch(color='lightgreen', label='Male')
+    female_patch = mpatches.Patch(color='lightblue', label='Female')
+    ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
-# --- Step 11: Interpretation ---
+    st.pyplot(fig_net)
+
+# --- Step 10: Interpretation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
