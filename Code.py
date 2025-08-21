@@ -307,4 +307,11 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
 
-    - **Node Colors
+    - **Node Colors** represent user gender (lightgreen = Male, lightblue = Female).
+    - **Node Size** reflects the number of triggered shares (higher influence).
+    - **Node Border Thickness** corresponds to betweenness centrality (network influence).
+    - **Edges** are colored by the average gender of connected nodes.
+    - **Gifted Bridgers** are users who helped spread information across different genders and ideologies.
+
+    This visualization helps identify influential users and information pathways in the network.
+    """)  # <--- Make sure to close triple quotes here
