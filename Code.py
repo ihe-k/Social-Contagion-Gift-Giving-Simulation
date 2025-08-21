@@ -228,6 +228,14 @@ from collections import Counter
 user_features_np = np.array(user_features)
 user_labels_np = np.array(user_labels)
 
+st.write(f"Number of features in your feature matrix: {user_features_np.shape[1]}")
+st.write(f"Number of feature names: {len(feature_names)}")
+
+if user_features_np.shape[1] != len(feature_names):
+    st.error("Mismatch detected! Number of features does NOT match number of feature names.")
+else:
+    st.success("Feature matrix columns and feature names length MATCH.")
+
 # Stratified split
 sss = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
 train_index, test_index = next(sss.split(user_features_np, user_labels_np))
@@ -320,6 +328,33 @@ y_pred = le.inverse_transform(y_pred_encoded)
 accuracy = accuracy_score(y_test, y_pred)
 st.write(f"Test Accuracy: {accuracy:.3f}")
 st.text(classification_report(y_test, y_pred))
+
+st.text(classification_report(y_test, y_pred))
+
+# Show raw feature importances as a table
+st.write("Feature importances:")
+st.write(pd.Series(importances, index=feature_names))
+
+# Then plot feature importances
+importance_series = pd.Series(importances, index=feature_names).sort_values(ascending=True)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+importance_series.plot(kind='barh', ax=ax)
+ax.set_title("Feature Importances (XGBoost)")
+st.pyplot(fig)
+
+# --- Step X: Feature Importances (XGBoost) ---
+importances = best_model.feature_importances_
+
+# Plot feature importances using matplotlib
+import matplotlib.pyplot as plt
+
+importance_series = pd.Series(importances, index=feature_names).sort_values(ascending=True)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+importance_series.plot(kind='barh', ax=ax)
+ax.set_title("Feature Importances (XGBoost)")
+st.pyplot(fig)
 
 # --- Feature Importance Visualization ---
 importances = best_model.feature_importances_
