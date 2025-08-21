@@ -138,36 +138,20 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from xgboost import XGBClassifier
 
-# Encode labels
-le = LabelEncoder()
-y_train_enc = le.fit_transform(y_train)
-y_test_enc = le.transform(y_test)
-
-# Define parameter grid with regularization
-xgb_param_grid = {
-    'n_estimators': [50, 100],
-    'max_depth': [3, 5],
-    'learning_rate': [0.01, 0.1],
-    'reg_alpha': [0.1, 1],    # L1
-    'reg_lambda': [1, 10]     # L2
-}
-
 grid = GridSearchCV(
-    XGBClassifier(objective='multi:softmax', num_class=3, eval_metric='mlogloss', use_label_encoder=False),
+    XGBClassifier(
+        objective='multi:softmax',
+        num_class=3,
+        eval_metric='mlogloss',
+        use_label_encoder=False
+    ),
     xgb_param_grid,
     cv=3,
-    n_jobs=-1
+    n_jobs=-1,
+    error_score='raise'  # This will raise error if there's an issue again
 )
-grid.fit(
-    X_train, y_train_enc,
-    eval_set=[(X_test, y_test_enc)],
-    early_stopping_rounds=10,
-    verbose=False
-)
+grid.fit(X_train, y_train_enc)
 
-best_model = grid.best_estimator_
-y_pred = best_model.predict(X_test)
-y_pred_labels = le.inverse_transform(y_pred)
 
 # --- Step 7: Model Evaluation with Cross-Validation ---
 st.subheader("Model Evaluation (XGBoost)")
