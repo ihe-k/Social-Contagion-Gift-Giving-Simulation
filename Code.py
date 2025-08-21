@@ -188,6 +188,8 @@ for node in G.nodes:
         anti_health_neighbors = 0
 
     features.extend([pro_health_neighbors, anti_health_neighbors])
+    gender_chronic_interaction = gender_female * has_chronic
+    features.append(gender_chronic_interaction)
 
     user_features.append(features)
     user_labels.append(u['ideology'])
@@ -264,18 +266,29 @@ xgb_param_grid = {
 
 grid = GridSearchCV(xgb_model, xgb_param_grid, cv=3, n_jobs=-1)
 
-grid.fit(X_train_resampled, y_train_resampled)
-best_model = grid.best_estimator_
-y_pred = best_model.predict(X_test)
+le = LabelEncoder()
+y_train_encoded = le.fit_transform(y_train_resampled)
+y_test_encoded = le.transform(y_test)
+
+grid.fit(X_train_resampled, y_train_encoded)
+
+y_pred_encoded = grid.best_estimator_.predict(X_test)
+y_pred = le.inverse_transform(y_pred_encoded)
 
 from sklearn.preprocessing import LabelEncoder
 from xgboost import XGBClassifier
 from sklearn.model_selection import GridSearchCV
 
 # Label encoding
+
 le = LabelEncoder()
 y_train_encoded = le.fit_transform(y_train_resampled)
 y_test_encoded = le.transform(y_test)
+
+grid.fit(X_train_resampled, y_train_encoded)
+
+y_pred_encoded = grid.best_estimator_.predict(X_test)
+y_pred = le.inverse_transform(y_pred_encoded)
 
 # Define XGBoost and hyperparameters
 xgb_model = XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42)
@@ -303,9 +316,16 @@ y_pred_encoded = grid.best_estimator_.predict(X_test)
 y_pred = le.inverse_transform(y_pred_encoded)
 
 # Evaluate
+# Evaluate
 accuracy = accuracy_score(y_test, y_pred)
 st.write(f"Test Accuracy: {accuracy:.3f}")
 st.text(classification_report(y_test, y_pred))
+
+# --- Feature Importance Visualization ---
+importances = best_model.feature_importances_
+st.subheader("🔍 Feature Importances (XGBoost)")
+st.bar_chart(pd.Series(importances, index=feature_names))
+
 
 # --- Step 8: Contagion Simulation with Bridging Gifts ---
 #st.subheader("Contagion Simulation")
