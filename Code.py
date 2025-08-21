@@ -22,6 +22,7 @@ from sklearn.ensemble import RandomForestClassifier
 from imblearn.over_sampling import SMOTE
 from collections import Counter
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 # --- Parameters ---
 NUM_USERS = 300
@@ -245,16 +246,36 @@ param_grid = {
     'min_samples_split': [2, 5]
 }
 
-grid = GridSearchCV(
-    RandomForestClassifier(class_weight='balanced', random_state=42),
-    param_grid,
-    cv=3,
-    n_jobs=-1
+from xgboost import XGBClassifier
+
+xgb_model = XGBClassifier(
+    objective='multi:softprob',
+    num_class=3,
+    use_label_encoder=False,
+    eval_metric='mlogloss',
+    random_state=42
 )
+
+xgb_param_grid = {
+    'n_estimators': [100, 200],
+    'max_depth': [3, 6, 10],
+    'learning_rate': [0.01, 0.1, 0.2]
+}
+
+grid = GridSearchCV(xgb_model, xgb_param_grid, cv=3, n_jobs=-1)
 
 grid.fit(X_train_resampled, y_train_resampled)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
+
+le = LabelEncoder()
+y_train_encoded = le.fit_transform(y_train_resampled)
+y_test_encoded = le.transform(y_test)
+
+grid.fit(X_train_resampled, y_train_encoded)
+y_pred_encoded = grid.best_estimator_.predict(X_test)
+y_pred = le.inverse_transform(y_pred_encoded)
+
 
 accuracy = accuracy_score(y_test, y_pred)
 st.write(f"Test Accuracy: {accuracy:.3f}")
