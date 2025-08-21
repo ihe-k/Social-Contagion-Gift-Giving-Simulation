@@ -1,3 +1,6 @@
+pip install --upgrade pip setuptools wheel
+pip install -r requirements.txt
+
 FROM python:3.10-slim
 
 WORKDIR /app
