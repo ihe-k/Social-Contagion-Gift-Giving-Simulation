@@ -4,11 +4,11 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# Upgrade pip early
+RUN apt-get update && apt-get install -y build-essential
+
 RUN pip install --upgrade pip setuptools wheel
 
-# Install requirements with no-cache-dir to reduce image size
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt --verbose
 
 COPY . .
 
