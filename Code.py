@@ -38,11 +38,11 @@ nx.set_node_attributes(G, '', 'sentiment')
 def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
     if polarity > 0.5:
-        return 'pro-health'
+        return 'pro-health', polarity
     elif polarity < -0.5:
-        return 'anti-health'
+        return 'anti-health', polarity
     else:
-        return 'neutral'
+        return 'neutral', polarity
 
 # --- Step 3: Fetch Podcasts via RSS ---
 def get_podcasts_from_rss(feed_url, max_items=5):
@@ -72,9 +72,16 @@ for url in rss_urls:
         pass  # silently ignore feeds that fail
 
 # --- Step 4: Assign User Attributes ---
-podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
+podcast_sentiments = []
+podcast_polarities = []
+for p in podcast_items:
+    s, polarity = analyze_sentiment(p['content'])
+    podcast_sentiments.append(s)
+    podcast_polarities.append(polarity)
+
 if not podcast_sentiments:
     podcast_sentiments = ['neutral'] * 10
+    podcast_polarities = [0.0] * 10
 
 counts = {
     'pro-health': podcast_sentiments.count('pro-health'),
@@ -84,15 +91,25 @@ counts = {
 total = sum(counts.values()) or 1
 weights = {k: v / total for k, v in counts.items()}
 
+# We'll assign sentiment polarity by sampling from podcast polarities weighted by ideology
+# For simplicity, assign the average polarity of corresponding ideology in podcasts
+mean_polarity_map = {
+    'pro-health': np.mean([p for s, p in zip(podcast_sentiments, podcast_polarities) if s == 'pro-health']) if counts['pro-health'] else 0,
+    'anti-health': np.mean([p for s, p in zip(podcast_sentiments, podcast_polarities) if s == 'anti-health']) if counts['anti-health'] else 0,
+    'neutral': np.mean([p for s, p in zip(podcast_sentiments, podcast_polarities) if s == 'neutral']) if counts['neutral'] else 0,
+}
+
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
-    G.nodes[node]['ideology'] = random.choices(
+    ideology_choice = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
         weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
         k=1
     )[0]
-    G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
+    G.nodes[node]['ideology'] = ideology_choice
+    G.nodes[node]['sentiment'] = ideology_choice
+    G.nodes[node]['sentiment_polarity'] = mean_polarity_map[ideology_choice]
     G.nodes[node]['shared'] = False
     G.nodes[node]['score'] = 0
     G.nodes[node]['triggered_count'] = 0
@@ -112,15 +129,24 @@ def calc_sentiment_trends():
 
 sentiment_trends = calc_sentiment_trends()
 betweenness_centrality = nx.betweenness_centrality(G)
+degree_centrality = nx.degree_centrality(G)
+clustering_coeff = nx.clustering(G)
 
 user_features = []
 user_labels = []
 for node in G.nodes:
     u = G.nodes[node]
+    gender_bin = 1 if u['gender'] == 'Female' else 0
+    chronic_bin = 1 if u['has_chronic_disease'] else 0
+    interaction = gender_bin * chronic_bin
     features = [
-        1 if u['gender'] == 'Female' else 0,
-        1 if u['has_chronic_disease'] else 0,
+        gender_bin,
+        chronic_bin,
         sentiment_trends[node],
+        degree_centrality[node],
+        clustering_coeff[node],
+        interaction,
+        u['sentiment_polarity'],
         betweenness_centrality[node]
     ]
     user_features.append(features)
@@ -311,4 +337,4 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     - **Gifted Bridgers** are users who helped spread information across different genders and ideologies.
 
     This visualization helps identify influential users and information pathways in the network.
-    """)  # <--- Make sure to close triple quotes here
+    """)
