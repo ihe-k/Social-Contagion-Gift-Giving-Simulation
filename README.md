@@ -1,5 +1,5 @@
 # Gift Triggered Health Information Contagion Simulation
-This project leverages advanced machine learning models and social network analysis to predict user behaviour/information diffusion patterns across platforms. Using sentiment analysis and Random Forest Classifiers, this work explores the impact of ideologies, health conditions and social contagion on health information sharing.
+This project leverages advanced machine learning models and social network analysis to predict user behaviour/information diffusion patterns across platforms. Using sentiment analysis and logistic regression, this work explores the impact of ideologies, health conditions and social contagion on health information sharing.
 
 The goal is to understand how users with varying health conditions, ideologies and behaviours might influence each other in a digital ecosystem. This model can be used to predict the likelihood of health-related information spreading across social networks and help design more effective public health communication strategies as well as targeted interventions.
 
@@ -26,7 +26,7 @@ The goal is to understand how users with varying health conditions, ideologies a
 ## Academic Relevance
 * Public Health Systems: This model serves as an innovative tool for understanding information diffusion and social contagion in public health systems, particularly in the context of health misinformation or chronic disease management.
 * Behavioural Science Research: This project integrates behavioural science and machine learning, contributing to research on how ideologies and health conditions influence human behaviour in social networks.
-* Data Science & AI: The project demonstrates the application of machine learning algorithms (e.g., Logistic Regression) in predicting social behaviour and potentially may contribute to data science as well as AI research on social media networks.
+* Data Science & AI: The project demonstrates the application of machine learning algorithms (e.g., logistic regression) in predicting social behaviour and potentially may contribute to data science as well as AI research on social media networks.
 
 ## Project Structure
 ```plaintext
