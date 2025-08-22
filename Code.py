@@ -10,6 +10,10 @@ import numpy as np
 import feedparser
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
+import nltk
+
+nltk.download('punkt')
+nltk.download('averaged_perceptron_tagger')
 
 # --- Parameters ---
 NUM_USERS = 30
