@@ -217,7 +217,7 @@ for idx, n in enumerate(G.nodes):
 # --- Sidebar for view toggle ---
 view_mode = st.sidebar.radio("Select Network View", ('Gender Focus', 'Ideology Focus'))
 
-# --- Prepare edge colors based on view ---
+# --- Prepare edge colors and widths based on view ---
 edge_colors = []
 edge_widths = []
 
@@ -257,6 +257,18 @@ nx.draw_networkx(
     edge_cmap=plt.cm.Reds  # Optional, to add a red colormap for edges
 )
 
+# --- Node Borders (Betweenness Centrality) ---
+nx.draw_networkx_nodes(
+    G,
+    pos,
+    node_size=node_sizes,
+    node_color=node_colors,
+    linewidths=node_border_widths,  # Apply varying border widths based on betweenness centrality
+    edgecolors="black",  # Add black edge around nodes
+    ax=ax_net
+)
+
+# --- Displaying the Plot ---
 st.pyplot(fig_net)
 
 # --- Network Diagram Interpretation ---
