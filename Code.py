@@ -157,7 +157,7 @@ for n in G.nodes:
     else:
         node_border_colors.append('none')  # no border
 
-# Prepare edge colors based on view
+# Prepare edge colors based on current view
 edge_colors = []
 edge_widths = []
 
@@ -168,16 +168,16 @@ for u, v in G.edges:
             edge_colors.append('red')
             edge_widths.append(2)
         else:
-            # same gender, show in grey
+            # same gender: grey
             edge_colors.append('#414141')
             edge_widths.append(1)
     else:
-        # Show cross-gender OR cross-ideology ties in red
-        if G.nodes[u]['gender'] != G.nodes[v]['gender'] or G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+        # "Ideology View": only cross-ideology ties in red
+        if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
             edge_colors.append('red')
             edge_widths.append(2)
         else:
-            # same gender & same ideology: grey
+            # same ideology: grey
             edge_colors.append('#414141')
             edge_widths.append(1)
 
@@ -192,7 +192,7 @@ nx.draw_networkx(G, pos=pos,
                  font_size=8,
                  font_color='white')
 
-# Draw nodes with custom border colors (or no border)
+# Draw nodes with no border or custom border color
 nx.draw_networkx_nodes(G, pos,
                        node_size=node_sizes,
                        node_color=node_colors,
@@ -217,7 +217,7 @@ with st.expander("ℹ️ Interpretation of the network diagram"):
     - **Node Border Color**: Nodes with high betweenness centrality (top 20%) are highlighted with **green borders** to show they are key bridges in the network.
     - **Node Size**: Larger nodes indicate more influence or triggered shares.
     - **Edge Colors**:
-        - **Red**: Cross-gender or cross-ideology ties (depending on view).
+        - **Red**: Cross-gender ties (in Gender View) or cross-ideology ties (in Ideology View).
         - **Grey (#414141)**: All other ties (same gender & same ideology).
     - **Connections**: Show patterns of homophily and bridging nodes.
     """)
