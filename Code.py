@@ -213,4 +213,11 @@ else:
 for idx, n in enumerate(G.nodes):
     color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
     node_colors.append(color)
-    node_sizes.append(300 + 100 * G
+    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+    node_border_widths.append(norm_bc[idx])
+
+# --- Prepare edge colors and widths ---
+edge_colors = []
+edge_widths = []
+
+for u, v
