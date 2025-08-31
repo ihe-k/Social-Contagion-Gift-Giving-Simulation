@@ -176,6 +176,23 @@ col6.metric("Contagion Steps", value=contagion_steps)
 col7.metric("Final Share Rate (%)", value=f"{final_share_rate:.2f}%")
 col8.metric("Cross-Ideology Ties (%)", value=f"{percent_cross_ideology:.2f}%")
 
+with st.expander("📝 Dashboard Summary"):
+    st.write("""
+    This dashboard provides an overview of the network dynamics based on the contagion simulation.
+    
+    - **Triggered Shares:** Number of users who have shared information after being influenced.
+    - **Key Bridges:** Count of influential nodes that connect different parts of the network, facilitating information flow.
+    - **Engaged with Clinicians:** Number of users who interacted with healthcare professionals after sharing information.
+    - **Cross-Gender Ties (%):** Percentage of connections between users of different genders, indicating heterophily.
+    - **Total Users:** Total number of individuals in the network.
+    - **Contagion Steps:** The number of steps it took for the contagion to spread through the network.
+    - **Final Share Rate (%):** Percentage of users who shared the information by the end of the simulation.
+    - **Cross-Ideology Ties (%):** Percentage of connections between users of different ideological groups, highlighting heterogeneity.
+    
+    These metrics help in understanding the spread, influence, and diversity within the network, guiding strategies for effective information dissemination.
+    """)
+
+
 # --- Visualisation ---
 st.subheader("Network Contagion Visualization")
 
