@@ -172,7 +172,7 @@ for u, v in G.edges:
         edge_colors.append('red')
         edge_widths.append(2)
     else:
-        edge_colors.append('#AAAAAA')
+        edge_colors.append('#555555')  # Change grey to darker grey
         edge_widths.append(1)
 
 # Draw the Network
