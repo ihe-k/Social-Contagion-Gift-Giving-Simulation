@@ -205,4 +205,92 @@ avg_ideology_influence = np.mean([sentiment_trends[node] for node in G.nodes])
 
 st.write(f"**Total Shares Triggered**: {triggered_shares}")
 st.write(f"**Average Shares Triggered per User**: {avg_triggered_shares:.2f}")
-st.write(f"
+st.write(f"st.write(f"**Average Ideology Influence**: {avg_ideology_influence:.2f}")
+st.write(f"**Average Betweenness Centrality**: {np.mean(list(betweenness_centrality.values())):.2f}")
+
+fig_net, ax_net = plt.subplots(figsize=(8, 6))
+
+# Define colors for ideologies
+ideology_colors = {
+    'pro-health': '#003A6B',  # Dark Blue
+    'neutral': '#5293BB',      # Light Blue
+    'anti-health': '#89CFF1'   # Light Blue (lighter for anti-health)
+}
+
+# --- Prepare node colors and sizes ---
+node_colors = []
+node_sizes = []
+node_border_widths = []
+
+# Normalize betweenness centrality for border widths
+bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
+if bc_values.max() > 0:
+    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
+else:
+    norm_bc = np.ones(len(G.nodes))
+
+for idx, n in enumerate(G.nodes):
+    # Assign color based on ideology
+    color = ideology_colors[G.nodes[n]['ideology']]
+    node_colors.append(color)
+    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+    node_border_widths.append(norm_bc[idx])
+
+# --- Prepare edge colors and widths ---
+edge_colors = []
+edge_widths = []
+
+for u, v in G.edges:
+    if G.nodes[u]['gender'] != G.nodes[v]['gender'] or G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+        edge_colors.append('red')  # Cross-gender or Cross-ideology connections
+        edge_widths.append(2)      # Thicker red edges for cross-gender or cross-ideology ties
+    else:
+        edge_colors.append('#AAAAAA')  # Grey edges for same-gender and same-ideology ties
+        edge_widths.append(1)          # Normal width for regular edges
+
+# --- Draw the Network ---
+nx.draw_networkx(
+    G,
+    pos=pos,
+    with_labels=True,
+    labels={n: str(n) for n in G.nodes},
+    node_size=node_sizes,
+    node_color=node_colors,
+    edge_color=edge_colors,
+    width=edge_widths,  # Uniform edge widths
+    style='solid',
+    font_size=8,
+    font_color='white',  # Make font color white
+    edge_cmap=plt.cm.Blues,  # Color map for edge width
+    ax=ax_net
+)
+
+# Legend for ideology
+pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-Health')
+neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
+anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-Health')
+ax_net.legend(handles=[pro_health_patch, neutral_patch, anti_health_patch], loc='best')
+
+# Add title
+ax_net.set_title("Health Information Contagion Network")
+
+st.pyplot(fig_net)
+
+# --- Step 11: Explanation ---
+with st.expander("ℹ️ Interpretation of the Network Diagram"):
+    st.markdown("""
+    ### **Network Diagram Interpretation**
+    - **Node Colors:**  
+      - **Dark blue** represents **Pro-Health users**  
+      - **Light blue** represents **Neutral users**  
+      - **Lightest blue** represents **Anti-Health users**
+    - **Node Size:**  
+      Reflects how many other users this node has **influenced or triggered**.  
+      Larger nodes = more shares triggered.
+    - **Node Border Width:**  
+      Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread. These are key nodes that facilitate the flow of information across ideologies.
+    - **Edge Colors (Connections):**  
+      - **Red edges** = **Cross-gender** or **Cross-ideology** ties.  
+      - **Grey edges** = Connections between users of the same gender and same ideology.
+""")
+
