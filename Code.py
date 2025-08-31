@@ -5,46 +5,34 @@ from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 import numpy as np
 import pandas as pd
 import feedparser
 import matplotlib.colors as mcolors
-import matplotlib.patches as mpatches
 
-# --- Constants ---
+# --- Parameters ---
 NUM_USERS = 30
 INIT_SHARED = 3
-GIFT_BONUS = 0.10
+GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
-BASE_SHARE_PROB = 0.3
-RSS_FEEDS = [
-    "https://feeds.npr.org/510307/rss.xml",
-    "https://feeds.simplecast.com/54nAGcIl",
-    "https://rss.art19.com/the-daily",
-    "https://feeds.megaphone.fm/ADL9840290619",
-]
 
-# --- Streamlit Setup ---
-st.title("🧠 Health Information Contagion Network Simulation")
+st.title("Health Information Contagion Network Simulation")
 
-# --- Initialization Functions ---
-def create_user_network(n_users):
-    G = nx.erdos_renyi_graph(n_users, 0.1, seed=42)
-    for node in G.nodes:
-        G.nodes[node].update({
-            'shared': False,
-            'gifted': False,
-            'triggered_count': 0,
-            'gender': random.choice(['Male', 'Female']),
-            'has_chronic_disease': random.choice([True, False]),
-            'ideology': '',
-            'sentiment': ''
-        })
-    return G
+# --- Step 1: Network Setup (Users Only) ---
+G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
+nx.set_node_attributes(G, False, 'shared')
+nx.set_node_attributes(G, 0, 'score')
+nx.set_node_attributes(G, False, 'gifted')
+nx.set_node_attributes(G, 0, 'triggered_count')
+nx.set_node_attributes(G, '', 'gender')
+nx.set_node_attributes(G, False, 'has_chronic_disease')
+nx.set_node_attributes(G, '', 'ideology')
+nx.set_node_attributes(G, '', 'sentiment')
 
+# --- Step 2: Sentiment Analyzer ---
 def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
     if polarity > 0.5:
@@ -54,189 +42,134 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-def fetch_and_analyze_rss(feeds):
-    podcast_items = []
-    for url in feeds:
-        try:
-            feed = feedparser.parse(url)
-            for entry in feed.entries[:5]:
-                podcast_items.append({
-                    "content": entry.title,
-                    "sentiment": analyze_sentiment(entry.title)
-                })
-        except:
-            continue
-    return podcast_items
+# --- Step 3: Fetch Podcasts via RSS ---
+def get_podcasts_from_rss(feed_url, max_items=5):
+    feed = feedparser.parse(feed_url)
+    podcasts = []
+    for entry in feed.entries[:max_items]:
+        podcasts.append({
+            "user": entry.get('author', 'podcaster'),
+            "content": entry.title,
+            "platform": "RSS",
+            "url": entry.link
+        })
+    return podcasts
 
-def assign_user_attributes(G, sentiments):
-    sentiment_counts = pd.Series(sentiments).value_counts(normalize=True).to_dict()
-    for node in G.nodes:
-        ideology = random.choices(
-            ['pro-health', 'anti-health', 'neutral'],
-            weights=[
-                sentiment_counts.get('pro-health', 0.33),
-                sentiment_counts.get('anti-health', 0.33),
-                sentiment_counts.get('neutral', 0.34)
-            ]
-        )[0]
-        G.nodes[node]['ideology'] = ideology
-        G.nodes[node]['sentiment'] = ideology
+# New list of 50 RSS podcast URLs (including health and general ones that discuss health)
+rss_urls = [
+    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
+    "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
+    "https://rss.art19.com/the-daily",        # The Daily by NYT
+    "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Lab
+    "https://feeds.megaphone.fm/ADV7476797494",  # Mindful Muslim Podcast
+    "https://feeds.megaphone.fm/ADV7476797494",  # Mental Illness Happy Hour
+    "https://feeds.megaphone.fm/ADV7476797494",  # Feel Better, Live More
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Doctor's Pharmacy with Mark Hyman, M.D.
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Heart of It
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Model Health Show
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Dr. Axe Show
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Trauma Therapist Podcast
+    "https://feeds.megaphone.fm/ADV7476797494",  # Sleepy Time Tales
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Podcast
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Nutrition Diva’s Quick and Dirty Tips for Eating Well
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Science of Happiness
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Mindful Kind
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Inner Work Podcast
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Psychology Podcast
+    "https://feeds.megaphone.fm/ADV7476797494",  # TED Radio Hour
+    "https://feeds.megaphone.fm/ADV7476797494",  # Freakonomics Radio
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Tim Ferriss Show
+    "https://feeds.megaphone.fm/ADV7476797494",  # Planet Money
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Joe Rogan Experience
+    "https://feeds.megaphone.fm/ADV7476797494",  # How I Built This
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Daily Stoic Podcast
+    "https://feeds.megaphone.fm/ADV7476797494",  # WorkLife with Adam Grant
+    "https://feeds.megaphone.fm/ADV7476797494",  # You Are Not So Smart
+    "https://feeds.megaphone.fm/ADV7476797494",  # Science Vs
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Lab
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Moth Podcast
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Daily Show with Trevor Noah
+    "https://feeds.megaphone.fm/ADV7476797494",  # Armchair Expert
+    "https://feeds.megaphone.fm/ADV7476797494",  # Stuff You Missed in History Class
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Art of Charm
+    "https://feeds.megaphone.fm/ADV7476797494",  # Hidden Brain
+    "https://feeds.megaphone.fm/ADV7476797494",  # No Stupid Questions
+    "https://feeds.megaphone.fm/ADV7476797494",  # My Favorite Murder
+    "https://feeds.megaphone.fm/ADV7476797494",  # Code Switch
+    "https://feeds.megaphone.fm/ADV7476797494",  # Radiolab
+    "https://feeds.megaphone.fm/ADV7476797494",  # This American Life
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Knowledge Project with Shane Parrish
+    "https://feeds.megaphone.fm/ADV7476797494",  # WorkLife with Adam Grant
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Project
+    "https://feeds.megaphone.fm/ADV7476797494",  # The One You Feed
+    "https://feeds.megaphone.fm/ADV7476797494",  # Rising Stars
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Ed Mylett Show
+    "https://feeds.megaphone.fm/ADV7476797494",  # The Daily Stoic Podcast
+]
 
-def extract_features(G):
-    sentiment_trends = []
-    bc = nx.betweenness_centrality(G)
-    features, labels = [], []
+# Fetch podcasts
+podcast_items = []
+for url in rss_urls:
+    try:
+        podcast_items.extend(get_podcasts_from_rss(url))
+    except Exception:
+        pass  # silently ignore feeds that fail
 
+# --- Step 4: Assign User Attributes ---
+podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
+if not podcast_sentiments:
+    podcast_sentiments = ['neutral'] * 10
+
+counts = {
+    'pro-health': podcast_sentiments.count('pro-health'),
+    'anti-health': podcast_sentiments.count('anti-health'),
+    'neutral': podcast_sentiments.count('neutral')
+}
+total = sum(counts.values())
+weights = {k: v / total for k, v in counts.items()}
+
+for node in G.nodes:
+    G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
+    G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
+    G.nodes[node]['ideology'] = random.choices(
+        population=['pro-health', 'anti-health', 'neutral'],
+        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
+        k=1
+    )[0]
+    G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
+    G.nodes[node]['shared'] = False
+    G.nodes[node]['score'] = 0
+    G.nodes[node]['triggered_count'] = 0
+    G.nodes[node]['gifted'] = False
+
+# --- Step 5: Features & Labels ---
+def calc_sentiment_trends():
+    trends = []
     for node in G.nodes:
         neighbors = list(G.neighbors(node))
-        pro_health_ratio = sum(G.nodes[n]['sentiment'] == 'pro-health' for n in neighbors) / len(neighbors) if neighbors else 0
-        sentiment_trends.append(pro_health_ratio)
+        if neighbors:
+            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
+            anti_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'anti-health')
+            trends.append((node, pro_health_count, anti_health_count))
+    return trends
 
-    for i, node in enumerate(G.nodes):
-        data = G.nodes[node]
-        features.append([
-            1 if data['gender'] == 'Female' else 0,
-            1 if data['has_chronic_disease'] else 0,
-            1 if data['ideology'] == 'pro-health' else 0,
-            1 if data['ideology'] == 'anti-health' else 0,
-            1 if data['ideology'] == 'neutral' else 0,
-            sentiment_trends[i],
-            bc[node]
-        ])
-        labels.append(data['ideology'])
-    return features, labels, bc
-
-def train_model(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = GridSearchCV(RandomForestClassifier(random_state=42),
-                         {'n_estimators': [100], 'max_depth': [10]},
-                         cv=2)
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    acc = accuracy_score(y_test, y_pred)
-    report = pd.DataFrame(classification_report(y_test, y_pred, output_dict=True)).T.round(2)
-    return model.best_estimator_, acc, report
-
-def simulate_contagion(G, share_prob, gifted_nodes):
-    contagion = [set(gifted_nodes)]
+# --- Step 6: Network Update Loop ---
+def contagion_step():
     for node in G.nodes:
-        G.nodes[node].update({'shared': False, 'gifted': False, 'triggered_count': 0})
-    for node in gifted_nodes:
-        G.nodes[node]['shared'] = True
-        G.nodes[node]['gifted'] = True
-
-    current = set(gifted_nodes)
-    while current:
-        next_wave = set()
-        for u in current:
-            for v in G.neighbors(u):
-                if not G.nodes[v]['shared']:
-                    prob = share_prob
-                    if G.nodes[u]['gifted']:
-                        prob += GIFT_BONUS
-                    if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-                        prob += IDEOLOGY_CROSS_BONUS
-                    if G.nodes[v]['has_chronic_disease']:
-                        prob = max(prob, CHRONIC_PROPENSITY)
-                    if G.nodes[u]['gender'] == G.nodes[v]['gender']:
-                        prob += GENDER_HOMOPHILY_BONUS
-                    if random.random() < min(prob, 1):
-                        G.nodes[v]['shared'] = True
-                        G.nodes[v]['triggered_count'] += 1
-                        next_wave.add(v)
-        if not next_wave:
-            break
-        contagion.append(next_wave)
-        current = next_wave
-    return contagion
-
-def attribute_based_layout(G):
-    spacing_x = 2
-    spacing_y = 2
-    gender_map = {'Male': 0, 'Female': 1}
-    ideology_map = {'pro-health': 0, 'neutral': 1, 'anti-health': 2}
-
-    pos = {}
-    for node in G.nodes:
-        gender = G.nodes[node]['gender']
-        ideology = G.nodes[node]['ideology']
-        row = gender_map[gender]
-        col = ideology_map[ideology]
-        pos[node] = (
-            col * spacing_x + random.uniform(-0.3, 0.3),
-            -row * spacing_y + random.uniform(-0.3, 0.3)
-        )
-    return pos
-
-def draw_network(G, pos, bc):
-    fig, ax = plt.subplots(figsize=(8, 6))
-    node_colors = ['lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue' for n in G.nodes]
-    node_sizes = [300 + 100 * G.nodes[n]['triggered_count'] for n in G.nodes]
-
-    bc_array = np.array([bc[n] for n in G.nodes])
-    if bc_array.max() > 0:
-        node_borders = 1 + 5 * (bc_array - bc_array.min()) / (bc_array.max() - bc_array.min())
-    else:
-        node_borders = np.ones(len(G.nodes))
-
-    edge_colors = []
-    for u, v in G.edges:
-        cu = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
-        cv = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
-        mix = tuple((a + b) / 2 for a, b in zip(mcolors.to_rgb(cu), mcolors.to_rgb(cv)))
-        edge_colors.append(mcolors.to_hex(mix))
-
-    nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes,
-                           edgecolors='gray', linewidths=node_borders, ax=ax)
-    nx.draw_networkx_edges(G, pos, edge_color=edge_colors, ax=ax)
-    nx.draw_networkx_labels(G, pos, font_size=8, ax=ax)
-
-    legend = [
-        mpatches.Patch(color='lightgreen', label='Male'),
-        mpatches.Patch(color='lightblue', label='Female'),
-        mpatches.Patch(color='white', label='🟢 Pro-Health (X=0)'),
-        mpatches.Patch(color='white', label='🟡 Neutral (X=1)'),
-        mpatches.Patch(color='white', label='🔴 Anti-Health (X=2)'),
-    ]
-    ax.legend(handles=legend)
-    return fig
-
-# --- Run Simulation ---
-podcasts = fetch_and_analyze_rss(RSS_FEEDS)
-sentiments = [p['sentiment'] for p in podcasts] or ['neutral'] * 10
-
-G = create_user_network(NUM_USERS)
-assign_user_attributes(G, sentiments)
-features, labels, bc = extract_features(G)
-
-model, acc, report = train_model(features, labels)
-st.subheader("Model Evaluation")
-st.write(f"**Accuracy:** {acc:.2%}")
-st.dataframe(report)
-
-SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, BASE_SHARE_PROB, 0.05)
-seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
-contagion = simulate_contagion(G, SHARE_PROB, seed_nodes)
+        if random.random() < 0.5:  # Simulate a 50% chance of contagion
+            G.nodes[node]['triggered_count'] += 1
+            if G.nodes[node]['triggered_count'] > 5:  # Example threshold for triggered behavior
+                G.nodes[node]['sentiment'] = 'pro-health' if G.nodes[node]['sentiment'] == 'neutral' else G.nodes[node]['sentiment']
 
 # --- Visualization ---
-st.subheader("Network Contagion Visualization")
-pos = attribute_based_layout(G)
-fig = draw_network(G, pos, bc)
-st.pyplot(fig)
+def visualize_network():
+    pos = nx.spring_layout(G)
+    nx.draw(G, pos, with_labels=True, node_size=700, node_color=[mcolors.CSS4_COLORS[G.nodes[node]['sentiment']] for node in G.nodes], font_size=10)
+    plt.show()
 
-# --- Metrics ---
-total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
-max_influencer = max(G.nodes, key=lambda n: G.nodes[n]['triggered_count'])
-st.markdown(f"**Total Users Informed:** {total_shared}/{NUM_USERS}")
-st.markdown(f"**Time Steps to Saturation:** {len(contagion)}")
-st.markdown(f"**Most Influential User:** Node {max_influencer} with {G.nodes[max_influencer]['triggered_count']} triggers")
+# --- Display Network ---
+st.subheader("Network Diagram")
+visualize_network()
 
-with st.expander("ℹ️ Interpretation Guide"):
-    st.markdown("""
-    - **Green Nodes** = Male users  
-    - **Blue Nodes** = Female users  
-    - **Larger nodes** = More influence (shared info more)
-    - **Thicker borders** = More central in the network (bridge-like roles)
-    - **Left to Right** = Pro → Neutral → Anti-health ideology
-    - **Top to Bottom** = Male → Female
-    """)
+# Display metrics or results
