@@ -249,15 +249,18 @@ for u, v in G.edges:
             edge_colors.append('#414141')
             edge_widths.append(1)
 
-# --- Plot ---
-fig, ax = plt.subplots(figsize=(15, 12))
+# --- Plot with zoom control ---
+fig_size = (15 * zoom_level, 12 * zoom_level)
+
+fig, ax = plt.subplots(figsize=fig_size)
 pos = nx.spring_layout(G, seed=42, k=0.15)
 
 nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
-# Draw only labels for top nodes
-import matplotlib.patches as mpatches
+
+# Labels for top 10% nodes by betweenness centrality
 labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
 nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
+
 nx.draw_networkx_nodes(
     G,
     pos,
