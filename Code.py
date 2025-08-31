@@ -191,7 +191,7 @@ for n in G.nodes:
     if network_view == "Gender View":
         color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
     else:
-        color = '#003A6B' if G.nodes[n]['ideology'] == 'pro-health' else '#89CFF1' if G.nodes[n]['ideology']=='anti-health' else '#5293BB'
+        color = '#003A6B' if G.nodes[n]['ideology'] == 'pro-health' else '#89CFF1' if G.nodes[n]['ideology']=='anti-health' else '#5293BB' if G.nodes[n]['ideology']=='neutral'
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
 
