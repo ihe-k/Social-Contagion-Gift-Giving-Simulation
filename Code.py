@@ -25,9 +25,6 @@ CROSS_GENDER_REDUCTION_FACTOR = 0.7
 IDEOLOGY_HOMOPHILY_BONUS = 1.5
 K_THRESHOLD = 3
 
-# --- Sidebar: get zoom level once ---
-zoom_level = st.sidebar.slider("Zoom In > Zoom Out", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
-
 # --- Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)
 nx.set_node_attributes(G, False, 'shared')
@@ -97,12 +94,13 @@ accuracy = accuracy_score(y_test, y_pred)
 report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
 
-# --- Sidebar: network view ---
-network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
-
 # --- Dashboard metrics ---
 st.sidebar.header("Network Contagion & Settings")
+network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
+
 SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
+
+zoom_level = st.sidebar.slider("Zoom In > Zoom Out", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
 
 # --- Contagion setup ---
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
@@ -223,6 +221,15 @@ for u, v in G.edges:
         else:
             edge_colors.append('#414141')
             edge_widths.append(1)
+
+###
+
+# Use a fixed DPI for consistent marker size
+DPI = 100
+
+# Create figure with fixed DPI
+fig, ax = plt.subplots(figsize=(8, 6), dpi=DPI)
+
 
 # --- Plot with zoom control ---
 
