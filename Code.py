@@ -129,7 +129,16 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Visualization ---
+# --- Dashboard ---
+st.markdown("## Dashboard")
+col1, col2, col3 = st.columns(3)
+
+shared_count = sum(1 for n in G.nodes if G.nodes[n]['shared'])
+col1.metric("Total Users", value=NUM_USERS)
+col2.metric("Shared Users", value=shared_count)
+col3.metric("View Mode", value=network_view)
+
+# --- Visualisation ---
 st.subheader("Network Contagion Visualization")
 
 # Prepare node info
