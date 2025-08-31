@@ -192,11 +192,14 @@ while current:
 # --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
 
-# Add the radio button for toggle
-view_option = st.radio(
-    "Select View Mode",
-    ("Gender-Based Network", "Cross-Ideology Network")
-)
+# Dashboard summary
+triggered_shares = sum([G.nodes[node]['triggered_count'] for node in G.nodes])
+avg_triggered_shares = triggered_shares / NUM_USERS
+avg_ideology_influence = np.mean([sentiment_trends[node] for node in G.nodes])
+
+st.write(f"**Total Shares Triggered**: {triggered_shares}")
+st.write(f"**Average Shares Triggered per User**: {avg_triggered_shares:.2f}")
+st.write(f"**Average Ideology Influence (Pro-Health)**: {avg_ideology_influence:.2f}")
 
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
 pos = nx.spring_layout(G, seed=42)
@@ -206,9 +209,17 @@ def darken_color(color, amount=0.6):
     darkened = tuple(max(min(x * amount, 1), 0) for x in c)
     return darkened
 
+# Custom node colors
 node_colors = []
 node_sizes = []
 node_border_widths = []
+
+# Custom Colors for ideologies
+color_map = {
+    'pro-health': '#003A6B',
+    'neutral': '#5293BB',
+    'anti-health': '#89CFF1'
+}
 
 # Normalize betweenness centrality for border widths
 bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
@@ -218,10 +229,7 @@ else:
     norm_bc = np.ones(len(G.nodes))
 
 for idx, n in enumerate(G.nodes):
-    if view_option == "Gender-Based Network":
-        color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
-    else:
-        color = '#00BFAE' if G.nodes[n]['ideology'] == 'pro-health' else ('#FF4747' if G.nodes[n]['ideology'] == 'anti-health' else '#D9D9D9')
+    color = color_map[G.nodes[n]['ideology']]
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
@@ -231,10 +239,7 @@ edge_colors = []
 edge_widths = []
 
 for u, v in G.edges:
-    if G.nodes[u]['gender'] != G.nodes[v]['gender']:  # Cross-gender connection
-        edge_colors.append('red')
-        edge_widths.append(2)
-    elif G.nodes[u]['ideology'] != G.nodes[v]['ideology']:  # Cross-ideology connection
+    if G.nodes[u]['gender'] != G.nodes[v]['gender'] or G.nodes[u]['ideology'] != G.nodes[v]['ideology']:  # Cross-gender or Cross-ideology connection
         edge_colors.append('red')
         edge_widths.append(2)
     else:
@@ -250,26 +255,19 @@ nx.draw_networkx(
     node_size=node_sizes,
     node_color=node_colors,
     edge_color=edge_colors,
-    width=edge_widths,  # Uniform edge widths
+    width=edge_widths,
     style='solid',
     font_size=8,
     font_color='white',  # Make font color white
     ax=ax_net
 )
 
-# Legend for gender
-male_patch = mpatches.Patch(color='#003A6B', label='Male')
-female_patch = mpatches.Patch(color='#5293BB', label='Female')
-
 # Legend for ideology
-pro_health_patch = mpatches.Patch(color='#00BFAE', label='Pro-health')
-anti_health_patch = mpatches.Patch(color='#FF4747', label='Anti-health')
-neutral_patch = mpatches.Patch(color='#D9D9D9', label='Neutral')
+pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-health')
+anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-health')
+neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
 
-if view_option == "Gender-Based Network":
-    ax_net.legend(handles=[male_patch, female_patch], loc='best')
-else:
-    ax_net.legend(handles=[pro_health_patch, anti_health_patch, neutral_patch], loc='best')
+ax_net.legend(handles=[pro_health_patch, anti_health_patch, neutral_patch], loc='best')
 
 st.pyplot(fig_net)
 
@@ -278,14 +276,14 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
     - **Node Colors:**  
-      - **Dark blue circles** represent **Male users** in **Gender-Based View**  
-      - **Light blue circles** represent **Female users** in **Gender-Based View**  
-      - **Teal** represents **Pro-health users**, **Red** represents **Anti-health users**, and **Grey** represents **Neutral** users in **Cross-Ideology View**
+      - **Dark blue circles** represent **Pro-health users**  
+      - **Light blue circles** represent **Neutral users**  
+      - **Light cyan circles** represent **Anti-health users**
     - **Node Size:**  
       Reflects how many other users this node has **influenced or triggered**.  
       Larger nodes = more shares triggered.
     - **Node Border Width:**  
-      Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread. These are key nodes that facilitate the flow of information across ideologies.
+      Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread.
     - **Edge Colors (Connections):**  
       - **Red edges** = **Cross-gender** or **Cross-ideology** ties.  
       - **Grey edges** = Connections between users of the same gender and same ideology.
