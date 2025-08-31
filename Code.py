@@ -22,7 +22,7 @@ GENDER_HOMOPHILY_BONUS = 0.2
 
 st.title("Health Information Contagion Network Simulation")
 
-# --- Step 1: Network Setup (Users Only) ---
+# --- Step 1: Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
@@ -33,7 +33,7 @@ nx.set_node_attributes(G, False, 'has_chronic_disease')
 nx.set_node_attributes(G, '', 'ideology')
 nx.set_node_attributes(G, '', 'sentiment')
 
-# --- Step 2: Sentiment Analyzer ---
+# --- Step 2: Sentiment Analysis ---
 def analyze_sentiment(text):
     polarity = TextBlob(text).sentiment.polarity
     if polarity > 0.5:
@@ -43,7 +43,7 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Fetch Podcasts via RSS ---
+# --- Step 3: Fetch Podcasts ---
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
@@ -67,7 +67,7 @@ podcast_items = []
 for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
-    except Exception:
+    except:
         pass
 
 # --- Step 4: Assign User Attributes ---
@@ -87,7 +87,7 @@ for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
     G.nodes[node]['ideology'] = random.choices(
-        population=['pro-health', 'anti-health', 'neutral'],
+        ['pro-health', 'anti-health', 'neutral'],
         weights=[weights.get('pro-health', 0.33),
                  weights.get('anti-health', 0.33),
                  weights.get('neutral', 0.33)],
@@ -187,7 +187,7 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Network Visualisation ---
+# --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
 pos = nx.spring_layout(G, seed=42)
@@ -214,14 +214,13 @@ for idx, n in enumerate(G.nodes):
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
 
-# --- Add view mode selection in sidebar ---
+# --- Sidebar View Selection ---
 view_mode = st.sidebar.radio("Select Network View", ('Gender Focus', 'Ideology Focus'))
 
-# Set edge colors based on selected view
+# Set edge colors based on view
 edge_colors = []
 
 if view_mode == 'Gender Focus':
-    # Color edges based on gender homophily
     for u, v in G.edges:
         color_u = '#003A6B' if G.nodes[u]['gender'] == 'Male' else '#5293BB'
         color_v = '#003A6B' if G.nodes[v]['gender'] == 'Male' else '#5293BB'
@@ -236,19 +235,22 @@ else:
         if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
             edge_colors.append('red')
         else:
-            # Optional: keep a default color for same-ideology ties
+            # optional: keep a default color for same-ideology ties
             edge_colors.append('#AAAAAA')
 
-# Draw the network
-nx.draw(G, pos,
-        with_labels=True,
-        labels={n: str(n) for n in G.nodes},
-        node_size=node_sizes,
-        node_color=node_colors,
-        edge_color=edge_colors,
-        linewidths=node_border_widths,
-        font_size=8,
-        ax=ax_net)
+# Draw the network explicitly with all edges and their colors
+nx.draw_networkx(
+    G,
+    pos=pos,
+    with_labels=True,
+    labels={n: str(n) for n in G.nodes},
+    node_size=node_sizes,
+    node_color=node_colors,
+    edge_color=edge_colors,
+    linewidths=node_border_widths,
+    font_size=8,
+    ax=ax_net
+)
 
 # Legend for gender
 male_patch = mpatches.Patch(color='#003A6B', label='Male')
@@ -257,7 +259,7 @@ ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
 
-# --- Step 10: Explanation ---
+# --- Step 11: Explanation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
@@ -271,7 +273,7 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
       Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
     - **Edge Colors (Connections):**  
       - **Red edges** = Cross-ideology ties (connections between users with different ideologies)  
-      - **Other edges** based on focus (gender homophily or default)
+      - Other edges are based on focus (gender homophily or default)
     - **Clusters:**  
       The network shows **homophily** and **ideological alignment** influencing connections and information diffusion.
     - **Overall Insights:**  
