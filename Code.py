@@ -247,22 +247,24 @@ nx.draw_networkx_nodes(
 )
 
 # --- Legend setup ---
-LEGEND_MARKER_SIZE = 300
+LEGEND_MARKER_SIZE = 10  # points, adjust as needed
+
 if network_view == "Gender View":
     legend_handles = [
-        mpatches.Patch(color='#003A6B', label='Male'),
-        mpatches.Patch(color='#5293BB', label='Female')
+        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#003A6B', label='Male'),
+        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#5293BB', label='Female')
     ]
 else:
     legend_handles = [
-        mpatches.Patch(color='#003A6B', label='Pro-Health'),
-        mpatches.Patch(color='#89CFF1', label='Anti-Health'),
-        mpatches.Patch(color='#5293BB', label='Neutral')
+        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#003A6B', label='Pro-Health'),
+        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#89CFF1', label='Anti-Health'),
+        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#5293BB', label='Neutral')
     ]
 
-# Draw the legend with markerscale=1 to keep size consistent
-ax.legend(handles=legend_handles, loc='best', markerscale=1)
+# Plot the legend
+ax.legend(handles=legend_handles, loc='best')
 
+# Finalize plot
 ax.set_title("Large Network Visualization (300 nodes)")
 ax.axis('off')
 
