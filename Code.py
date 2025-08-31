@@ -129,14 +129,52 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Dashboard ---
-st.markdown("## Dashboard")
-col1, col2, col3 = st.columns(3)
+# --- Dashboard Summary---
+st.markdown("## Network Dashboard")
 
-shared_count = sum(1 for n in G.nodes if G.nodes[n]['shared'])
-col1.metric("Total Users", value=NUM_USERS)
-col2.metric("Shared Users", value=shared_count)
-col3.metric("View Mode", value=network_view)
+# Calculate key metrics
+total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
+total_nodes = len(G.nodes)
+
+# 1. Triggered Shares
+st.metric("Triggered Shares", value=total_shared)
+
+# 2. Key Bridges (top 20% by betweenness)
+bet_cen = nx.betweenness_centrality(G)
+threshold = np.percentile(list(bet_cen.values()), 80)
+key_bridges = [n for n, bc in bet_cen.items() if bc >= threshold]
+st.metric("Number of Key Bridges", value=len(key_bridges))
+
+# 3. Engagement with clinicians after sharing info
+# Note: Placeholder - simulate or set as zero if no data
+# For demo, randomly pick some nodes as "clinicians" engaged after sharing
+# Here, we randomly select some nodes as "clinicians" for illustration
+clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.random() < 0.3)
+st.metric("Engaged with Clinicians", value=clinicians_engaged)
+
+# 4. Cross-ideology ties
+cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
+st.metric("Cross-Ideology Ties", value=cross_ideology_edges)
+
+# 5. Cross-gender ties
+cross_gender_edges = sum(1 for u, v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender'])
+st.metric("Cross-Gender Ties", value=cross_gender_edges)
+
+# 6. Potential for gift giving (most influential users)
+# For example, top 3 nodes by 'triggered_count'
+top_influencers = sorted(G.nodes, key=lambda n: G.nodes[n]['triggered_count'], reverse=True)[:3]
+top_influencers_names = ', '.join(str(n) for n in top_influencers)
+st.write(f"Most Influential Users: {top_influencers_names}")
+
+# 7. Contagion stats
+# Number of steps in contagion
+contagion_steps = len(contagion)
+# Final share rate
+final_share_rate = total_shared / total_nodes * 100
+st.metric("Contagion Steps", value=contagion_steps)
+st.metric("Final Share Rate (%)", value=f"{final_share_rate:.1f}")
+
+# Optional: add a pie chart or bar chart for more visual insights
 
 # --- Visualisation ---
 st.subheader("Network Contagion Visualization")
