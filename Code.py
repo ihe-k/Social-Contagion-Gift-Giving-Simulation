@@ -174,13 +174,13 @@ final_share_rate = (total_shared / total_nodes) * 100
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7, col8 = st.columns(4)
 
-col1.metric("Triggered Shares", total_shared)
+col1.metric("Total Users", total_nodes)
 col2.metric("Key Bridges", key_bridges)
-col3.metric("Engaged Clinicians", clinicians_engaged)
+col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
 col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
-col5.metric("Total Users", total_nodes)
+col5.metric("Triggered Shares", total_shared)
 col6.metric("Contagion Steps", contagion_steps)
-col7.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
+col7.metric("Engaged Clinicians", clinicians_engaged)
 col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
 
 with st.expander("📝 Dashboard Summary"):
