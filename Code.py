@@ -20,8 +20,7 @@ GENDER_HOMOPHILY_BONUS = 0.2
 CROSS_GENDER_BONUS = 0.3
 CROSS_IDEOLOGY_BONUS = 0.3
 
-# Threshold for contagion
-K_THRESHOLD = 3  # Node shares if at least 3 neighbors are sharing
+K_THRESHOLD = 3  # contagion threshold
 
 # --- Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
@@ -45,7 +44,7 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Features for Model ---
+# --- Features ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -92,12 +91,12 @@ accuracy = accuracy_score(y_test, y_pred)
 report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
 
-# --- Sidebar Elements ---
+# --- Sidebar ---
 st.sidebar.header("Network Contagion & Settings")
 SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 
-# --- Contagion Simulation with Threshold ---
+# --- Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 for node in G.nodes:
@@ -105,15 +104,12 @@ for node in G.nodes:
     G.nodes[node]['gifted'] = False
     G.nodes[node]['triggered_count'] = 0
 
-# Seed initial nodes as sharing
 for node in seed_nodes:
     G.nodes[node]['shared'] = True
     G.nodes[node]['gifted'] = True
 
 contagion = [set(seed_nodes)]
 current = set(seed_nodes)
-steps = 0
-
 while True:
     next_step = set()
     for u in G.nodes:
@@ -128,31 +124,25 @@ while True:
         break
     contagion.append(next_step)
     current = next_step
-    steps += 1
 
-# --- Dashboard summary ---
+# --- Dashboard metrics ---
 st.markdown("## Dashboard Summary")
 total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
 total_nodes = len(G.nodes)
 total_edges = G.number_of_edges()
 
-# Cross-gender ties
 cross_gender_edges = sum(1 for u, v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender'])
 percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges > 0 else 0
 
-# Cross-ideology ties
 cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
 percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
 
-# Key bridges (top 20% by betweenness)
 bet_cen = nx.betweenness_centrality(G)
-threshold = np.percentile(list(bet_cen.values()), 80)
-key_bridges = sum(1 for bc in bet_cen.values() if bc >= threshold)
+threshold_bet = np.percentile(list(bet_cen.values()), 80)
+key_bridges = sum(1 for v in bet_cen.values() if v >= threshold_bet)
 
-# Placeholder for engagement with clinicians
 clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.random() < 0.3)
 
-# Contagion stats
 contagion_steps = len(contagion)
 final_share_rate = (total_shared / total_nodes) * 100
 
@@ -160,30 +150,38 @@ final_share_rate = (total_shared / total_nodes) * 100
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7, col8 = st.columns(4)
 
-col1.metric("Triggered Shares", value=total_shared)
-col2.metric("Key Bridges", value=key_bridges)
-col3.metric("Engaged with Clinicians", value=clinicians_engaged)
-col4.metric("Cross-Gender Ties (%)", value=f"{percent_cross_gender:.1f}%")
-col5.metric("Total Users", value=total_nodes)
-col6.metric("Contagion Steps", value=contagion_steps)
-col7.metric("Final Share Rate (%)", value=f"{final_share_rate:.1f}%")
-col8.metric("Cross-Ideology Ties (%)", value=f"{percent_cross_ideology:.1f}%")
+col1.metric("Triggered Shares", total_shared)
+col2.metric("Key Bridges", key_bridges)
+col3.metric("Engaged Clinicians", clinicians_engaged)
+col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
+col5.metric("Total Users", total_nodes)
+col6.metric("Contagion Steps", contagion_steps)
+col7.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
+col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
 
 with st.expander("📝 Dashboard Summary"):
     st.write("""
     This dashboard provides an overview of the network dynamics based on the contagion simulation.
-    - **Triggered Shares:** Number of users who shared after exposure.
-    - **Key Bridges:** Influential nodes bridging parts of the network.
-    - **Engaged with Clinicians:** Number of users interacting after sharing.
-    - **Cross-Gender Ties (%):** Percentage of ties connecting different genders.
-    - **Total Users:** Total network size.
-    - **Contagion Steps:** Number of rounds for spread completion.
-    - **Final Share Rate (%):** Overall percentage of users sharing.
-    - **Cross-Ideology Ties (%):** Percentage of ties between different ideological groups.
+    - Triggered Shares: number of users who shared after exposure.
+    - Key Bridges: influential nodes bridging parts of the network.
+    - Engaged Clinicians: users interacting after sharing.
+    - Cross-Gender Ties (%): percentage connecting different genders.
+    - Total Users: network size.
+    - Contagion Steps: rounds for spread.
+    - Final Share Rate (%): overall sharing percentage.
+    - Cross-Ideology Ties (%): ties between different ideological groups.
     """)
 
 # --- Visualization ---
 st.subheader("Network Contagion Visualization")
+
+# --- Define colors for ideologies ---
+ideology_colors = {
+    'pro-health': '#003A6B',
+    'anti-health':  '#89CFF1',
+    'neutral': '#5293BB'
+}
+
 node_colors = []
 node_sizes = []
 
@@ -191,19 +189,15 @@ for n in G.nodes:
     if network_view == "Gender View":
         color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
     else:
-        color = (
-    '#003A6B' if G.nodes[n]['ideology'] == 'pro-health' else
-    '#89CFF1' if G.nodes[n]['ideology'] == 'anti-health' else
-    '#5293BB' if G.nodes[n]['ideology'] == 'neutral' else
-    'default_color'  # Optional: fallback color if none match
-)
+        # Use specified colors for ideologies, including neutral
+        color = ideology_colors.get(G.nodes[n]['ideology'], '#000000')
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
 
 # Betweenness for border color
 bc = nx.betweenness_centrality(G)
 threshold_bc = np.percentile(list(bc.values()), 80)
-node_border_colors = ['green' if bc[n] >= threshold_bc else 'none' for n in G.nodes]
+node_border_colors = ['green' if bc[n] >= threshold_bc else 'black' for n in G.nodes]
 
 # Edges coloring based on view
 edge_colors = []
@@ -218,6 +212,7 @@ for u, v in G.edges:
             edge_colors.append('#414141')
             edge_widths.append(1)
     else:
+        # Ideology view: highlight cross-ideology, including 'neutral'
         if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
             if 'neutral' in (G.nodes[u]['ideology'], G.nodes[v]['ideology']):
                 edge_colors.append('red')
@@ -230,23 +225,22 @@ for u, v in G.edges:
             edge_widths.append(1)
 
 # Plot network
-fig, ax = plt.subplots(figsize=(8,6))
-nx.draw_networkx(G, pos=nx.spring_layout(G, seed=42),
+fig, ax = plt.subplots(figsize=(8, 6))
+pos = nx.spring_layout(G, seed=42)
+
+nx.draw_networkx(G, pos=pos,
                  node_size=node_sizes,
                  node_color=node_colors,
                  edge_color=edge_colors,
                  width=edge_widths,
                  font_size=8,
                  font_color='white')
-nx.draw_networkx_nodes(G, pos=nx.spring_layout(G, seed=42),
-                       node_size=node_sizes,
-                       node_color=node_colors,
-                       edgecolors=node_border_colors,
-                       linewidths=2)
 
+# Legend for ideologies
 ax.legend(handles=[
-    mpatches.Patch(color='#003A6B', label='Male' if network_view=="Gender View" else 'Pro-Health'),
-    mpatches.Patch(color='#5293BB', label='Female' if network_view=="Gender View" else 'Anti-Health')
+    mpatches.Patch(color='#003A6B', label='Pro-Health'),
+    mpatches.Patch(color='#89CFF1', label='Anti-Health'),
+    mpatches.Patch(color='#5293BB', label='Neutral')
 ], loc='best')
 
 st.pyplot(fig)
