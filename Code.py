@@ -3,10 +3,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from textblob import TextBlob
 import streamlit as st
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV, StratifiedKFold, cross_val_score
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
 from sklearn.preprocessing import LabelEncoder
+from xgboost import XGBClassifier
 import numpy as np
 import pandas as pd
 import feedparser
@@ -14,7 +15,7 @@ import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 
 # --- Parameters ---
-NUM_USERS = 300  # increased to 300
+NUM_USERS = 350
 INIT_SHARED = 3
 GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
@@ -23,8 +24,8 @@ GENDER_HOMOPHILY_BONUS = 0.2
 
 st.title("Health Information Contagion Network Simulation")
 
-# --- Step 1: Network Setup (Users Only) ---
-G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)  # sparser graph for better visualization
+# --- Step 1: Network Setup ---
+G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
 nx.set_node_attributes(G, False, 'gifted')
@@ -44,7 +45,8 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Fetch Podcasts via RSS ---
+# --- Step 3: RSS Feed ---
+@st.cache_data
 def get_podcasts_from_rss(feed_url, max_items=5):
     feed = feedparser.parse(feed_url)
     podcasts = []
@@ -58,10 +60,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
     return podcasts
 
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
-    "https://rss.art19.com/the-daily",        # The Daily by NYT
-    "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
+    "https://feeds.npr.org/510307/rss.xml",
+    "https://feeds.simplecast.com/54nAGcIl",
+    "https://rss.art19.com/the-daily",
+    "https://feeds.megaphone.fm/ADL9840290619"
 ]
 
 podcast_items = []
@@ -69,7 +71,7 @@ for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception:
-        pass  # silently ignore feeds that fail
+        pass
 
 # --- Step 4: Assign User Attributes ---
 podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
@@ -81,8 +83,11 @@ counts = {
     'anti-health': podcast_sentiments.count('anti-health'),
     'neutral': podcast_sentiments.count('neutral')
 }
-total = sum(counts.values()) or 1
-weights = {k: v / total for k, v in counts.items()}
+total = sum(counts.values())
+if total == 0:
+    weights = {'pro-health': 0.33, 'anti-health': 0.33, 'neutral': 0.34}
+else:
+    weights = {k: v / total for k, v in counts.items()}
 
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
@@ -93,12 +98,8 @@ for node in G.nodes:
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
-    G.nodes[node]['shared'] = False
-    G.nodes[node]['score'] = 0
-    G.nodes[node]['triggered_count'] = 0
-    G.nodes[node]['gifted'] = False
 
-# --- Step 5: Features & Labels ---
+# --- Step 5: Feature Engineering ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -120,51 +121,62 @@ for node in G.nodes:
     features = [
         1 if u['gender'] == 'Female' else 0,
         1 if u['has_chronic_disease'] else 0,
+        1 if u['ideology'] == 'pro-health' else 0,
+        1 if u['ideology'] == 'anti-health' else 0,
+        1 if u['ideology'] == 'neutral' else 0,
         sentiment_trends[node],
         betweenness_centrality[node]
     ]
     user_features.append(features)
     user_labels.append(u['ideology'])
 
-# --- Step 6: Logistic Regression Model Training & Evaluation ---
-
-# Encode labels
-le = LabelEncoder()
-y_encoded = le.fit_transform(user_labels)
-
-# Train/test split with stratify
 X_train, X_test, y_train, y_test = train_test_split(
-    user_features, y_encoded, test_size=0.2, random_state=42, stratify=y_encoded
+    user_features, user_labels, test_size=0.2, random_state=42
 )
 
-# Initialize Logistic Regression model
-logreg = LogisticRegression(
-    multi_class='multinomial',
-    solver='lbfgs',
-    max_iter=1000,
-    random_state=42
+# --- Step 6: Model Training (XGBoost) ---
+le = LabelEncoder()
+y_train_enc = le.fit_transform(y_train)
+y_test_enc = le.transform(y_test)
+
+xgb_param_grid = {
+    'n_estimators': [50, 100],
+    'max_depth': [3, 5],
+    'learning_rate': [0.01, 0.1],
+    'subsample': [0.8, 1.0]
+}
+
+grid = GridSearchCV(
+    XGBClassifier(objective='multi:softmax', num_class=3,
+                  eval_metric='mlogloss', use_label_encoder=False),
+    xgb_param_grid,
+    cv=3,
+    n_jobs=-1,
+    error_score='raise'
 )
+grid.fit(X_train, y_train_enc)
 
-logreg.fit(X_train, y_train)
+best_model = grid.best_estimator_
+y_pred = best_model.predict(X_test)
+y_pred_labels = le.inverse_transform(y_pred)
 
-# Predictions
-y_pred = logreg.predict(X_test)
+# --- Step 7: Evaluation ---
+st.subheader("Model Evaluation (XGBoost)")
 
-# Metrics
-test_accuracy = accuracy_score(y_test, y_pred)
-st.subheader("Model Evaluation (Logistic Regression)")
-st.write(f"**Test Accuracy:** {test_accuracy:.2%}")
+accuracy = accuracy_score(y_test, y_pred_labels)
+report_dict = classification_report(y_test, y_pred_labels, output_dict=True)
+report_df = pd.DataFrame(report_dict).transpose().round(2)
 
-report = classification_report(y_test, y_pred, target_names=le.classes_, output_dict=True)
-report_df = pd.DataFrame(report).transpose().round(2)
+skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+cv_scores = cross_val_score(best_model, X_train, y_train_enc, cv=skf)
+cv_mean = cv_scores.mean()
+cv_std = cv_scores.std()
+
+st.write(f"**Test Accuracy:** {accuracy:.2%}")
+st.write(f"**Cross-validated Accuracy:** {cv_mean:.2%} ± {cv_std:.2%}")
 st.dataframe(report_df)
 
-# Cross-validation
-skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-cv_scores = cross_val_score(logreg, X_train, y_train, cv=skf)
-st.write(f"**Cross-validated Accuracy (train set):** {cv_scores.mean():.2%} ± {cv_scores.std():.2%}")
-
-# --- Step 7: Contagion Simulation with Bridging Gifts ---
+# --- Step 8: Contagion Simulation ---
 st.subheader("Contagion Simulation")
 
 SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
@@ -172,7 +184,6 @@ SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 
-# Reset contagion-related attributes
 for node in G.nodes:
     G.nodes[node]['shared'] = False
     G.nodes[node]['gifted'] = False
@@ -200,18 +211,15 @@ while current:
                 if random.random() < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[u]['triggered_count'] += 1
-                    
-                    # Reward users who bridge both gender and ideology boundaries
                     if (G.nodes[u]['gender'] != G.nodes[v]['gender']) and (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
                         G.nodes[u]['gifted'] = True
-                    
                     next_step.add(v)
     if not next_step:
         break
     contagion.append(next_step)
     current = next_step
 
-# --- Step 8: Dashboard: Show Reward & Influence Stats ---
+# --- Dashboard Metrics ---
 gifted_nodes = [n for n in G.nodes if G.nodes[n]['gifted']]
 gifted_influences = [G.nodes[n]['triggered_count'] for n in gifted_nodes]
 other_nodes = [n for n in G.nodes if not G.nodes[n]['gifted']]
@@ -233,54 +241,79 @@ with col2:
     st.metric("Avg Influence (Others)", f"{avg_influence_others:.2f}")
 with col3:
     st.metric("Average User Score", f"{avg_score:.2f}")
-    st.metric("Average Influence (Triggered Shares)", f"{avg_influence:.2f}")
+    st.metric("Average Influence", f"{avg_influence:.2f}")
 
 # --- Step 9: Visualization ---
-# --- Step 9: Simplified Influencer Visualization by Ideology ---
-st.subheader("Influencer Network (Clustered by Ideology)")
+st.subheader("User Network Contagion Simulation")
+fig_net, ax_net = plt.subplots(figsize=(8, 6))
 
-influence_threshold = 2
-influential_nodes = [n for n in G.nodes if G.nodes[n]['triggered_count'] >= influence_threshold]
-H = G.subgraph(influential_nodes).copy()
+def darken_color(color, amount=0.6):
+    c = mcolors.to_rgb(color)
+    darkened = tuple(max(min(x * amount, 1), 0) for x in c)
+    return darkened
 
-if len(H.nodes) < 2:
-    st.warning("Not enough influential nodes to display a network. Try increasing SHARE_PROB or adjusting parameters.")
+node_colors = []
+edge_colors = []
+node_sizes = []
+node_border_widths = []
+
+bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
+if bc_values.max() > 0:
+    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
 else:
-    # Positioning with cluster-aware layout
-    pos = nx.spring_layout(H, seed=42, k=0.3)
+    norm_bc = np.ones(len(G.nodes))
 
-    # Color by ideology
-    ideology_colors = {
-        'pro-health': '#2ca02c',
-        'anti-health': '#d62728',
-        'neutral': '#1f77b4'
-    }
-    node_colors = [ideology_colors.get(H.nodes[n]['ideology'], '#999999') for n in H.nodes]
-    node_sizes = [400 + 100 * H.nodes[n]['triggered_count'] for n in H.nodes]
+for idx, n in enumerate(G.nodes):
+    color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
+    node_colors.append(color)
+    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+    node_border_widths.append(norm_bc[idx])
 
-    fig, ax = plt.subplots(figsize=(10, 8))
-    nx.draw_networkx_nodes(H, pos, node_color=node_colors, node_size=node_sizes, ax=ax, alpha=0.85, edgecolors='black')
-    nx.draw_networkx_edges(H, pos, ax=ax, alpha=0.3)
-    nx.draw_networkx_labels(H, pos, font_size=8, ax=ax)
+for u, v in G.edges:
+    color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
+    color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
+    rgb_u = mcolors.to_rgb(color_u)
+    rgb_v = mcolors.to_rgb(color_v)
+    mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
+    dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
+    edge_colors.append(dark_edge_color)
 
-    # Legend
-    patches = [mpatches.Patch(color=color, label=ideology) for ideology, color in ideology_colors.items()]
-    ax.legend(handles=patches, loc='best')
+nx.draw_networkx_nodes(G, pos,
+                       node_size=node_sizes,
+                       node_color=node_colors,
+                       linewidths=node_border_widths,
+                       edgecolors='gray',
+                       ax=ax_net)
 
-    ax.set_title("Influencer Subgraph (Clustered by Ideology)")
-    ax.axis('off')
-    st.pyplot(fig)
+nx.draw_networkx_edges(G, pos,
+                       edge_color=edge_colors,
+                       ax=ax_net)
 
-# --- Step 10: Interpretation ---
+label_colors = {n: '#003A6B' if G.nodes[n]['gender'] == 'Female' else '#1B5886' for n in G.nodes}
+for node in G.nodes:
+    nx.draw_networkx_labels(
+        G, pos,
+        labels={node: str(node)},
+        font_color=label_colors[node],
+        font_size=8,
+        ax=ax_net
+    )
+
+male_patch = mpatches.Patch(color='lightgreen', label='Male')
+female_patch = mpatches.Patch(color='lightblue', label='Female')
+ax_net.legend(handles=[male_patch, female_patch], loc='best')
+
+st.pyplot(fig_net)
+
+# --- Step 10: Explanation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
-
-    - **Node Colors** represent user gender (lightgreen = Male, lightblue = Female).
-    - **Node Size** reflects the number of triggered shares (higher influence).
-    - **Node Border Thickness** corresponds to betweenness centrality (network influence).
-    - **Edges** are colored by the average gender of connected nodes.
-    - **Gifted Bridgers** are users who helped spread information across different genders and ideologies.
-
-    This visualization helps identify influential users and information pathways in the network.
-    """)  # <--- Make sure to close triple quotes here
+    - **Node Colors:** Green = Male, Blue = Female  
+    - **Node Size:** Indicates influence (triggered shares)  
+    - **Node Border Width:** Indicates betweenness centrality (importance as a bridge)  
+    - **Edge Colors:**  
+        - Green = Male–Male  
+        - Blue = Female–Female  
+        - Gray = Mixed-gender  
+    """)
