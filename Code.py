@@ -220,4 +220,53 @@ for idx, n in enumerate(G.nodes):
 edge_colors = []
 edge_widths = []
 
-for u, v
+for u, v in G.edges:
+    if G.nodes[u]['gender'] != G.nodes[v]['gender']:  # Cross-gender connection
+        edge_colors.append('red')
+        edge_widths.append(2)
+    elif G.nodes[u]['ideology'] != G.nodes[v]['ideology']:  # Cross-ideology connection
+        edge_colors.append('red')
+        edge_widths.append(2)
+    else:
+        edge_colors.append('#AAAAAA')
+        edge_widths.append(1)
+
+# --- Draw the Network ---
+nx.draw_networkx(
+    G,
+    pos=pos,
+    with_labels=True,
+    labels={n: str(n) for n in G.nodes},
+    node_size=node_sizes,
+    node_color=node_colors,
+    edge_color=edge_colors,
+    width=edge_widths,  # Uniform edge widths
+    style='solid',
+    font_size=8,
+    font_color='white',  # Make font color white
+    ax=ax_net
+)
+
+# Legend for gender
+male_patch = mpatches.Patch(color='#003A6B', label='Male')
+female_patch = mpatches.Patch(color='#5293BB', label='Female')
+ax_net.legend(handles=[male_patch, female_patch], loc='best')
+
+st.pyplot(fig_net)
+
+# --- Step 11: Explanation ---
+with st.expander("ℹ️ Interpretation of the Network Diagram"):
+    st.markdown("""
+    ### **Network Diagram Interpretation**
+    - **Node Colors:**  
+      - **Dark blue circles** represent **Male users**  
+      - **Light blue circles** represent **Female users**  
+    - **Node Size:**  
+      Reflects how many other users this node has **influenced or triggered**.  
+      Larger nodes = more shares triggered.
+    - **Node Border Width:**  
+      Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread. These are key nodes that facilitate the flow of information across ideologies.
+    - **Edge Colors (Connections):**  
+      - **Red edges** = **Cross-gender** or **Cross-ideology** ties.  
+      - **Grey edges** = Connections between users of the same gender and same ideology.
+""")
