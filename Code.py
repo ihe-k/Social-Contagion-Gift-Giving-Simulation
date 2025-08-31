@@ -217,8 +217,8 @@ for idx, n in enumerate(G.nodes):
     node_border_widths.append(norm_bc[idx])
 
 for u, v in G.edges:
-    color_u = 'lightgreen' if G.nodes[u]['gender'] == 'Male' else 'lightblue'
-    color_v = 'lightgreen' if G.nodes[v]['gender'] == 'Male' else 'lightblue'
+    color_u = '#003A6B' if G.nodes[u]['gender'] == 'Male' else '#5293BB'
+    color_v = '#003A6B' if G.nodes[v]['gender'] == 'Male' else '#5293BB'
     rgb_u = mcolors.to_rgb(color_u)
     rgb_v = mcolors.to_rgb(color_v)
     mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
@@ -237,8 +237,8 @@ nx.draw(G, pos,
         edgecolors='gray')
 
 # Legend
-male_patch = mpatches.Patch(color='lightgreen', label='Male')
-female_patch = mpatches.Patch(color='lightblue', label='Female')
+male_patch = mpatches.Patch(color='#003A6B', label='Male')
+female_patch = mpatches.Patch(color='#5293BB', label='Female')
 ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
