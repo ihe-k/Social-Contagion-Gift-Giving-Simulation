@@ -230,16 +230,15 @@ if view_mode == 'Gender Focus':
         mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
         dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
         edge_colors.append(dark_edge_color)
-        edge_widths.append(1)
+        edge_widths.append(1)  # Uniform edge width for gender connections
 else:
-    # Cross-ideology ties: red edges, others grey
+    # Cross-gender ties: red edges, others grey
     for u, v in G.edges:
-        if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+        if G.nodes[u]['gender'] != G.nodes[v]['gender']:  # Check if genders are different
             edge_colors.append('red')
-            edge_widths.append(2)  # Thicker red edges to emphasize cross-ideology ties
         else:
             edge_colors.append('#AAAAAA')
-            edge_widths.append(0.5)  # Thin grey edges
+        edge_widths.append(2)  # Uniform edge width for ideology connections (set to 2)
 
 # --- Drawing Network ---
 nx.draw_networkx(
@@ -250,9 +249,10 @@ nx.draw_networkx(
     node_size=node_sizes,
     node_color=node_colors,
     edge_color=edge_colors,
-    width=edge_widths,  # Apply variable edge widths
+    width=edge_widths,  # Apply uniform edge widths
     style='solid',
     font_size=8,
+    font_color='white',  # Make font color white
     ax=ax_net,
     edge_cmap=plt.cm.Reds  # Optional, to add a red colormap for edges
 )
@@ -283,6 +283,6 @@ st.markdown("""
 - **Node Border Width:**  
   Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread. These are key nodes that facilitate the flow of information across ideologies.
 - **Edge Colors (Connections):**  
-  - **Red edges** = **Cross-ideology ties** (connections between users with different ideologies)  
-  - **Grey edges** = Connections between users with the same ideology
+  - **Red edges** = **Cross-gender ties** (connections between users of different genders)  
+  - **Grey edges** = Connections between users of the same gender
 """)
