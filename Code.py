@@ -102,7 +102,7 @@ report_df = pd.DataFrame(report_dict).transpose().round(2)
 
 # --- Sidebar Elements ---
 st.sidebar.header("Network Contagion & Settings")
-SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
+SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 
 # --- Contagion Simulation ---
