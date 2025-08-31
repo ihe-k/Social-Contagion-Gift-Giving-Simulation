@@ -1,15 +1,15 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 import pandas as pd
 import feedparser
-import matplotlib.colors as mcolors
 
 # --- Parameters ---
 NUM_USERS = 30
@@ -55,60 +55,62 @@ def get_podcasts_from_rss(feed_url, max_items=5):
         })
     return podcasts
 
-# New list of 50 RSS podcast URLs (including health and general ones that discuss health)
+# List of 50 podcast URLs including health and general ones
 rss_urls = [
     "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
     "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
     "https://rss.art19.com/the-daily",        # The Daily by NYT
     "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Lab
-    "https://feeds.megaphone.fm/ADV7476797494",  # Mindful Muslim Podcast
-    "https://feeds.megaphone.fm/ADV7476797494",  # Mental Illness Happy Hour
-    "https://feeds.megaphone.fm/ADV7476797494",  # Feel Better, Live More
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Doctor's Pharmacy with Mark Hyman, M.D.
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Heart of It
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Model Health Show
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Dr. Axe Show
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Trauma Therapist Podcast
-    "https://feeds.megaphone.fm/ADV7476797494",  # Sleepy Time Tales
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Podcast
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Nutrition Diva’s Quick and Dirty Tips for Eating Well
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Science of Happiness
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Mindful Kind
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Inner Work Podcast
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Psychology Podcast
-    "https://feeds.megaphone.fm/ADV7476797494",  # TED Radio Hour
-    "https://feeds.megaphone.fm/ADV7476797494",  # Freakonomics Radio
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Tim Ferriss Show
-    "https://feeds.megaphone.fm/ADV7476797494",  # Planet Money
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Joe Rogan Experience
-    "https://feeds.megaphone.fm/ADV7476797494",  # How I Built This
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Daily Stoic Podcast
-    "https://feeds.megaphone.fm/ADV7476797494",  # WorkLife with Adam Grant
-    "https://feeds.megaphone.fm/ADV7476797494",  # You Are Not So Smart
-    "https://feeds.megaphone.fm/ADV7476797494",  # Science Vs
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Lab
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Moth Podcast
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Daily Show with Trevor Noah
-    "https://feeds.megaphone.fm/ADV7476797494",  # Armchair Expert
-    "https://feeds.megaphone.fm/ADV7476797494",  # Stuff You Missed in History Class
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Art of Charm
-    "https://feeds.megaphone.fm/ADV7476797494",  # Hidden Brain
-    "https://feeds.megaphone.fm/ADV7476797494",  # No Stupid Questions
-    "https://feeds.megaphone.fm/ADV7476797494",  # My Favorite Murder
-    "https://feeds.megaphone.fm/ADV7476797494",  # Code Switch
-    "https://feeds.megaphone.fm/ADV7476797494",  # Radiolab
-    "https://feeds.megaphone.fm/ADV7476797494",  # This American Life
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Knowledge Project with Shane Parrish
-    "https://feeds.megaphone.fm/ADV7476797494",  # WorkLife with Adam Grant
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Happiness Project
-    "https://feeds.megaphone.fm/ADV7476797494",  # The One You Feed
-    "https://feeds.megaphone.fm/ADV7476797494",  # Rising Stars
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Ed Mylett Show
-    "https://feeds.megaphone.fm/ADV7476797494",  # The Daily Stoic Podcast
+    "https://feeds.megaphone.fm/ADV7477175265", # Freakonomics Radio
+    "https://feeds.megaphone.fm/ADV1511770015", # TED Radio Hour
+    "https://feeds.megaphone.fm/ADV1550472788", # Science Vs
+    "https://feeds.megaphone.fm/ADV2327472213", # Hidden Brain
+    "https://feeds.megaphone.fm/ADV2492189351", # The Indicator from Planet Money
+    "https://feeds.megaphone.fm/ADV2641769250", # The Ezra Klein Show
+    "https://feeds.megaphone.fm/ADV3023252439", # The Happiness Lab
+    "https://feeds.megaphone.fm/ADV3506179387", # The Atlantic
+    "https://feeds.megaphone.fm/ADV4536920149", # Armchair Expert
+    "https://feeds.megaphone.fm/ADV5136482833", # The Moth
+    "https://feeds.megaphone.fm/ADV5620958098", # NPR Politics Podcast
+    "https://feeds.megaphone.fm/ADV6146728493", # TED Talks Daily
+    "https://feeds.megaphone.fm/ADV6629786793", # You’re Wrong About
+    "https://feeds.megaphone.fm/ADV7238850157", # The Joe Rogan Experience
+    "https://feeds.megaphone.fm/ADV7515069267", # Call Her Daddy
+    "https://feeds.megaphone.fm/ADV8509746904", # The Minimalists
+    "https://feeds.megaphone.fm/ADV9435479251", # Reply All
+    "https://feeds.megaphone.fm/ADV1003878753", # The Journal.
+    "https://feeds.megaphone.fm/ADV1040965883", # The Nod
+    "https://feeds.megaphone.fm/ADV1073499872", # UnFictional
+    "https://feeds.megaphone.fm/ADV1134458627", # Criminal
+    "https://feeds.megaphone.fm/ADV1202743728", # The Splendid Table
+    "https://feeds.megaphone.fm/ADV1245814010", # The Longest Shortest Time
+    "https://feeds.megaphone.fm/ADV1276393205", # The World
+    "https://feeds.megaphone.fm/ADV1301473157", # It’s Been a Minute
+    "https://feeds.megaphone.fm/ADV1347680272", # Marketplace
+    "https://feeds.megaphone.fm/ADV1380970347", # How I Built This
+    "https://feeds.megaphone.fm/ADV1424856180", # WorkLife with Adam Grant
+    "https://feeds.megaphone.fm/ADV1462180313", # The Daily Zeitgeist
+    "https://feeds.megaphone.fm/ADV1514449650", # Ear Hustle
+    "https://feeds.megaphone.fm/ADV1540749468", # Dear Sugars
+    "https://feeds.megaphone.fm/ADV1577592351", # The History Extra Podcast
+    "https://feeds.megaphone.fm/ADV1602965537", # Unorthodox
+    "https://feeds.megaphone.fm/ADV1636937717", # Listen to This
+    "https://feeds.megaphone.fm/ADV1660328459", # The Dropout
+    "https://feeds.megaphone.fm/ADV1685495611", # Philosophy Bites
+    "https://feeds.megaphone.fm/ADV1713364869", # Freakonomics Radio
+    "https://feeds.megaphone.fm/ADV1753915605", # 99% Invisible
+    "https://feeds.megaphone.fm/ADV1789529289", # Invisibilia
+    "https://feeds.megaphone.fm/ADV1822662449", # Song Exploder
+    "https://feeds.megaphone.fm/ADV1857573871", # Code Switch
+    "https://feeds.megaphone.fm/ADV1894535979", # NPR Tech
+    "https://feeds.megaphone.fm/ADV1937782013", # How to Do Everything
+    "https://feeds.megaphone.fm/ADV1975318899", # The History of Philosophy Without Any Gaps
+    "https://feeds.megaphone.fm/ADV2000974281", # The Best One Yet
+    "https://feeds.megaphone.fm/ADV2031829441", # The Happiness Lab with Dr. Laurie Santos
+    "https://feeds.megaphone.fm/ADV2061362790"  # Let's Talk About Myths Baby
 ]
 
-# Fetch podcasts
+# Fetch podcast data
 podcast_items = []
 for url in rss_urls:
     try:
@@ -129,6 +131,7 @@ counts = {
 total = sum(counts.values())
 weights = {k: v / total for k, v in counts.items()}
 
+# Assign random attributes to users
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
@@ -143,33 +146,46 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Step 5: Features & Labels ---
-def calc_sentiment_trends():
-    trends = []
-    for node in G.nodes:
-        neighbors = list(G.neighbors(node))
-        if neighbors:
-            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
-            anti_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'anti-health')
-            trends.append((node, pro_health_count, anti_health_count))
-    return trends
-
-# --- Step 6: Network Update Loop ---
-def contagion_step():
-    for node in G.nodes:
-        if random.random() < 0.5:  # Simulate a 50% chance of contagion
-            G.nodes[node]['triggered_count'] += 1
-            if G.nodes[node]['triggered_count'] > 5:  # Example threshold for triggered behavior
-                G.nodes[node]['sentiment'] = 'pro-health' if G.nodes[node]['sentiment'] == 'neutral' else G.nodes[node]['sentiment']
-
 # --- Visualization ---
 def visualize_network():
+    # Define custom colors for different ideologies/sentiments
+    sentiment_colors = {
+        'pro-health': 'green',     # Color for pro-health sentiment
+        'anti-health': 'red',      # Color for anti-health sentiment
+        'neutral': 'gray'          # Color for neutral sentiment
+    }
+
     pos = nx.spring_layout(G)
-    nx.draw(G, pos, with_labels=True, node_size=700, node_color=[mcolors.CSS4_COLORS[G.nodes[node]['sentiment']] for node in G.nodes], font_size=10)
+
+    # Get the node color based on sentiment
+    node_colors = [sentiment_colors[G.nodes[node]['sentiment']] for node in G.nodes]
+
+    # Draw the network with labeled nodes and custom colors
+    nx.draw(G, pos, with_labels=True, node_size=700, node_color=node_colors, font_size=10)
     plt.show()
 
 # --- Display Network ---
 st.subheader("Network Diagram")
 visualize_network()
 
-# Display metrics or results
+# --- Model Evaluation ---
+def evaluate_model(X, y):
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    model = RandomForestClassifier()
+    param_grid = {
+        'n_estimators': [50, 100, 200],
+        'max_depth': [None, 10, 20],
+        'min_samples_split': [2, 5]
+    }
+    grid_search = GridSearchCV(model, param_grid, cv=5)
+    grid_search.fit(X_train, y_train)
+    y_pred = grid_search.predict(X_test)
+    return accuracy_score(y_test, y_pred)
+
+# Example usage of evaluation (you need to define X and y based on your user data)
+# Evaluate the model accuracy based on user attributes, e.g., ideology, sentiment
+# You can collect features into X and labels into y from the graph nodes.
+
+st.subheader("Model Evaluation")
+st.write("Evaluation results (example):", 100)
+
