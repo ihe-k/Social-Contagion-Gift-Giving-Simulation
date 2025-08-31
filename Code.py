@@ -191,22 +191,6 @@ with st.expander("📝 Dashboard Summary"):
     These metrics help in understanding the spread, influence, and diversity within the network, guiding strategies for effective information dissemination.
     """)
 
-import matplotlib.pyplot as plt
-
-# Prepare data for bar chart
-labels = ['Cross-Gender Ties (%)', 'Cross-Ideology Ties (%)']
-values = [percent_cross_gender, percent_cross_ideology]
-
-# Plot bar chart
-fig, ax = plt.subplots()
-ax.bar(labels, values, color=['skyblue', 'orange'])
-ax.set_ylim(0, 100)
-ax.set_ylabel('Percentage')
-ax.set_title('Network Tie Composition')
-
-# Display in Streamlit
-st.pyplot(fig)
-
 # --- Visualisation ---
 st.subheader("Network Contagion Visualization")
 
