@@ -188,7 +188,7 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 10: Network Visualization ---
+# --- Step 9: Network Visualization ---
 st.subheader("User Network Contagion Simulation")
 
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
@@ -211,7 +211,7 @@ else:
     norm_bc = np.ones(len(G.nodes))
 
 for idx, n in enumerate(G.nodes):
-    color = 'lightgreen' if G.nodes[n]['gender'] == 'Male' else 'lightblue'
+    color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#1B5886'
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
