@@ -31,16 +31,6 @@ nx.set_node_attributes(G, False, 'has_chronic_disease')
 nx.set_node_attributes(G, '', 'ideology')
 nx.set_node_attributes(G, '', 'sentiment')
 
-# --- Sentiment Analysis ---
-def analyze_sentiment(text):
-    polarity = TextBlob(text).sentiment.polarity
-    if polarity > 0.5:
-        return 'pro-health'
-    elif polarity < -0.5:
-        return 'anti-health'
-    else:
-        return 'neutral'
-
 # --- Assign User Attributes ---
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
@@ -173,20 +163,22 @@ edge_widths = []
 
 for u, v in G.edges:
     if network_view == "Gender View":
-        # Show only cross-gender ties
+        # Show only cross-gender ties in red
         if G.nodes[u]['gender'] != G.nodes[v]['gender']:
             edge_colors.append('red')
             edge_widths.append(2)
         else:
-            edge_colors.append('none')  # same gender: no line
+            # same gender, show in grey
+            edge_colors.append('#414141')
             edge_widths.append(1)
     else:
-        # Show cross-gender or cross-ideology ties
+        # Show cross-gender OR cross-ideology ties in red
         if G.nodes[u]['gender'] != G.nodes[v]['gender'] or G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
             edge_colors.append('red')
             edge_widths.append(2)
         else:
-            edge_colors.append('none')  # same gender and same ideology
+            # same gender & same ideology: grey
+            edge_colors.append('#414141')
             edge_widths.append(1)
 
 # Plot network
@@ -200,7 +192,7 @@ nx.draw_networkx(G, pos=pos,
                  font_size=8,
                  font_color='white')
 
-# Draw nodes with custom border colors
+# Draw nodes with custom border colors (or no border)
 nx.draw_networkx_nodes(G, pos,
                        node_size=node_sizes,
                        node_color=node_colors,
@@ -226,6 +218,6 @@ with st.expander("ℹ️ Interpretation of the network diagram"):
     - **Node Size**: Larger nodes indicate more influence or triggered shares.
     - **Edge Colors**:
         - **Red**: Cross-gender or cross-ideology ties (depending on view).
-        - **No line**: Same gender and same ideology ties are hidden.
+        - **Grey (#414141)**: All other ties (same gender & same ideology).
     - **Connections**: Show patterns of homophily and bridging nodes.
     """)
