@@ -16,10 +16,11 @@ import matplotlib.patches as mpatches
 NUM_USERS = 30
 INIT_SHARED = 3
 GIFT_BONUS = 10
-IDEOLOGY_CROSS_BONUS = 0.2  # Base bonus for cross-ideology sharing
-CROSS_IDEOLOGY_BONUS = 0.3  # Amplified bonus for cross-ideology users
+IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
+CROSS_GENDER_BONUS = 0.3  # Increased probability for cross-gender connections
+CROSS_IDEOLOGY_BONUS = 0.3  # Increased probability for cross-ideology connections
 
 st.title("Health Information Contagion Network Simulation")
 
@@ -152,7 +153,7 @@ st.dataframe(report_df)
 
 # --- Step 8: Contagion Simulation ---
 st.sidebar.header("Simulation Parameters")
-SHARE_PROB = st.sidebar.slider("Contagion Spread", 0.0, 1.0, 0.3, 0.05)
+SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
@@ -171,29 +172,14 @@ while current:
     for u in current:
         for v in G.neighbors(u):
             if not G.nodes[v]['shared']:
-                # Base probability
                 prob = SHARE_PROB + (GIFT_BONUS / 100 if G.nodes[u]['gifted'] else 0)
-                
-                # Apply IDEOLOGY_CROSS_BONUS for cross-ideology connections
                 if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-                    prob += IDEOLOGY_CROSS_BONUS  # Base bonus for cross-ideology tie
-                
-                # Apply CROSS_IDEOLOGY_BONUS based on number of cross-ideology neighbors
-                cross_ideology_neighbors_u = sum(1 for neighbor in G.neighbors(u) if G.nodes[neighbor]['ideology'] != G.nodes[u]['ideology'])
-                prob += CROSS_IDEOLOGY_BONUS * cross_ideology_neighbors_u  # Amplified bonus for many cross-ideology neighbors
-                
-                # Chronic disease influence
+                    prob += IDEOLOGY_CROSS_BONUS + CROSS_IDEOLOGY_BONUS
                 if G.nodes[v]['has_chronic_disease']:
                     prob = max(prob, CHRONIC_PROPENSITY)
-                
-                # Gender homophily influence
-                if G.nodes[u]['gender'] == G.nodes[v]['gender']:
-                    prob += GENDER_HOMOPHILY_BONUS
-                
-                # Cap probability to [0, 1] range
+                if G.nodes[u]['gender'] != G.nodes[v]['gender']:  # Cross-gender connection boost
+                    prob += CROSS_GENDER_BONUS
                 prob = min(max(prob, 0), 1)
-                
-                # Random share decision based on the probability
                 if random.random() < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[v]['triggered_count'] += 1
@@ -220,32 +206,11 @@ node_border_widths = []
 # Normalize betweenness centrality for border widths
 bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
 if bc_values.max() > 0:
-    bc_values = bc_values / bc_values.max()
-node_border_widths = bc_values * 5  # Adjust for visibility
+    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
+else:
+    norm_bc = np.ones(len(G.nodes))
 
-for node in G.nodes:
-    color = 'red' if G.nodes[node]['shared'] else 'lightblue'
-    node_colors.append(darken_color(color, 0.8))
-    node_sizes.append(300)
-
-edge_colors = []
-for u, v in G.edges:
-    if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-        edge_colors.append('red')
-    else:
-        edge_colors.append('darkgrey')
-
-nx.draw_networkx_edges(G, pos, edge_color=edge_colors, width=2, alpha=0.7)
-nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes, linewidths=node_border_widths)
-nx.draw_networkx_labels(G, pos, font_size=10, font_color='white')
-
-# Create a key for the network
-legend_elements = [
-    mpatches.Patch(color='lightblue', label='Non-shared (healthy info)'),
-    mpatches.Patch(color='red', label='Shared nodes (triggered)'),
-    mpatches.Patch(color='darkgrey', label='Ideological connection'),
-    mpatches.Patch(color='red', label='Cross-ideology connection')
-]
-
-plt.legend(handles=legend_elements)
-st.pyplot(fig_net)
+for idx, n in enumerate(G.nodes):
+    color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
+    node_colors.append(color)
+    node_sizes.append(300 + 100 * G
