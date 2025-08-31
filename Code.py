@@ -5,7 +5,7 @@ from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 import pandas as pd
 import feedparser
@@ -57,11 +57,10 @@ def get_podcasts_from_rss(feed_url, max_items=5):
     return podcasts
 
 rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",  # NPR Life Kit Health
-    "https://feeds.simplecast.com/54nAGcIl",  # Stuff You Should Know
-    "https://rss.art19.com/the-daily",        # The Daily by NYT
-    "https://feeds.megaphone.fm/ADL9840290619", # Revisionist History
-    # Add your other podcast RSS URLs here as needed
+    "https://feeds.npr.org/510307/rss.xml",
+    "https://feeds.simplecast.com/54nAGcIl",
+    "https://rss.art19.com/the-daily",
+    "https://feeds.megaphone.fm/ADL9840290619",
 ]
 
 podcast_items = []
@@ -69,7 +68,7 @@ for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
     except Exception:
-        pass  # silently ignore feeds that fail
+        pass
 
 # --- Step 4: Assign User Attributes ---
 podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
@@ -89,7 +88,9 @@ for node in G.nodes:
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
     G.nodes[node]['ideology'] = random.choices(
         population=['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health', 0.33), weights.get('anti-health', 0.33), weights.get('neutral', 0.33)],
+        weights=[weights.get('pro-health', 0.33),
+                 weights.get('anti-health', 0.33),
+                 weights.get('neutral', 0.33)],
         k=1
     )[0]
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
@@ -142,11 +143,9 @@ y_pred = best_model.predict(X_test)
 
 # --- Step 7: Model Evaluation ---
 st.subheader("Model Evaluation")
-
 accuracy = accuracy_score(y_test, y_pred)
 report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
-
 st.write(f"**Accuracy:** {accuracy:.2%}")
 st.dataframe(report_df)
 
@@ -190,8 +189,8 @@ while current:
 
 # --- Step 9: Network Visualization ---
 st.subheader("User Network Contagion Simulation")
-
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
+pos = nx.spring_layout(G, seed=42)
 
 def darken_color(color, amount=0.6):
     c = mcolors.to_rgb(color)
@@ -201,9 +200,8 @@ def darken_color(color, amount=0.6):
 node_colors = []
 node_sizes = []
 node_border_widths = []
-edge_colors = []
 
-# Normalize betweenness centrality for border widths (scale 1 to 6)
+# Normalize betweenness centrality for border widths
 bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
 if bc_values.max() > 0:
     norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
@@ -216,15 +214,33 @@ for idx, n in enumerate(G.nodes):
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
 
-for u, v in G.edges:
-    color_u = '#003A6B' if G.nodes[u]['gender'] == 'Male' else '#5293BB'
-    color_v = '#003A6B' if G.nodes[v]['gender'] == 'Male' else '#5293BB'
-    rgb_u = mcolors.to_rgb(color_u)
-    rgb_v = mcolors.to_rgb(color_v)
-    mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
-    dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
-    edge_colors.append(dark_edge_color)
+# --- Add view mode selection ---
+view_mode = st.radio("Select Network View", ('Gender Focus', 'Ideology Focus'))
 
+# Set edge colors based on selected view
+edge_colors = []
+
+if view_mode == 'Gender Focus':
+    # Color edges based on gender homophily
+    for u, v in G.edges:
+        color_u = '#003A6B' if G.nodes[u]['gender'] == 'Male' else '#5293BB'
+        color_v = '#003A6B' if G.nodes[v]['gender'] == 'Male' else '#5293BB'
+        rgb_u = mcolors.to_rgb(color_u)
+        rgb_v = mcolors.to_rgb(color_v)
+        mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
+        dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
+        edge_colors.append(dark_edge_color)
+else:
+    # Color edges based on ideology cross-ties
+    cross_ideology_color = 'red'
+    same_ideology_color = '#AAAAAA'
+    for u, v in G.edges:
+        if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+            edge_colors.append(cross_ideology_color)
+        else:
+            edge_colors.append(same_ideology_color)
+
+# Draw the network
 nx.draw(G, pos,
         with_labels=True,
         labels={n: str(n) for n in G.nodes},
@@ -233,10 +249,9 @@ nx.draw(G, pos,
         edge_color=edge_colors,
         linewidths=node_border_widths,
         font_size=8,
-        ax=ax_net,
-        edgecolors='gray')
+        ax=ax_net)
 
-# Legend
+# Legend for gender
 male_patch = mpatches.Patch(color='#003A6B', label='Male')
 female_patch = mpatches.Patch(color='#5293BB', label='Female')
 ax_net.legend(handles=[male_patch, female_patch], loc='best')
@@ -247,28 +262,21 @@ st.pyplot(fig_net)
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
-
     - **Node Colors:**  
-      - **Green circles** represent **Male users**  
-      - **Blue circles** represent **Female users**  
-
+      - **Dark blue circles** represent **Male users**  
+      - **Light blue circles** represent **Female users**  
     - **Node Size:**  
       Reflects how many other users this node has **influenced or triggered**.  
       Larger nodes = more shares triggered.
-
     - **Node Border Width:**  
       Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
-
     - **Edge Colors (Connections):**  
       - **Light green edges** = Male-to-Male connections (**gender homophily**)  
       - **Light blue edges** = Female-to-Female connections (**gender homophily**)  
       - **Gray edges** = Male-to-Female or Female-to-Male (**cross-gender ties**)
-
     - **Clusters:**  
       The network shows **gender homophily** and **ideological alignment** influencing connections and information diffusion.
-
     - **Overall Insights:**  
       - Users with higher **centrality** act as **key influencers** or bridges.  
       - **Chronic disease status** and **ideological differences** impact sharing probabilities and contagion dynamics.
     """)
-
