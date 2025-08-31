@@ -130,50 +130,51 @@ while current:
     current = next_step
 
 # --- Dashboard Summary---
+# --- Dashboard in 2 rows, 4 columns each ---
 st.markdown("## Network Dashboard")
 
-# First row
+# Create 2 rows with 4 columns each
 col1, col2, col3, col4 = st.columns(4)
-
-# Second row
 col5, col6, col7, col8 = st.columns(4)
 
-# Calculate metrics
+# Calculate key metrics
 total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
 total_nodes = len(G.nodes)
 
-# Top influencers
-top_influencers = sorted(G.nodes, key=lambda n: G.nodes[n]['triggered_count'], reverse=True)[:3]
-top_influencers_names = ', '.join(str(n) for n in top_influencers)
+# Total edges
+total_edges = G.number_of_edges()
 
-# Betweenness threshold for key bridges
+# Count cross-gender ties
+cross_gender_edges = sum(1 for u, v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender'])
+percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges > 0 else 0
+
+# Count cross-ideology ties
+cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
+percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
+
+# Key bridges (top 20% by betweenness centrality)
 bet_cen = nx.betweenness_centrality(G)
 threshold = np.percentile(list(bet_cen.values()), 80)
 key_bridges_count = sum(1 for bc in bet_cen.values() if bc >= threshold)
 
-# Simulate engagement with clinicians
+# Simulate engagement with clinicians after sharing info
+# Placeholder: Randomly simulate some engagement
 clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.random() < 0.3)
-
-# Cross-ideology and cross-gender ties
-cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
-cross_gender_edges = sum(1 for u, v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender'])
 
 # Contagion stats
 contagion_steps = len(contagion)
-final_share_rate = total_shared / total_nodes * 100
+final_share_rate = (total_shared / total_nodes) * 100
 
 # Assign metrics to columns
 col1.metric("Triggered Shares", value=total_shared)
 col2.metric("Key Bridges", value=key_bridges_count)
 col3.metric("Engaged with Clinicians", value=clinicians_engaged)
-col4.metric("Cross-Gender Ties", value=cross_gender_edges)
+col4.metric("Cross-Gender Ties (%)", value=f"{percent_cross_gender:.2f}%")
 
 col5.metric("Total Users", value=total_nodes)
 col6.metric("Contagion Steps", value=contagion_steps)
-col7.metric("Final Share Rate (%)", value=f"{final_share_rate:.1f}")
-col8.metric("Cross-Ideology Ties", value=cross_ideology_edges)
-
-# Optional: add more detailed charts or info below if needed
+col7.metric("Final Share Rate (%)", value=f"{final_share_rate:.2f}%")
+col8.metric("Cross-Ideology Ties (%)", value=f"{percent_cross_ideology:.2f}%")
 
 # --- Visualisation ---
 st.subheader("Network Contagion Visualization")
