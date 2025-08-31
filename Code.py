@@ -5,7 +5,7 @@ from textblob import TextBlob
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 import pandas as pd
 import feedparser
@@ -198,24 +198,15 @@ while current:
 
 # --- Visualization ---
 def visualize_network():
-    # Custom color mapping for sentiment
-    sentiment_to_color = {
-        'pro-health': 'lightgreen',   # Green for pro-health
-        'anti-health': 'salmon',      # Red for anti-health
-        'neutral': 'lightgray'        # Gray for neutral
-    }
-
-    # Assign positions using spring layout (you can use circular layout if you prefer)
+    plt.figure(figsize=(10, 8))
     pos = nx.spring_layout(G, seed=42)
 
-    # Use the color mapping to assign colors to the nodes based on sentiment
-    node_colors = [sentiment_to_color[G.nodes[node]['sentiment']] for node in G.nodes]
-
-    # Draw the network
+    node_colors = [mcolors.CSS4_COLORS.get(G.nodes[node]['sentiment'], '#808080') for node in G.nodes]
     nx.draw(G, pos, with_labels=True, node_size=700, node_color=node_colors, font_size=10)
-    plt.show()
+    plt.title("Health Information Contagion Network")
+    st.pyplot(plt)
 
-# --- Display Network ---
+# Display Network Diagram
 st.subheader("Network Diagram")
 visualize_network()
 
