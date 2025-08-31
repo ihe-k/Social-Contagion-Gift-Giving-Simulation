@@ -26,7 +26,7 @@ IDEOLOGY_HOMOPHILY_BONUS = 1.5
 K_THRESHOLD = 3
 
 # --- Sidebar: get zoom level once ---
-zoom_level = st.sidebar.slider("Zoom level", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
+zoom_level = st.sidebar.slider("Zoom In > Zoom Out", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
 
 # --- Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)
@@ -247,25 +247,29 @@ nx.draw_networkx_nodes(
 )
 
 # --- Legend setup ---
-LEGEND_MARKER_SIZE = 10  # points, adjust as needed
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+
+# Define fixed marker size in points
+MARKER_SIZE = 10
 
 if network_view == "Gender View":
     legend_handles = [
-        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#003A6B', label='Male'),
-        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#5293BB', label='Female')
+        mlines.Line2D([], [], color='#003A6B', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Male'),
+        mlines.Line2D([], [], color='#5293BB', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Female')
     ]
 else:
     legend_handles = [
-        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#003A6B', label='Pro-Health'),
-        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#89CFF1', label='Anti-Health'),
-        mpatches.Circle((0, 0), radius=LEGEND_MARKER_SIZE, color='#5293BB', label='Neutral')
+        mlines.Line2D([], [], color='#003A6B', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Pro-Health'),
+        mlines.Line2D([], [], color='#89CFF1', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Anti-Health'),
+        mlines.Line2D([], [], color='#5293BB', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Neutral')
     ]
 
 # Plot the legend
 ax.legend(handles=legend_handles, loc='best')
 
 # Finalize plot
-ax.set_title("Large Network Visualization (300 nodes)")
-ax.axis('off')
+#ax.set_title("Large Network Visualization (300 nodes)")
+# ax.axis('off')
 
 st.pyplot(fig)
