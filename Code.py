@@ -16,7 +16,8 @@ import matplotlib.patches as mpatches
 NUM_USERS = 30
 INIT_SHARED = 3
 GIFT_BONUS = 10
-IDEOLOGY_CROSS_BONUS = 0.2
+IDEOLOGY_CROSS_BONUS = 0.2  # Base bonus for cross-ideology sharing
+CROSS_IDEOLOGY_BONUS = 0.3  # Amplified bonus for cross-ideology users
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 0.2
 
@@ -170,14 +171,29 @@ while current:
     for u in current:
         for v in G.neighbors(u):
             if not G.nodes[v]['shared']:
+                # Base probability
                 prob = SHARE_PROB + (GIFT_BONUS / 100 if G.nodes[u]['gifted'] else 0)
+                
+                # Apply IDEOLOGY_CROSS_BONUS for cross-ideology connections
                 if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-                    prob += IDEOLOGY_CROSS_BONUS
+                    prob += IDEOLOGY_CROSS_BONUS  # Base bonus for cross-ideology tie
+                
+                # Apply CROSS_IDEOLOGY_BONUS based on number of cross-ideology neighbors
+                cross_ideology_neighbors_u = sum(1 for neighbor in G.neighbors(u) if G.nodes[neighbor]['ideology'] != G.nodes[u]['ideology'])
+                prob += CROSS_IDEOLOGY_BONUS * cross_ideology_neighbors_u  # Amplified bonus for many cross-ideology neighbors
+                
+                # Chronic disease influence
                 if G.nodes[v]['has_chronic_disease']:
                     prob = max(prob, CHRONIC_PROPENSITY)
+                
+                # Gender homophily influence
                 if G.nodes[u]['gender'] == G.nodes[v]['gender']:
                     prob += GENDER_HOMOPHILY_BONUS
+                
+                # Cap probability to [0, 1] range
                 prob = min(max(prob, 0), 1)
+                
+                # Random share decision based on the probability
                 if random.random() < prob:
                     G.nodes[v]['shared'] = True
                     G.nodes[v]['triggered_count'] += 1
@@ -204,85 +220,32 @@ node_border_widths = []
 # Normalize betweenness centrality for border widths
 bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
 if bc_values.max() > 0:
-    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
-else:
-    norm_bc = np.ones(len(G.nodes))
+    bc_values = bc_values / bc_values.max()
+node_border_widths = bc_values * 5  # Adjust for visibility
 
-for idx, n in enumerate(G.nodes):
-    color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
-    node_colors.append(color)
-    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
-    node_border_widths.append(norm_bc[idx])
+for node in G.nodes:
+    color = 'red' if G.nodes[node]['shared'] else 'lightblue'
+    node_colors.append(darken_color(color, 0.8))
+    node_sizes.append(300)
 
-# --- Sidebar for view toggle ---
-view_mode = st.sidebar.radio("Select Network View", ('Gender Focus', 'Ideology Focus'))
-
-# --- Prepare edge colors and widths based on view ---
 edge_colors = []
-edge_widths = []
+for u, v in G.edges:
+    if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+        edge_colors.append('red')
+    else:
+        edge_colors.append('darkgrey')
 
-if view_mode == 'Gender Focus':
-    for u, v in G.edges:
-        color_u = '#003A6B' if G.nodes[u]['gender'] == 'Male' else '#5293BB'
-        color_v = '#003A6B' if G.nodes[v]['gender'] == 'Male' else '#5293BB'
-        rgb_u = mcolors.to_rgb(color_u)
-        rgb_v = mcolors.to_rgb(color_v)
-        mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
-        dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
-        edge_colors.append(dark_edge_color)
-        edge_widths.append(1)  # Uniform edge width for gender connections
-else:
-    # Cross-gender ties: red edges, others grey
-    for u, v in G.edges:
-        if G.nodes[u]['gender'] != G.nodes[v]['gender']:  # Check if genders are different
-            edge_colors.append('red')
-        else:
-            edge_colors.append('#AAAAAA')
-        edge_widths.append(2)  # Uniform edge width for ideology connections (set to 2)
+nx.draw_networkx_edges(G, pos, edge_color=edge_colors, width=2, alpha=0.7)
+nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=node_sizes, linewidths=node_border_widths)
+nx.draw_networkx_labels(G, pos, font_size=10, font_color='white')
 
-# --- Drawing Network ---
-nx.draw_networkx(
-    G,
-    pos=pos,
-    with_labels=True,
-    labels={n: str(n) for n in G.nodes},
-    node_size=node_sizes,
-    node_color=node_colors,
-    edge_color=edge_colors,
-    width=edge_widths,  # Apply uniform edge widths
-    style='solid',
-    font_size=8,
-    font_color='white',  # Make font color white
-    ax=ax_net,
-    edge_cmap=plt.cm.Reds  # Optional, to add a red colormap for edges
-)
+# Create a key for the network
+legend_elements = [
+    mpatches.Patch(color='lightblue', label='Non-shared (healthy info)'),
+    mpatches.Patch(color='red', label='Shared nodes (triggered)'),
+    mpatches.Patch(color='darkgrey', label='Ideological connection'),
+    mpatches.Patch(color='red', label='Cross-ideology connection')
+]
 
-# --- Node Borders (Betweenness Centrality) ---
-nx.draw_networkx_nodes(
-    G,
-    pos,
-    node_size=node_sizes,
-    node_color=node_colors,
-    linewidths=node_border_widths,  # Apply varying border widths based on betweenness centrality
-    edgecolors="black",  # Add black edge around nodes
-    ax=ax_net
-)
-
-# --- Displaying the Plot ---
+plt.legend(handles=legend_elements)
 st.pyplot(fig_net)
-
-# --- Network Diagram Interpretation ---
-st.markdown("""
-### **Network Diagram Interpretation**
-- **Node Colors:**  
-  - **Dark blue circles** represent **Male users**  
-  - **Light blue circles** represent **Female users**  
-- **Node Size:**  
-  Reflects how many other users this node has **influenced or triggered**.  
-  Larger nodes = more shares triggered.
-- **Node Border Width:**  
-  Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread. These are key nodes that facilitate the flow of information across ideologies.
-- **Edge Colors (Connections):**  
-  - **Red edges** = **Cross-gender ties** (connections between users of different genders)  
-  - **Grey edges** = Connections between users of the same gender
-""")
