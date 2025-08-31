@@ -214,10 +214,10 @@ for idx, n in enumerate(G.nodes):
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
 
-# --- Sidebar View Selection ---
+# --- Sidebar for view toggle ---
 view_mode = st.sidebar.radio("Select Network View", ('Gender Focus', 'Ideology Focus'))
 
-# Set edge colors based on view
+# --- Prepare edge colors based on view ---
 edge_colors = []
 
 if view_mode == 'Gender Focus':
@@ -230,15 +230,14 @@ if view_mode == 'Gender Focus':
         dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
         edge_colors.append(dark_edge_color)
 else:
-    # Cross-ideology ties: red edges
+    # Cross-ideology ties: red edges, others grey
     for u, v in G.edges:
         if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
             edge_colors.append('red')
         else:
-            # optional: keep a default color for same-ideology ties
             edge_colors.append('#AAAAAA')
 
-# Draw the network explicitly with all edges and their colors
+# Draw network with explicit edge colors and wider lines
 nx.draw_networkx(
     G,
     pos=pos,
@@ -247,7 +246,8 @@ nx.draw_networkx(
     node_size=node_sizes,
     node_color=node_colors,
     edge_color=edge_colors,
-    linewidths=node_border_widths,
+    width=2,  # Thicker lines for visibility
+    style='solid',
     font_size=8,
     ax=ax_net
 )
@@ -273,7 +273,7 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
       Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
     - **Edge Colors (Connections):**  
       - **Red edges** = Cross-ideology ties (connections between users with different ideologies)  
-      - Other edges are based on focus (gender homophily or default)
+      - Other edges based on focus (gender homophily or default)
     - **Clusters:**  
       The network shows **homophily** and **ideological alignment** influencing connections and information diffusion.
     - **Overall Insights:**  
