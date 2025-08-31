@@ -115,7 +115,8 @@ podcast_items = []
 for url in rss_urls:
     try:
         podcast_items.extend(get_podcasts_from_rss(url))
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching RSS feed {url}: {e}")
         pass  # silently ignore feeds that fail
 
 # --- Step 4: Assign User Attributes ---
@@ -146,46 +147,31 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Visualization ---
+# --- Step 5: Features & Labels ---
+def calc_sentiment_trends():
+    trends = []
+    for node in G.nodes:
+        neighbors = list(G.neighbors(node))
+        if neighbors:
+            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
+            trends.append(pro_health_count / len(neighbors))
+        else:
+            trends.append(0)
+    return trends
+
+sentiment_trends = calc_sentiment_trends()
+
+# --- Step 6: Visualization ---
 def visualize_network():
-    # Define custom colors for different ideologies/sentiments
-    sentiment_colors = {
-        'pro-health': 'green',     # Color for pro-health sentiment
-        'anti-health': 'red',      # Color for anti-health sentiment
-        'neutral': 'gray'          # Color for neutral sentiment
-    }
-
-    pos = nx.spring_layout(G)
-
-    # Get the node color based on sentiment
-    node_colors = [sentiment_colors[G.nodes[node]['sentiment']] for node in G.nodes]
-
-    # Draw the network with labeled nodes and custom colors
-    nx.draw(G, pos, with_labels=True, node_size=700, node_color=node_colors, font_size=10)
+    # Circular layout to ensure good visualization
+    pos = nx.circular_layout(G)
+    nx.draw(G, pos, with_labels=True, node_size=700, node_color=[mcolors.CSS4_COLORS[G.nodes[node]['sentiment']] for node in G.nodes], font_size=10)
     plt.show()
 
 # --- Display Network ---
 st.subheader("Network Diagram")
 visualize_network()
 
-# --- Model Evaluation ---
-def evaluate_model(X, y):
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-    model = RandomForestClassifier()
-    param_grid = {
-        'n_estimators': [50, 100, 200],
-        'max_depth': [None, 10, 20],
-        'min_samples_split': [2, 5]
-    }
-    grid_search = GridSearchCV(model, param_grid, cv=5)
-    grid_search.fit(X_train, y_train)
-    y_pred = grid_search.predict(X_test)
-    return accuracy_score(y_test, y_pred)
-
-# Example usage of evaluation (you need to define X and y based on your user data)
-# Evaluate the model accuracy based on user attributes, e.g., ideology, sentiment
-# You can collect features into X and labels into y from the graph nodes.
-
-st.subheader("Model Evaluation")
-st.write("Evaluation results (example):", 100)
-
+# Display metrics or results
+st.subheader("Metrics or Results")
+st.write(f"Total podcasts fetched: {len(podcast_items)}")
