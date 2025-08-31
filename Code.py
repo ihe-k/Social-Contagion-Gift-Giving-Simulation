@@ -236,12 +236,21 @@ nx.draw_networkx(G, pos=pos,
                  font_size=8,
                  font_color='white')
 
-# Legend for ideologies
-ax.legend(handles=[
-    mpatches.Patch(color='#003A6B', label='Pro-Health'),
-    mpatches.Patch(color='#89CFF1', label='Anti-Health'),
-    mpatches.Patch(color='#5293BB', label='Neutral')
-], loc='best')
+# --- Legend: Show only relevant legend based on view ---
+import matplotlib.patches as mpatches
+if network_view == "Gender View":
+    legend_handles = [
+        mpatches.Patch(color='#003A6B', label='Male'),
+        mpatches.Patch(color='#5293BB', label='Female')
+    ]
+else:
+    legend_handles = [
+        mpatches.Patch(color='#003A6B', label='Pro-Health'),
+        mpatches.Patch(color='#89CFF1', label='Anti-Health'),
+        mpatches.Patch(color='#5293BB', label='Neutral')
+    ]
+
+ax.legend(handles=legend_handles, loc='best')
 
 st.pyplot(fig)
 
