@@ -247,7 +247,6 @@ nx.draw_networkx_labels(G, pos,
                         font_color=[label_colors[n] for n in G.nodes],
                         font_size=8,
                         ax=ax_net)
-
 # Legend for genders
 #male_patch = mpatches.Patch(color='lightgreen', label='Male')
 #female_patch = mpatches.Patch(color='lightblue', label='Female')
