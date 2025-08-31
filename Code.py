@@ -191,6 +191,13 @@ while current:
 
 # --- Step 9: Visualization ---
 st.subheader("User Network Contagion Simulation")
+
+# Add the radio button for toggle
+view_option = st.radio(
+    "Select View Mode",
+    ("Gender-Based Network", "Cross-Ideology Network")
+)
+
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
 pos = nx.spring_layout(G, seed=42)
 
@@ -211,7 +218,10 @@ else:
     norm_bc = np.ones(len(G.nodes))
 
 for idx, n in enumerate(G.nodes):
-    color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
+    if view_option == "Gender-Based Network":
+        color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
+    else:
+        color = '#00BFAE' if G.nodes[n]['ideology'] == 'pro-health' else ('#FF4747' if G.nodes[n]['ideology'] == 'anti-health' else '#D9D9D9')
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
@@ -250,7 +260,16 @@ nx.draw_networkx(
 # Legend for gender
 male_patch = mpatches.Patch(color='#003A6B', label='Male')
 female_patch = mpatches.Patch(color='#5293BB', label='Female')
-ax_net.legend(handles=[male_patch, female_patch], loc='best')
+
+# Legend for ideology
+pro_health_patch = mpatches.Patch(color='#00BFAE', label='Pro-health')
+anti_health_patch = mpatches.Patch(color='#FF4747', label='Anti-health')
+neutral_patch = mpatches.Patch(color='#D9D9D9', label='Neutral')
+
+if view_option == "Gender-Based Network":
+    ax_net.legend(handles=[male_patch, female_patch], loc='best')
+else:
+    ax_net.legend(handles=[pro_health_patch, anti_health_patch, neutral_patch], loc='best')
 
 st.pyplot(fig_net)
 
@@ -259,8 +278,9 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
     - **Node Colors:**  
-      - **Dark blue circles** represent **Male users**  
-      - **Light blue circles** represent **Female users**  
+      - **Dark blue circles** represent **Male users** in **Gender-Based View**  
+      - **Light blue circles** represent **Female users** in **Gender-Based View**  
+      - **Teal** represents **Pro-health users**, **Red** represents **Anti-health users**, and **Grey** represents **Neutral** users in **Cross-Ideology View**
     - **Node Size:**  
       Reflects how many other users this node has **influenced or triggered**.  
       Larger nodes = more shares triggered.
