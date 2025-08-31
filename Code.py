@@ -5,7 +5,6 @@ from textblob import TextBlob
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -160,28 +159,35 @@ bet_cen = nx.betweenness_centrality(G)
 bc_vals = np.array(list(bet_cen.values()))
 threshold = np.percentile(bc_vals, 80)
 
-# Assign border colors: green if high betweenness (top 20%), else dark grey
+# Assign border colors: green if high betweenness, 'none' (no border) otherwise
 node_border_colors = []
 for n in G.nodes:
     if bet_cen[n] >= threshold:
         node_border_colors.append('green')
     else:
-        node_border_colors.append('none')  # dark grey
+        node_border_colors.append('none')  # no border
 
 # Prepare edge colors based on view
 edge_colors = []
 edge_widths = []
 
 for u, v in G.edges:
-    if G.nodes[u]['gender'] != G.nodes[v]['gender']:  # Cross-gender
-        edge_colors.append('red')
-        edge_widths.append(2)
-    elif G.nodes[u]['ideology'] != G.nodes[v]['ideology']:  # Cross-ideology
-        edge_colors.append('red')
-        edge_widths.append(2)
+    if network_view == "Gender View":
+        # Show only cross-gender ties
+        if G.nodes[u]['gender'] != G.nodes[v]['gender']:
+            edge_colors.append('red')
+            edge_widths.append(2)
+        else:
+            edge_colors.append('none')  # same gender: no line
+            edge_widths.append(1)
     else:
-        edge_colors.append('none')  # same-gender, same-ideology
-        edge_widths.append(1)
+        # Show cross-gender or cross-ideology ties
+        if G.nodes[u]['gender'] != G.nodes[v]['gender'] or G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
+            edge_colors.append('red')
+            edge_widths.append(2)
+        else:
+            edge_colors.append('none')  # same gender and same ideology
+            edge_widths.append(1)
 
 # Plot network
 fig, ax = plt.subplots(figsize=(8,6))
@@ -192,17 +198,14 @@ nx.draw_networkx(G, pos=pos,
                  width=edge_widths,
                  style='solid',
                  font_size=8,
-                 font_color='white',
-                 linewidths=1,
-                 edgecolors=None,  # Not used here
-                 ax=ax)
+                 font_color='white')
 
 # Draw nodes with custom border colors
 nx.draw_networkx_nodes(G, pos,
                        node_size=node_sizes,
                        node_color=node_colors,
                        edgecolors=node_border_colors,
-                       linewidths=2)  # set border width for visibility
+                       linewidths=2)
 
 # Legend
 if network_view == "Gender View":
@@ -222,7 +225,7 @@ with st.expander("ℹ️ Interpretation of the network diagram"):
     - **Node Border Color**: Nodes with high betweenness centrality (top 20%) are highlighted with **green borders** to show they are key bridges in the network.
     - **Node Size**: Larger nodes indicate more influence or triggered shares.
     - **Edge Colors**:
-        - **Red**: Cross-gender or cross-ideology ties.
-        - **Grey**: Same gender and same ideology.
+        - **Red**: Cross-gender or cross-ideology ties (depending on view).
+        - **No line**: Same gender and same ideology ties are hidden.
     - **Connections**: Show patterns of homophily and bridging nodes.
     """)
