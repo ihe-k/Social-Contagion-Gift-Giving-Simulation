@@ -219,6 +219,7 @@ view_mode = st.sidebar.radio("Select Network View", ('Gender Focus', 'Ideology F
 
 # --- Prepare edge colors based on view ---
 edge_colors = []
+edge_widths = []
 
 if view_mode == 'Gender Focus':
     for u, v in G.edges:
@@ -229,15 +230,18 @@ if view_mode == 'Gender Focus':
         mixed_rgb = tuple((x + y) / 2 for x, y in zip(rgb_u, rgb_v))
         dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
         edge_colors.append(dark_edge_color)
+        edge_widths.append(1)
 else:
     # Cross-ideology ties: red edges, others grey
     for u, v in G.edges:
         if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
             edge_colors.append('red')
+            edge_widths.append(2)  # Thicker red edges to emphasize cross-ideology ties
         else:
             edge_colors.append('#AAAAAA')
+            edge_widths.append(0.5)  # Thin grey edges
 
-# Draw network with explicit edge colors and wider lines
+# --- Drawing Network ---
 nx.draw_networkx(
     G,
     pos=pos,
@@ -246,37 +250,27 @@ nx.draw_networkx(
     node_size=node_sizes,
     node_color=node_colors,
     edge_color=edge_colors,
-    width=2,  # Thicker lines for visibility
+    width=edge_widths,  # Apply variable edge widths
     style='solid',
     font_size=8,
-    ax=ax_net
+    ax=ax_net,
+    edge_cmap=plt.cm.Reds  # Optional, to add a red colormap for edges
 )
-
-# Legend for gender
-male_patch = mpatches.Patch(color='#003A6B', label='Male')
-female_patch = mpatches.Patch(color='#5293BB', label='Female')
-ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
 
-# --- Step 11: Explanation ---
-with st.expander("ℹ️ Interpretation of the Network Diagram"):
-    st.markdown("""
-    ### **Network Diagram Interpretation**
-    - **Node Colors:**  
-      - **Dark blue circles** represent **Male users**  
-      - **Light blue circles** represent **Female users**  
-    - **Node Size:**  
-      Reflects how many other users this node has **influenced or triggered**.  
-      Larger nodes = more shares triggered.
-    - **Node Border Width:**  
-      Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
-    - **Edge Colors (Connections):**  
-      - **Red edges** = Cross-ideology ties (connections between users with different ideologies)  
-      - Other edges based on focus (gender homophily or default)
-    - **Clusters:**  
-      The network shows **homophily** and **ideological alignment** influencing connections and information diffusion.
-    - **Overall Insights:**  
-      - Users with higher **centrality** act as **key influencers** or bridges.  
-      - **Chronic disease status** and **ideological differences** impact sharing probabilities and contagion dynamics.
-    """)
+# --- Network Diagram Interpretation ---
+st.markdown("""
+### **Network Diagram Interpretation**
+- **Node Colors:**  
+  - **Dark blue circles** represent **Male users**  
+  - **Light blue circles** represent **Female users**  
+- **Node Size:**  
+  Reflects how many other users this node has **influenced or triggered**.  
+  Larger nodes = more shares triggered.
+- **Node Border Width:**  
+  Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread. These are key nodes that facilitate the flow of information across ideologies.
+- **Edge Colors (Connections):**  
+  - **Red edges** = **Cross-ideology ties** (connections between users with different ideologies)  
+  - **Grey edges** = Connections between users with the same ideology
+""")
