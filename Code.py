@@ -249,9 +249,9 @@ nx.draw_networkx_labels(G, pos,
                         ax=ax_net)
 
 # Legend for genders
-male_patch = mpatches.Patch(color='lightgreen', label='Male')
-female_patch = mpatches.Patch(color='lightblue', label='Female')
-ax_net.legend(handles=[male_patch, female_patch], loc='best')
+#male_patch = mpatches.Patch(color='lightgreen', label='Male')
+#female_patch = mpatches.Patch(color='lightblue', label='Female')
+#ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
 
