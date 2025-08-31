@@ -96,6 +96,19 @@ st.sidebar.header("Network Contagion & Settings")
 SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 
+# --- Define the adjusted share probability function ---
+def get_share_probability(u, v):
+    prob = SHARE_PROB
+    # Boost if same gender (homophily)
+    if G.nodes[u]['gender'] == G.nodes[v]['gender']:
+        prob *= GENDER_HOMOPHILY_BONUS
+    # Boost if same ideology (homophily)
+    if G.nodes[u]['ideology'] == G.nodes[v]['ideology']:
+        prob *= IDEOLOGY_CROSS_BONUS
+    # Cross-ideology involving neutral can also boost sharing if desired
+    # (Optional: add other factors)
+    return min(prob, 1)
+
 # --- Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
@@ -110,16 +123,20 @@ for node in seed_nodes:
 
 contagion = [set(seed_nodes)]
 current = set(seed_nodes)
+
 while True:
     next_step = set()
     for u in G.nodes:
         if not G.nodes[u]['shared']:
-            neighbors = list(G.neighbors(u))
-            shared_neighbors = sum(G.nodes[nb]['shared'] for nb in neighbors)
-            if shared_neighbors >= K_THRESHOLD:
-                G.nodes[u]['shared'] = True
-                G.nodes[u]['triggered_count'] += 1
-                next_step.add(u)
+            for v in G.neighbors(u):
+                if G.nodes[v]['shared']:
+                    # Use adjusted probability
+                    share_prob = get_share_probability(v, u)
+                    if random.random() < share_prob:
+                        G.nodes[u]['shared'] = True
+                        G.nodes[u]['triggered_count'] += 1
+                        next_step.add(u)
+                        break  # once shared, move to next node
     if not next_step:
         break
     contagion.append(next_step)
@@ -146,7 +163,7 @@ clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.r
 contagion_steps = len(contagion)
 final_share_rate = (total_shared / total_nodes) * 100
 
-# Display metrics
+# --- Display metrics ---
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7, col8 = st.columns(4)
 
@@ -172,8 +189,8 @@ with st.expander("📝 Dashboard Summary"):
     - Cross-Ideology Ties (%): ties between different ideological groups.
     """)
 
-# --- Visualisation ---
-st.subheader("Network Contagion Visualisation")
+# --- Visualization ---
+st.subheader("Network Contagion Visualization")
 
 # --- Define colors for ideologies ---
 ideology_colors = {
@@ -209,7 +226,7 @@ edge_widths = []
 
 for u, v in G.edges:
     if network_view == "Gender View":
-        # Red only if cross-gender
+        # Red if cross-gender
         if G.nodes[u]['gender'] != G.nodes[v]['gender']:
             edge_colors.append('red')
             edge_widths.append(2)
@@ -245,6 +262,7 @@ nx.draw_networkx_nodes(
     linewidths=2
 )
 
+# Draw labels in white
 nx.draw_networkx_labels(
     G, pos,
     font_size=8,
@@ -258,7 +276,7 @@ nx.draw_networkx_edges(
     width=edge_widths
 )
 
-# --- Legend: show only relevant legend ---
+# --- Legend ---
 import matplotlib.patches as mpatches
 if network_view == "Gender View":
     legend_handles = [
@@ -275,12 +293,3 @@ else:
 ax.legend(handles=legend_handles, loc='best')
 
 st.pyplot(fig)
-
-with st.expander("ℹ️ Interpretation of the network diagram"):
-    st.write("""
-    - Nodes with **green borders** are key bridges (top 20% betweenness).
-    - **Node size** indicates influence based on triggered shares.
-    - **Red edges** highlight cross-gender or cross-ideology ties.
-    - Grey edges are within-group ties.
-    - Patterns reveal homophily and bridging nodes.
-    """)
