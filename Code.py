@@ -186,20 +186,20 @@ col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
 with st.expander("📝 Dashboard Summary"):
     st.write("""
     This dashboard provides an overview of the network dynamics based on the contagion simulation.
-    - Triggered Shares: number of users who shared after exposure.
-    - Key Bridges: influential nodes bridging parts of the network.
-    - Engaged Clinicians: users interacting after sharing.
-    - Cross-Gender Ties (%): percentage connecting different genders.
-    - Total Users: network size.
-    - Contagion Steps: rounds for spread.
-    - Final Share Rate (%): overall sharing percentage.
-    - Cross-Ideology Ties (%): ties between different ideological groups.
+    - Total Users: Network size
+    - Key Bridges: Influential nodes bridging parts of the network
+    - Final Share Rate (%): Overall sharing percentage
+    - Cross-Gender Ties (%): Proportion connecting different genders
+    - Triggered Shares: Number of users who shared after exposure
+    - Contagion Steps: Rounds for spread
+    - Engaged Clinicians: Users interacting after sharing.    
+    - Cross-Ideology Ties (%): Ties between different ideological groups.
     """)
 
-# --- Visualization ---
-st.subheader("Network Contagion Visualization")
+# --- Visualisation ---
+st.subheader("Network Contagion Visualisation")
 
-# --- Define colors for ideologies ---
+# --- Define colours for ideologies ---
 ideology_colors = {
     'pro-health': '#003A6B',
     'anti-health':  '#89CFF1',
