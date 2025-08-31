@@ -155,6 +155,12 @@ st.dataframe(report_df)
 st.sidebar.header("Simulation Parameters")
 SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
 
+# Move radio button to sidebar
+view_option = st.sidebar.radio(
+    "Select Network View",
+    ("Male/Female Distribution", "Cross-Ideology & Gender Distribution")
+)
+
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 for node in G.nodes:
@@ -199,92 +205,4 @@ avg_ideology_influence = np.mean([sentiment_trends[node] for node in G.nodes])
 
 st.write(f"**Total Shares Triggered**: {triggered_shares}")
 st.write(f"**Average Shares Triggered per User**: {avg_triggered_shares:.2f}")
-st.write(f"**Average Ideology Influence (Pro-Health)**: {avg_ideology_influence:.2f}")
-
-fig_net, ax_net = plt.subplots(figsize=(8, 6))
-pos = nx.spring_layout(G, seed=42)
-
-def darken_color(color, amount=0.6):
-    c = mcolors.to_rgb(color)
-    darkened = tuple(max(min(x * amount, 1), 0) for x in c)
-    return darkened
-
-# Custom node colors
-node_colors = []
-node_sizes = []
-node_border_widths = []
-
-# Custom Colors for ideologies
-color_map = {
-    'pro-health': '#003A6B',
-    'neutral': '#5293BB',
-    'anti-health': '#89CFF1'
-}
-
-# Normalize betweenness centrality for border widths
-bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
-if bc_values.max() > 0:
-    norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
-else:
-    norm_bc = np.ones(len(G.nodes))
-
-for idx, n in enumerate(G.nodes):
-    color = color_map[G.nodes[n]['ideology']]
-    node_colors.append(color)
-    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
-    node_border_widths.append(norm_bc[idx])
-
-# --- Prepare edge colors and widths ---
-edge_colors = []
-edge_widths = []
-
-for u, v in G.edges:
-    if G.nodes[u]['gender'] != G.nodes[v]['gender'] or G.nodes[u]['ideology'] != G.nodes[v]['ideology']:  # Cross-gender or Cross-ideology connection
-        edge_colors.append('red')
-        edge_widths.append(2)
-    else:
-        edge_colors.append('#AAAAAA')
-        edge_widths.append(1)
-
-# --- Draw the Network ---
-nx.draw_networkx(
-    G,
-    pos=pos,
-    with_labels=True,
-    labels={n: str(n) for n in G.nodes},
-    node_size=node_sizes,
-    node_color=node_colors,
-    edge_color=edge_colors,
-    width=edge_widths,
-    style='solid',
-    font_size=8,
-    font_color='white',  # Make font color white
-    ax=ax_net
-)
-
-# Legend for ideology
-pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-health')
-anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-health')
-neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
-
-ax_net.legend(handles=[pro_health_patch, anti_health_patch, neutral_patch], loc='best')
-
-st.pyplot(fig_net)
-
-# --- Step 11: Explanation ---
-with st.expander("ℹ️ Interpretation of the Network Diagram"):
-    st.markdown("""
-    ### **Network Diagram Interpretation**
-    - **Node Colors:**  
-      - **Dark blue circles** represent **Pro-health users**  
-      - **Light blue circles** represent **Neutral users**  
-      - **Light cyan circles** represent **Anti-health users**
-    - **Node Size:**  
-      Reflects how many other users this node has **influenced or triggered**.  
-      Larger nodes = more shares triggered.
-    - **Node Border Width:**  
-      Indicates **betweenness centrality** — users with **thicker borders** serve as **important bridges** in the network, connecting different parts and enabling information spread.
-    - **Edge Colors (Connections):**  
-      - **Red edges** = **Cross-gender** or **Cross-ideology** ties.  
-      - **Grey edges** = Connections between users of the same gender and same ideology.
-""")
+st.write(f"
