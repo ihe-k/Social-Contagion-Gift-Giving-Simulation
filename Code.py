@@ -172,7 +172,7 @@ for u, v in G.edges:
         edge_colors.append('red')
         edge_widths.append(2)
     else:
-        edge_colors.append('#555555')  # Change grey to darker grey
+        edge_colors.append('#414141')  # Change grey to darker grey
         edge_widths.append(1)
 
 # Draw the Network
@@ -189,7 +189,7 @@ nx.draw_networkx(
     style='solid',
     font_size=8,
     font_color='white',
-    edgecolors='darkgrey',  # Node borders will be dark grey
+    edgecolors='#414141',  # Node borders will be dark grey
     node_shape='o',  # Circular nodes
     linewidths=node_border_widths,  # Apply betweenness centrality to node borders
     ax=ax_net
