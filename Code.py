@@ -3,12 +3,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 from textblob import TextBlob
 import streamlit as st
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split, GridSearchCV
-from sklearn.metrics import accuracy_score, classification_report
 import numpy as np
 import pandas as pd
-import feedparser
 import matplotlib.colors as mcolors
 import matplotlib.patches as mpatches
 
@@ -45,207 +41,65 @@ def analyze_sentiment(text):
     else:
         return 'neutral'
 
-# --- Step 3: Fetch Podcasts ---
-def get_podcasts_from_rss(feed_url, max_items=5):
-    feed = feedparser.parse(feed_url)
-    podcasts = []
-    for entry in feed.entries[:max_items]:
-        podcasts.append({
-            "user": entry.get('author', 'podcaster'),
-            "content": entry.title,
-            "platform": "RSS",
-            "url": entry.link
-        })
-    return podcasts
-
-rss_urls = [
-    "https://feeds.npr.org/510307/rss.xml",
-    "https://feeds.simplecast.com/54nAGcIl",
-    "https://rss.art19.com/the-daily",
-    "https://feeds.megaphone.fm/ADL9840290619",
-]
-
-podcast_items = []
-for url in rss_urls:
-    try:
-        podcast_items.extend(get_podcasts_from_rss(url))
-    except:
-        pass
-
-# --- Step 4: Assign User Attributes ---
-podcast_sentiments = [analyze_sentiment(p['content']) for p in podcast_items]
-if not podcast_sentiments:
-    podcast_sentiments = ['neutral'] * 10
-
-counts = {
-    'pro-health': podcast_sentiments.count('pro-health'),
-    'anti-health': podcast_sentiments.count('anti-health'),
-    'neutral': podcast_sentiments.count('neutral')
-}
-total = sum(counts.values())
-weights = {k: v / total for k, v in counts.items()}
-
+# --- Step 3: Assign User Attributes ---
 for node in G.nodes:
     G.nodes[node]['gender'] = random.choice(['Male', 'Female'])
     G.nodes[node]['has_chronic_disease'] = random.choice([True, False])
-    G.nodes[node]['ideology'] = random.choices(
-        ['pro-health', 'anti-health', 'neutral'],
-        weights=[weights.get('pro-health', 0.33),
-                 weights.get('anti-health', 0.33),
-                 weights.get('neutral', 0.33)],
-        k=1
-    )[0]
+    G.nodes[node]['ideology'] = random.choice(['pro-health', 'anti-health', 'neutral'])
     G.nodes[node]['sentiment'] = G.nodes[node]['ideology']
     G.nodes[node]['shared'] = False
     G.nodes[node]['score'] = 0
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Step 5: Features & Labels ---
-def calc_sentiment_trends():
-    trends = []
-    for node in G.nodes:
-        neighbors = list(G.neighbors(node))
-        if neighbors:
-            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
-            trends.append(pro_health_count / len(neighbors))
-        else:
-            trends.append(0)
-    return trends
-
-sentiment_trends = calc_sentiment_trends()
-betweenness_centrality = nx.betweenness_centrality(G)
-
-user_features = []
-user_labels = []
-for node in G.nodes:
-    u = G.nodes[node]
-    features = [
-        1 if u['gender'] == 'Female' else 0,
-        1 if u['has_chronic_disease'] else 0,
-        1 if u['ideology'] == 'pro-health' else 0,
-        1 if u['ideology'] == 'anti-health' else 0,
-        1 if u['ideology'] == 'neutral' else 0,
-        sentiment_trends[node],
-        betweenness_centrality[node]
-    ]
-    user_features.append(features)
-    user_labels.append(u['ideology'])
-
-X_train, X_test, y_train, y_test = train_test_split(
-    user_features, user_labels, test_size=0.2, random_state=42
-)
-
-# --- Step 6: Model Training ---
-param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
-grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
-grid.fit(X_train, y_train)
-best_model = grid.best_estimator_
-y_pred = best_model.predict(X_test)
-
-# --- Step 7: Model Evaluation ---
-st.subheader("Model Evaluation")
-accuracy = accuracy_score(y_test, y_pred)
-report_dict = classification_report(y_test, y_pred, output_dict=True)
-report_df = pd.DataFrame(report_dict).transpose().round(2)
-st.write(f"**Accuracy:** {accuracy:.2%}")
-st.dataframe(report_df)
-
-# --- Step 8: Contagion Simulation ---
-st.sidebar.header("Simulation Parameters")
-SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
-
-# Move radio button to sidebar
+# --- Step 4: Visualization ---
+st.sidebar.header("Network View")
 view_option = st.sidebar.radio(
-    "Select Network View",
-    ("Male/Female Distribution", "Cross-Ideology & Gender Distribution")
+    "Select Network View:",
+    ("Gender Distribution", "Ideology Distribution")
 )
 
-pos = nx.spring_layout(G, seed=42)
-seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
-for node in G.nodes:
-    G.nodes[node]['shared'] = False
-    G.nodes[node]['gifted'] = False
-    G.nodes[node]['triggered_count'] = 0
+# Node color settings
+gender_colors = {'Male': '#003A6B', 'Female': '#5293BB'}
+ideology_colors = {'pro-health': '#003A6B', 'neutral': '#5293BB', 'anti-health': '#89CFF1'}
 
-for node in seed_nodes:
-    G.nodes[node]['shared'] = True
-    G.nodes[node]['gifted'] = True
-
-contagion, current = [set(seed_nodes)], set(seed_nodes)
-while current:
-    next_step = set()
-    for u in current:
-        for v in G.neighbors(u):
-            if not G.nodes[v]['shared']:
-                prob = SHARE_PROB + (GIFT_BONUS / 100 if G.nodes[u]['gifted'] else 0)
-                if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-                    prob += IDEOLOGY_CROSS_BONUS + CROSS_IDEOLOGY_BONUS
-                if G.nodes[v]['has_chronic_disease']:
-                    prob = max(prob, CHRONIC_PROPENSITY)
-                if G.nodes[u]['gender'] != G.nodes[v]['gender']:  # Cross-gender connection boost
-                    prob += CROSS_GENDER_BONUS
-                prob = min(max(prob, 0), 1)
-                if random.random() < prob:
-                    G.nodes[v]['shared'] = True
-                    G.nodes[v]['triggered_count'] += 1
-                    next_step.add(v)
-    if not next_step:
-        break
-    contagion.append(next_step)
-    current = next_step
-
-# --- Step 9: Visualization ---
-st.subheader("User Network Contagion Simulation")
-
-# Dashboard summary
-triggered_shares = sum([G.nodes[node]['triggered_count'] for node in G.nodes])
-avg_triggered_shares = triggered_shares / NUM_USERS
-avg_ideology_influence = np.mean([sentiment_trends[node] for node in G.nodes])
-
-st.write(f"**Total Shares Triggered**: {triggered_shares}")
-st.write(f"**Average Shares Triggered per User**: {avg_triggered_shares:.2f}")
-st.write(f"**Average Ideology Influence**: {avg_ideology_influence:.2f}")
-st.write(f"**Average Betweenness Centrality**: {np.mean(list(betweenness_centrality.values())):.2f}")
-
+# --- Visualization Setup ---
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
+pos = nx.spring_layout(G, seed=42)
 
-# Define colors for ideologies
-ideology_colors = {
-    'pro-health': '#003A6B',  # Dark Blue
-    'neutral': '#5293BB',      # Light Blue
-    'anti-health': '#89CFF1'   # Light Blue (lighter for anti-health)
-}
-
-# --- Prepare node colors and sizes ---
+# Prepare node and edge colors
 node_colors = []
-node_sizes = []
-node_border_widths = []
+edge_colors = []
+edge_widths = []
 
-# Normalize betweenness centrality for border widths
-bc_values = np.array([betweenness_centrality[n] for n in G.nodes])
+# Prepare node size and border widths based on betweenness centrality
+bc_values = np.array(list(nx.betweenness_centrality(G).values()))
 if bc_values.max() > 0:
     norm_bc = 1 + 5 * (bc_values - bc_values.min()) / (bc_values.max() - bc_values.min())
 else:
     norm_bc = np.ones(len(G.nodes))
 
+# Loop over nodes to assign colors and sizes
+node_sizes = []
+node_border_widths = []
+
 for idx, n in enumerate(G.nodes):
-    # Assign color based on ideology
-    color = ideology_colors[G.nodes[n]['ideology']]
-    node_colors.append(color)
+    if view_option == "Gender Distribution":
+        node_color = gender_colors[G.nodes[n]['gender']]
+    elif view_option == "Ideology Distribution":
+        node_color = ideology_colors[G.nodes[n]['ideology']]
+    
+    node_colors.append(node_color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
 
-# --- Prepare edge colors and widths ---
-edge_colors = []
-edge_widths = []
-
+    # Loop over edges to assign colors based on connection type (cross-gender or cross-ideology)
 for u, v in G.edges:
-    if G.nodes[u]['gender'] != G.nodes[v]['gender'] or G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-        edge_colors.append('red')  # Cross-gender or Cross-ideology connections
-        edge_widths.append(2)      # Thicker red edges for cross-gender or cross-ideology ties
+    if (G.nodes[u]['gender'] != G.nodes[v]['gender']) or (G.nodes[u]['ideology'] != G.nodes[v]['ideology']):
+        edge_colors.append('red')  # Red for cross-gender or cross-ideology connections
+        edge_widths.append(2)      # Thicker red edges
     else:
-        edge_colors.append('#AAAAAA')  # Grey edges for same-gender and same-ideology ties
+        edge_colors.append('#AAAAAA')  # Grey for same-gender and same-ideology ties
         edge_widths.append(1)          # Normal width for regular edges
 
 # --- Draw the Network ---
@@ -257,23 +111,27 @@ nx.draw_networkx(
     node_size=node_sizes,
     node_color=node_colors,
     edge_color=edge_colors,
-    width=edge_widths,  # Uniform edge widths
+    width=edge_widths,
     style='solid',
     font_size=8,
-    font_color='white',  # Make font color white
-    edge_cmap=plt.cm.Blues,  # Color map for edge width
+    font_color='white',
+    edge_cmap=plt.cm.Blues, 
     ax=ax_net
 )
 
-# Legend for ideology
-pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-Health')
-neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
-anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-Health')
-ax_net.legend(handles=[pro_health_patch, neutral_patch, anti_health_patch], loc='best')
+# Legends for different views
+if view_option == "Gender Distribution":
+    male_patch = mpatches.Patch(color='#003A6B', label='Male')
+    female_patch = mpatches.Patch(color='#5293BB', label='Female')
+    ax_net.legend(handles=[male_patch, female_patch], loc='best')
+elif view_option == "Ideology Distribution":
+    pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-Health')
+    neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
+    anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-Health')
+    ax_net.legend(handles=[pro_health_patch, neutral_patch, anti_health_patch], loc='best')
 
-# Add title
-ax_net.set_title("Health Information Contagion Network")
-
+# Display the plot
+ax_net.set_title(f"{view_option} Network Diagram")
 st.pyplot(fig_net)
 
 # --- Step 11: Explanation ---
@@ -281,9 +139,9 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
     - **Node Colors:**  
-      - **Dark blue** represents **Pro-Health users**  
-      - **Light blue** represents **Neutral users**  
-      - **Lightest blue** represents **Anti-Health users**
+      - **Dark blue** represents **Male users** (if Gender view selected) or **Pro-Health** ideology (if Ideology view selected).  
+      - **Light blue** represents **Female users** (if Gender view selected) or **Neutral** ideology (if Ideology view selected).
+      - **Lightest blue** represents **Anti-Health** ideology (if Ideology view selected).
     - **Node Size:**  
       Reflects how many other users this node has **influenced or triggered**.  
       Larger nodes = more shares triggered.
@@ -293,4 +151,3 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
       - **Red edges** = **Cross-gender** or **Cross-ideology** ties.  
       - **Grey edges** = Connections between users of the same gender and same ideology.
 """)
-
