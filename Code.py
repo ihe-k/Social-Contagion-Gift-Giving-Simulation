@@ -250,6 +250,11 @@ for u, v in G.edges:
             edge_widths.append(1)
 
 # --- Plot with zoom control ---
+
+# Place this at the top of your plotting section
+zoom_level = st.sidebar.slider("Zoom level", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
+
+# Then do the plot with:
 fig_size = (15 * zoom_level, 12 * zoom_level)
 
 fig, ax = plt.subplots(figsize=fig_size)
