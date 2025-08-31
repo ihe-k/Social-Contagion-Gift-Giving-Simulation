@@ -172,8 +172,8 @@ with st.expander("📝 Dashboard Summary"):
     - Cross-Ideology Ties (%): ties between different ideological groups.
     """)
 
-# --- Visualization ---
-st.subheader("Network Contagion Visualization")
+# --- Visualisation ---
+st.subheader("Network Contagion Visualisation")
 
 # --- Define colors for ideologies ---
 ideology_colors = {
@@ -182,6 +182,16 @@ ideology_colors = {
     'neutral': '#5293BB'
 }
 
+# --- Calculate betweenness centrality and threshold for top 20% ---
+bc = nx.betweenness_centrality(G)
+threshold_bc = np.percentile(list(bc.values()), 80)
+
+# --- Node border colors: green for top 20% bridges, none otherwise ---
+node_border_colors = [
+    'green' if bc[n] >= threshold_bc else 'none' for n in G.nodes
+]
+
+# --- Node colors and sizes ---
 node_colors = []
 node_sizes = []
 
@@ -189,22 +199,17 @@ for n in G.nodes:
     if network_view == "Gender View":
         color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
     else:
-        # Use specified colors for ideologies, including neutral
         color = ideology_colors.get(G.nodes[n]['ideology'], '#000000')
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
 
-# Betweenness for border color
-bc = nx.betweenness_centrality(G)
-threshold_bc = np.percentile(list(bc.values()), 80)
-node_border_colors = ['green' if bc[n] >= threshold_bc else 'black' for n in G.nodes]
-
-# Edges coloring based on view
+# --- Edges coloring based on view ---
 edge_colors = []
 edge_widths = []
 
 for u, v in G.edges:
     if network_view == "Gender View":
+        # Red only if cross-gender
         if G.nodes[u]['gender'] != G.nodes[v]['gender']:
             edge_colors.append('red')
             edge_widths.append(2)
@@ -212,31 +217,42 @@ for u, v in G.edges:
             edge_colors.append('#414141')
             edge_widths.append(1)
     else:
-        # Ideology view: highlight cross-ideology, including 'neutral'
-        if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-            if 'neutral' in (G.nodes[u]['ideology'], G.nodes[v]['ideology']):
+        # Ideology view: red only if cross-ideology involving neutral
+        u_ideo = G.nodes[u]['ideology']
+        v_ideo = G.nodes[v]['ideology']
+        if u_ideo != v_ideo:
+            if 'neutral' in (u_ideo, v_ideo):
                 edge_colors.append('red')
                 edge_widths.append(2)
             else:
                 edge_colors.append('#414141')
                 edge_widths.append(1)
         else:
+            # same ideology
             edge_colors.append('#414141')
             edge_widths.append(1)
 
-# Plot network
-fig, ax = plt.subplots(figsize=(8, 6))
+# --- Plot ---
+fig, ax = plt.subplots(figsize=(8,6))
 pos = nx.spring_layout(G, seed=42)
 
-nx.draw_networkx(G, pos=pos,
-                 node_size=node_sizes,
-                 node_color=node_colors,
-                 edge_color=edge_colors,
-                 width=edge_widths,
-                 font_size=8,
-                 font_color='white')
+# Draw nodes with borders
+nx.draw_networkx_nodes(
+    G, pos,
+    node_size=node_sizes,
+    node_color=node_colors,
+    edgecolors=node_border_colors,
+    linewidths=2
+)
 
-# --- Legend: Show only relevant legend based on view ---
+# Draw edges
+nx.draw_networkx_edges(
+    G, pos,
+    edge_color=edge_colors,
+    width=edge_widths
+)
+
+# --- Legend: show only relevant legend ---
 import matplotlib.patches as mpatches
 if network_view == "Gender View":
     legend_handles = [
