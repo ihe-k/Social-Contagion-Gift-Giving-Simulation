@@ -311,9 +311,16 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     ### **Network Diagram Interpretation**
     - **Node Colors:** Green = Male, Blue = Female  
     - **Node Size:** Indicates influence (triggered shares)  
-    - **Node Border Width:** Indicates betweenness centrality (importance as a bridge)  
+    - **Node Border Width:** Indicates betweenness centrality (importance as a bridge): Users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
     - **Edge Colors:**  
-        - Green = Male–Male  
-        - Blue = Female–Female  
-        - Gray = Mixed-gender  
+      - **Light green edges** = Male-to-Male connections (**gender homophily**)  
+      - **Light blue edges** = Female-to-Female connections (**gender homophily**)  
+      - **Gray edges** = Male-to-Female or Female-to-Male (**cross-gender ties**)
+      - **Clusters:**  
+      The network shows **gender homophily** and **ideological alignment** influencing connections and information diffusion.
+
+    - **Overall Insights:**  
+      - Users with higher **centrality** act as **key influencers** or bridges.  
+      - **Chronic disease status** and **ideological differences** impact sharing probabilities and contagion dynamics.
+
     """)
