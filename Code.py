@@ -166,7 +166,7 @@ for n in G.nodes:
     if bet_cen[n] >= threshold:
         node_border_colors.append('green')
     else:
-        node_border_colors.append('#414141')  # dark grey
+        node_border_colors.append('none')  # dark grey
 
 # Prepare edge colors based on view
 edge_colors = []
@@ -180,7 +180,7 @@ for u, v in G.edges:
         edge_colors.append('red')
         edge_widths.append(2)
     else:
-        edge_colors.append('#414141')  # same-gender, same-ideology
+        edge_colors.append('none')  # same-gender, same-ideology
         edge_widths.append(1)
 
 # Plot network
