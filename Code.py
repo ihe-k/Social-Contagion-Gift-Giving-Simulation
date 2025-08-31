@@ -242,11 +242,14 @@ nx.draw_networkx_nodes(
     node_size=node_sizes,
     node_color=node_colors,
     edgecolors=node_border_colors,
-    font_size=8,
-    font_color='white',
     linewidths=2
 )
 
+nx.draw_networkx_labels(
+    G, pos,
+    font_size=8,
+    font_color='white'
+)
 
 # Draw edges
 nx.draw_networkx_edges(
