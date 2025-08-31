@@ -190,13 +190,16 @@ nx.draw_networkx(
 )
 
 # Legends for Gender and Ideology
-male_patch = mpatches.Patch(color='#003A6B', label='Male')
-female_patch = mpatches.Patch(color='#5293BB', label='Female')
-pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-Health')
-neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
-anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-Health')
+if network_view == "Gender View":
+    male_patch = mpatches.Patch(color='#003A6B', label='Male')
+    female_patch = mpatches.Patch(color='#5293BB', label='Female')
+    ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
-ax_net.legend(handles=[male_patch, female_patch, pro_health_patch, neutral_patch, anti_health_patch], loc='best')
+elif network_view == "Ideology View":
+    pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-Health')
+    neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
+    anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-Health')
+    ax_net.legend(handles=[pro_health_patch, neutral_patch, anti_health_patch], loc='best')
 
 # Show the plot in Streamlit
 st.pyplot(fig_net)
@@ -206,7 +209,6 @@ st.subheader("Model Evaluation")
 st.write(f"**Accuracy:** {accuracy:.2%}")
 st.dataframe(report_df)
 
-# --- Interpretation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.write("""
     The network diagram visualizes how information spreads through the network, starting with seed nodes that are 'shared'.
