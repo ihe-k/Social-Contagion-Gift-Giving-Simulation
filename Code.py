@@ -205,7 +205,7 @@ avg_ideology_influence = np.mean([sentiment_trends[node] for node in G.nodes])
 
 st.write(f"**Total Shares Triggered**: {triggered_shares}")
 st.write(f"**Average Shares Triggered per User**: {avg_triggered_shares:.2f}")
-st.write(f"st.write(f"**Average Ideology Influence**: {avg_ideology_influence:.2f}")
+st.write(f"**Average Ideology Influence**: {avg_ideology_influence:.2f}")
 st.write(f"**Average Betweenness Centrality**: {np.mean(list(betweenness_centrality.values())):.2f}")
 
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
