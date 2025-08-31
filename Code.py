@@ -152,7 +152,7 @@ st.dataframe(report_df)
 
 # --- Step 8: Contagion Simulation ---
 st.sidebar.header("Simulation Parameters")
-SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
+SHARE_PROB = st.sidebar.slider("Contagion Spread", 0.0, 1.0, 0.3, 0.05)
 
 pos = nx.spring_layout(G, seed=42)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
