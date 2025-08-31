@@ -156,7 +156,10 @@ for idx, n in enumerate(G.nodes):
         color = '#003A6B' if G.nodes[n]['ideology'] == 'pro-health' else '#89CFF1' if G.nodes[n]['ideology'] == 'anti-health' else '#5293BB'
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
-    node_border_widths.append(betweenness_centrality[idx])
+
+    # Betweenness centrality is used to determine node border width
+    centrality = betweenness_centrality[n]
+    node_border_widths.append(centrality * 10)  # Adjust scaling factor for visual appeal
 
 # Edge Colors and Widths
 edge_colors = []
@@ -186,6 +189,9 @@ nx.draw_networkx(
     style='solid',
     font_size=8,
     font_color='white',
+    edgecolors='darkgrey',  # Node borders will be dark grey
+    node_shape='o',  # Circular nodes
+    linewidths=node_border_widths,  # Apply betweenness centrality to node borders
     ax=ax_net
 )
 
@@ -194,24 +200,25 @@ if network_view == "Gender View":
     male_patch = mpatches.Patch(color='#003A6B', label='Male')
     female_patch = mpatches.Patch(color='#5293BB', label='Female')
     ax_net.legend(handles=[male_patch, female_patch], loc='best')
-
-elif network_view == "Ideology View":
+else:
     pro_health_patch = mpatches.Patch(color='#003A6B', label='Pro-Health')
     neutral_patch = mpatches.Patch(color='#5293BB', label='Neutral')
     anti_health_patch = mpatches.Patch(color='#89CFF1', label='Anti-Health')
     ax_net.legend(handles=[pro_health_patch, neutral_patch, anti_health_patch], loc='best')
 
-# Show the plot in Streamlit
+# Display the plot
 st.pyplot(fig_net)
 
-# --- Main Panel: Model Evaluation ---
+# --- Model Evaluation ---
 st.subheader("Model Evaluation")
 st.write(f"**Accuracy:** {accuracy:.2%}")
 st.dataframe(report_df)
 
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.write("""
-    The network diagram visualizes how information spreads through the network, starting with seed nodes that are 'shared'.
-    Nodes represent users, and edges represent their connections. Node size reflects how many users have been influenced by that node.
-    Cross-gender and cross-ideology connections are represented by **red edges**, and **darker borders** indicate more central users in the network.
+    **Node Border Width**: Users with thicker borders serve as **important bridges** in the network. These users help connect different parts of the network and enable information spread. They have high betweenness centrality.
+    **Node Size**: The size of each node reflects how many other users that node has influenced or triggered.
+    **Edge Colors**:  
+    - **Red edges** represent **cross-gender** or **cross-ideology** connections.  
+    - **Dark Grey edges** represent connections between users of the same gender and same ideology.
     """)
