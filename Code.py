@@ -172,12 +172,18 @@ for u, v in G.edges:
             edge_colors.append('#414141')
             edge_widths.append(1)
     else:
-        # "Ideology View": only cross-ideology ties in red
+        # "Ideology View": only cross-ideology ties connecting to neutral
         if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-            edge_colors.append('red')
-            edge_widths.append(2)
+            # Check if either node is neutral
+            if 'neutral' in (G.nodes[u]['ideology'], G.nodes[v]['ideology']):
+                edge_colors.append('red')
+                edge_widths.append(2)
+            else:
+                # cross-ideology but no neutral: grey
+                edge_colors.append('#414141')
+                edge_widths.append(1)
         else:
-            # same ideology: grey
+            # same ideology (both neutral or both same non-neutral): grey
             edge_colors.append('#414141')
             edge_widths.append(1)
 
@@ -217,7 +223,7 @@ with st.expander("ℹ️ Interpretation of the network diagram"):
     - **Node Border Color**: Nodes with high betweenness centrality (top 20%) are highlighted with **green borders** to show they are key bridges in the network.
     - **Node Size**: Larger nodes indicate more influence or triggered shares.
     - **Edge Colors**:
-        - **Red**: Cross-gender ties (in Gender View) or cross-ideology ties (in Ideology View).
-        - **Grey (#414141)**: All other ties (same gender & same ideology).
+        - **Red**: Cross-gender ties (in Gender View) or cross-ideology ties connecting to neutral (in Ideology View).
+        - **Grey (#414141)**: All other ties (same gender & same ideology, or cross-ideology not connecting to neutral).
     - **Connections**: Show patterns of homophily and bridging nodes.
     """)
