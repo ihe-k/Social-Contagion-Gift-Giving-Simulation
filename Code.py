@@ -106,102 +106,22 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Step 5: Features & Labels ---
-def calc_sentiment_trends():
-    trends = []
-    for node in G.nodes:
-        neighbors = list(G.neighbors(node))
-        if neighbors:
-            pro_health_count = sum(1 for n in neighbors if G.nodes[n]['sentiment'] == 'pro-health')
-            trends.append(pro_health_count / len(neighbors))
-        else:
-            trends.append(0)
-    return trends
-
-sentiment_trends = calc_sentiment_trends()
-betweenness_centrality = nx.betweenness_centrality(G)
-
-user_features = []
-user_labels = []
-for node in G.nodes:
-    u = G.nodes[node]
-    features = [
-        1 if u['gender'] == 'Female' else 0,
-        1 if u['has_chronic_disease'] else 0,
-        1 if u['ideology'] == 'pro-health' else 0,
-        1 if u['ideology'] == 'anti-health' else 0,
-        1 if u['ideology'] == 'neutral' else 0,
-        sentiment_trends[node],
-        betweenness_centrality[node]
-    ]
-    user_features.append(features)
-    user_labels.append(u['ideology'])
-
-X_train, X_test, y_train, y_test = train_test_split(
-    user_features, user_labels, test_size=0.2, random_state=42
-)
-
-# --- Step 6: Model Training ---
-param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
-grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
-grid.fit(X_train, y_train)
-best_model = grid.best_estimator_
-y_pred = best_model.predict(X_test)
-
-# --- Step 7: Model Evaluation ---
-st.subheader("Model Evaluation")
-
-accuracy = accuracy_score(y_test, y_pred)
-report_dict = classification_report(y_test, y_pred, output_dict=True)
-report_df = pd.DataFrame(report_dict).transpose().round(2)
-
-st.write(f"**Accuracy:** {accuracy:.2%}")
-st.dataframe(report_df)
-
-# --- Step 8: Contagion Simulation ---
-st.sidebar.header("Simulation Parameters")
-SHARE_PROB = st.sidebar.slider("Base Share Probability", 0.0, 1.0, 0.3, 0.05)
-
-pos = nx.spring_layout(G, seed=42)
-seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
-for node in G.nodes:
-    G.nodes[node]['shared'] = False
-    G.nodes[node]['gifted'] = False
-    G.nodes[node]['triggered_count'] = 0
-
-for node in seed_nodes:
-    G.nodes[node]['shared'] = True
-    G.nodes[node]['gifted'] = True
-
-contagion, current = [set(seed_nodes)], set(seed_nodes)
-while current:
-    next_step = set()
-    for u in current:
-        for v in G.neighbors(u):
-            if not G.nodes[v]['shared']:
-                prob = SHARE_PROB + (GIFT_BONUS / 100 if G.nodes[u]['gifted'] else 0)
-                if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-                    prob += IDEOLOGY_CROSS_BONUS
-                if G.nodes[v]['has_chronic_disease']:
-                    prob = max(prob, CHRONIC_PROPENSITY)
-                if G.nodes[u]['gender'] == G.nodes[v]['gender']:
-                    prob += GENDER_HOMOPHILY_BONUS
-                prob = min(max(prob, 0), 1)
-                if random.random() < prob:
-                    G.nodes[v]['shared'] = True
-                    G.nodes[v]['triggered_count'] += 1
-                    next_step.add(v)
-    if not next_step:
-        break
-    contagion.append(next_step)
-    current = next_step
-
 # --- Visualization ---
 def visualize_network():
     plt.figure(figsize=(10, 8))
     pos = nx.spring_layout(G, seed=42)
 
-    node_colors = [mcolors.CSS4_COLORS.get(G.nodes[node]['sentiment'], '#808080') for node in G.nodes]
+    # Define color mapping for the different sentiment values
+    sentiment_colors = {
+        'pro-health': 'green',      # Green for pro-health
+        'anti-health': 'red',       # Red for anti-health
+        'neutral': 'gray'           # Gray for neutral
+    }
+
+    # Assign a color to each node based on its sentiment
+    node_colors = [sentiment_colors.get(G.nodes[node]['sentiment'], 'gray') for node in G.nodes]
+
+    # Draw the network
     nx.draw(G, pos, with_labels=True, node_size=700, node_color=node_colors, font_size=10)
     plt.title("Health Information Contagion Network")
     st.pyplot(plt)
