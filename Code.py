@@ -275,11 +275,11 @@ nx.draw_networkx_nodes(
     edgecolors='black'
 )
 
-# Legend for groups
-
+# --- Legend setup ---
 # Fixed size for legend markers
-LEGEND_MARKER_SIZE = 300  # in data units
+LEGEND_MARKER_SIZE = 300
 
+# Define legend handles based on view
 if network_view == "Gender View":
     legend_handles = [
         mpatches.Patch(color='#003A6B', label='Male'),
@@ -292,15 +292,24 @@ else:
         mpatches.Patch(color='#5293BB', label='Neutral')
     ]
 
-# Plot your network with scaled node sizes
-node_size_scale = zoom_level  # or any scaling you want
-node_sizes = [base_node_size * node_size_scale for n in G.nodes]
+# --- Node size setup ---
+# Define a fixed base size for nodes
+base_node_size = 300
 
+# Get zoom level from slider
+zoom_level = st.sidebar.slider("Zoom level", 0.5, 2.0, 1.0, 0.1)
+
+# Calculate node sizes scaled by zoom
+node_sizes = [base_node_size * zoom_level for n in G.nodes]
+
+# --- Plotting ---
 fig, ax = plt.subplots(figsize=(15, 12))
 pos = nx.spring_layout(G, seed=42)
 
-nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
+# Draw edges
+nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='#414141')
 
+# Draw nodes
 nx.draw_networkx_nodes(
     G,
     pos,
@@ -310,13 +319,13 @@ nx.draw_networkx_nodes(
     edgecolors='black'
 )
 
+# Draw labels
 nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
 
 # Draw the legend with fixed marker size
 ax.legend(handles=legend_handles, loc='best', markerscale=1)
 
-
-
 ax.set_title("Large Network Visualization (300 nodes)")
 ax.axis('off')
+
 st.pyplot(fig)
