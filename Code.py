@@ -16,10 +16,13 @@ INIT_SHARED = 3
 GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
-GENDER_HOMOPHILY_BONUS = 0.2
+GENDER_HOMOPHILY_BONUS = 1.5
 CROSS_GENDER_BONUS = 0.3
 CROSS_IDEOLOGY_BONUS = 0.3
-
+SHARE_PROB = 0.2  # Lower base probability for contagion spread
+CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9  # Cross-ideology ties are only 10% as likely
+CROSS_GENDER_REDUCTION_FACTOR = 0.7   # reduce cross-gender sharing
+IDEOLOGY_HOMOPHILY_BONUS = 1.5
 K_THRESHOLD = 3  # contagion threshold
 
 # --- Network Setup ---
@@ -99,15 +102,19 @@ network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology
 # --- Define the adjusted share probability function ---
 def get_share_probability(u, v):
     prob = SHARE_PROB
-    # Boost if same gender (homophily)
+    
+    # Homophily boost
     if G.nodes[u]['gender'] == G.nodes[v]['gender']:
         prob *= GENDER_HOMOPHILY_BONUS
-    # Boost if same ideology (homophily)
+    else:
+        prob *= (1 - CROSS_GENDER_REDUCTION_FACTOR)
+        
     if G.nodes[u]['ideology'] == G.nodes[v]['ideology']:
-        prob *= IDEOLOGY_CROSS_BONUS
-    # Cross-ideology involving neutral can also boost sharing if desired
-    # (Optional: add other factors)
-    return min(prob, 1)
+        prob *= IDEOLOGY_HOMOPHILY_BONUS
+    else:
+        prob *= (1 - CROSS_IDEOLOGY_REDUCTION_FACTOR)
+    
+    return max(min(prob, 1), 0)
 
 # --- Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42)
