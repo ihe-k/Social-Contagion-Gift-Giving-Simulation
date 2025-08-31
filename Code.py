@@ -187,7 +187,7 @@ while current:
     contagion.append(next_step)
     current = next_step
 
-# --- Step 9: Network Visualization ---
+# --- Step 9: Network Visualisation ---
 st.subheader("User Network Contagion Simulation")
 fig_net, ax_net = plt.subplots(figsize=(8, 6))
 pos = nx.spring_layout(G, seed=42)
@@ -214,8 +214,8 @@ for idx, n in enumerate(G.nodes):
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
     node_border_widths.append(norm_bc[idx])
 
-# --- Add view mode selection ---
-view_mode = st.radio("Select Network View", ('Gender Focus', 'Ideology Focus'))
+# --- Add view mode selection in sidebar ---
+view_mode = st.sidebar.radio("Select Network View", ('Gender Focus', 'Ideology Focus'))
 
 # Set edge colors based on selected view
 edge_colors = []
@@ -231,14 +231,13 @@ if view_mode == 'Gender Focus':
         dark_edge_color = darken_color(mcolors.to_hex(mixed_rgb), amount=0.6)
         edge_colors.append(dark_edge_color)
 else:
-    # Color edges based on ideology cross-ties
-    cross_ideology_color = 'red'
-    same_ideology_color = '#AAAAAA'
+    # Cross-ideology ties: red edges
     for u, v in G.edges:
         if G.nodes[u]['ideology'] != G.nodes[v]['ideology']:
-            edge_colors.append(cross_ideology_color)
+            edge_colors.append('red')
         else:
-            edge_colors.append(same_ideology_color)
+            # Optional: keep a default color for same-ideology ties
+            edge_colors.append('#AAAAAA')
 
 # Draw the network
 nx.draw(G, pos,
@@ -258,7 +257,7 @@ ax_net.legend(handles=[male_patch, female_patch], loc='best')
 
 st.pyplot(fig_net)
 
-# --- Step 11: Explanation ---
+# --- Step 10: Explanation ---
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
@@ -271,11 +270,10 @@ with st.expander("ℹ️ Interpretation of the Network Diagram"):
     - **Node Border Width:**  
       Indicates **betweenness centrality** — users with thicker borders serve as **important bridges** in the network, connecting different parts and enabling information spread.
     - **Edge Colors (Connections):**  
-      - **Light green edges** = Male-to-Male connections (**gender homophily**)  
-      - **Light blue edges** = Female-to-Female connections (**gender homophily**)  
-      - **Gray edges** = Male-to-Female or Female-to-Male (**cross-gender ties**)
+      - **Red edges** = Cross-ideology ties (connections between users with different ideologies)  
+      - **Other edges** based on focus (gender homophily or default)
     - **Clusters:**  
-      The network shows **gender homophily** and **ideological alignment** influencing connections and information diffusion.
+      The network shows **homophily** and **ideological alignment** influencing connections and information diffusion.
     - **Overall Insights:**  
       - Users with higher **centrality** act as **key influencers** or bridges.  
       - **Chronic disease status** and **ideological differences** impact sharing probabilities and contagion dynamics.
