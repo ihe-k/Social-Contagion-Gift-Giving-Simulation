@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report
 
 # --- Parameters ---
-NUM_USERS = 30
+NUM_USERS = 300  # increased from 30
 INIT_SHARED = 3
 GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
@@ -19,14 +19,14 @@ CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 1.5
 CROSS_GENDER_BONUS = 0.3
 CROSS_IDEOLOGY_BONUS = 0.3
-SHARE_PROB = 0.2  # Lower base probability for contagion spread
-CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9  # Cross-ideology ties are only 10% as likely
-CROSS_GENDER_REDUCTION_FACTOR = 0.7   # reduce cross-gender sharing
+SHARE_PROB = 0.2
+CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9  # strongly reduce cross-ideology sharing
+CROSS_GENDER_REDUCTION_FACTOR = 0.7
 IDEOLOGY_HOMOPHILY_BONUS = 1.5
-K_THRESHOLD = 3  # contagion threshold
+K_THRESHOLD = 3
 
 # --- Network Setup ---
-G = nx.erdos_renyi_graph(NUM_USERS, 0.1, seed=42)
+G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)  # slightly lower prob for clarity
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
 nx.set_node_attributes(G, False, 'gifted')
@@ -47,7 +47,7 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Features ---
+# --- Features for ML ---
 def calc_sentiment_trends():
     trends = []
     for node in G.nodes:
@@ -82,14 +82,14 @@ X_train, X_test, y_train, y_test = train_test_split(
     user_features, user_labels, test_size=0.2, random_state=42
 )
 
-# --- Model Training ---
+# --- Model training ---
 param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
 best_model = grid.best_estimator_
 y_pred = best_model.predict(X_test)
 
-# --- Model Evaluation ---
+# --- Evaluation ---
 accuracy = accuracy_score(y_test, y_pred)
 report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
@@ -99,25 +99,22 @@ st.sidebar.header("Network Contagion & Settings")
 SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 
-# --- Define the adjusted share probability function ---
+# --- Adjusted Share Probability Function ---
 def get_share_probability(u, v):
     prob = SHARE_PROB
-    
-    # Homophily boost
+    # Boost within same group
     if G.nodes[u]['gender'] == G.nodes[v]['gender']:
         prob *= GENDER_HOMOPHILY_BONUS
     else:
         prob *= (1 - CROSS_GENDER_REDUCTION_FACTOR)
-        
     if G.nodes[u]['ideology'] == G.nodes[v]['ideology']:
         prob *= IDEOLOGY_HOMOPHILY_BONUS
     else:
         prob *= (1 - CROSS_IDEOLOGY_REDUCTION_FACTOR)
-    
     return max(min(prob, 1), 0)
 
 # --- Contagion Simulation ---
-pos = nx.spring_layout(G, seed=42)
+pos = nx.spring_layout(G, seed=42, k=0.15)
 seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
 for node in G.nodes:
     G.nodes[node]['shared'] = False
@@ -137,19 +134,18 @@ while True:
         if not G.nodes[u]['shared']:
             for v in G.neighbors(u):
                 if G.nodes[v]['shared']:
-                    # Use adjusted probability
                     share_prob = get_share_probability(v, u)
                     if random.random() < share_prob:
                         G.nodes[u]['shared'] = True
                         G.nodes[u]['triggered_count'] += 1
                         next_step.add(u)
-                        break  # once shared, move to next node
+                        break
     if not next_step:
         break
     contagion.append(next_step)
     current = next_step
 
-# --- Dashboard metrics ---
+# --- Dashboard Metrics ---
 st.markdown("## Dashboard Summary")
 total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
 total_nodes = len(G.nodes)
@@ -170,7 +166,7 @@ clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.r
 contagion_steps = len(contagion)
 final_share_rate = (total_shared / total_nodes) * 100
 
-# --- Display metrics ---
+# --- Metrics display ---
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7, col8 = st.columns(4)
 
@@ -196,21 +192,21 @@ with st.expander("📝 Dashboard Summary"):
     - Cross-Ideology Ties (%): Ties between different ideological groups.
     """)
 
-# --- Visualisation ---
+# --- Visualization ---
 st.subheader("Network Contagion Visualisation")
 
-# --- Define colours for ideologies ---
+# --- Define colors for ideologies ---
 ideology_colors = {
     'pro-health': '#003A6B',
     'anti-health':  '#89CFF1',
     'neutral': '#5293BB'
 }
 
-# --- Calculate betweenness centrality and threshold for top 20% ---
+# --- Calculate betweenness centrality for top 20% ---
 bc = nx.betweenness_centrality(G)
 threshold_bc = np.percentile(list(bc.values()), 80)
 
-# --- Node border colors: green for top 20% bridges, none otherwise ---
+# --- Node border colors: green for top 20% bridges ---
 node_border_colors = [
     'green' if bc[n] >= threshold_bc else 'none' for n in G.nodes
 ]
@@ -233,7 +229,6 @@ edge_widths = []
 
 for u, v in G.edges:
     if network_view == "Gender View":
-        # Red if cross-gender
         if G.nodes[u]['gender'] != G.nodes[v]['gender']:
             edge_colors.append('red')
             edge_widths.append(2)
@@ -241,7 +236,6 @@ for u, v in G.edges:
             edge_colors.append('#414141')
             edge_widths.append(1)
     else:
-        # Ideology view: red only if cross-ideology involving neutral
         u_ideo = G.nodes[u]['ideology']
         v_ideo = G.nodes[v]['ideology']
         if u_ideo != v_ideo:
@@ -252,39 +246,28 @@ for u, v in G.edges:
                 edge_colors.append('#414141')
                 edge_widths.append(1)
         else:
-            # same ideology
             edge_colors.append('#414141')
             edge_widths.append(1)
 
 # --- Plot ---
-fig, ax = plt.subplots(figsize=(8,6))
-pos = nx.spring_layout(G, seed=42)
+fig, ax = plt.subplots(figsize=(15, 12))
+pos = nx.spring_layout(G, seed=42, k=0.15)
 
-# Draw nodes with borders
+nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
+# Draw only labels for top nodes
+import matplotlib.patches as mpatches
+labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
+nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
 nx.draw_networkx_nodes(
-    G, pos,
+    G,
+    pos,
     node_size=node_sizes,
     node_color=node_colors,
-    edgecolors=node_border_colors,
-    linewidths=2
+    linewidths=0.5,
+    edgecolors='black'
 )
 
-# Draw labels in white
-nx.draw_networkx_labels(
-    G, pos,
-    font_size=8,
-    font_color='white'
-)
-
-# Draw edges
-nx.draw_networkx_edges(
-    G, pos,
-    edge_color=edge_colors,
-    width=edge_widths
-)
-
-# --- Legend ---
-import matplotlib.patches as mpatches
+# Legend for groups
 if network_view == "Gender View":
     legend_handles = [
         mpatches.Patch(color='#003A6B', label='Male'),
@@ -296,7 +279,7 @@ else:
         mpatches.Patch(color='#89CFF1', label='Anti-Health'),
         mpatches.Patch(color='#5293BB', label='Neutral')
     ]
-
 ax.legend(handles=legend_handles, loc='best')
-
+ax.set_title("Large Network Visualization (300 nodes)")
+ax.axis('off')
 st.pyplot(fig)
