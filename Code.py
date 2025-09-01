@@ -25,6 +25,8 @@ CROSS_GENDER_REDUCTION_FACTOR = 0.7
 IDEOLOGY_HOMOPHILY_BONUS = 1.5
 K_THRESHOLD = 3
 
+st.title("Health Information Network Simulation")
+
 # --- Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)
 
@@ -157,7 +159,7 @@ while True:
     current = next_step
 
 # --- Influence analysis of chronic users ---
-st.markdown("## Dashboard Summary")
+#st.markdown("## Dashboard Summary")
 total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
 total_nodes = len(G.nodes)
 total_edges = G.number_of_edges()
