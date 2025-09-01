@@ -297,3 +297,24 @@ else:
 ax.legend(handles=legend_handles, loc='best')
 ax.axis('off')
 st.pyplot(fig)
+with st.expander("ℹ️ Interpretation of the Network Diagram"):
+    st.markdown("""
+    ### **Network Diagram Interpretation**
+
+    - **Node Size:**  
+      Reflects how many other users this node has influenced or triggered.  
+      Larger nodes indicate that more shares are being triggered.
+
+    - **Node Border Width:**  
+      Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
+
+    - **Edge Colors (Connections):**  
+      - Red edges indicate cross-gender and ideology ties    
+
+    - **Clusters:**  
+      The network shows that gender homophily and ideological alignment influence connections and information diffusion.
+
+    - **Overall Insights:**  
+      - Users with higher centrality act as key influencers or bridges.  
+      - Chronic disease status and ideological differences impact sharing probabilities and contagion dynamics.
+    """)
