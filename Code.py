@@ -329,7 +329,7 @@ st.pyplot(fig)
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     The network diagram visually represents the structure and dynamics of the social network involved in the contagion process, highlighting key influencers and connection patterns that drive the spread of health information.
-    - By emphasising nodes with high betweenness centrality (bridge nodes) with thicker, red borders, it identifies key influencers or connectors that facilitate information spread across different parts of the network.  
+    - By emphasising nodes with high betweenness centrality (bridge nodes) with thicker red borders, it identifies key influencers or connectors that facilitate information spread across different parts of the network.  
     - It shows how users (nodes) are connected through social ties (edges), indicating who interacts with whom based on gender or ideological similarity/difference.  The colors of the edges reveal whether connections are within the same group (e.g., same gender or ideology) or across groups, illustrating the degree of homophily and cross-group interactions.
     - The structure shows potential routes through which health information or misinformation can propagate especially via bridge nodes that connect otherwise separate communities.
     - Overall Insights: Users with higher centrality act as key influencers or bridges.  Chronic disease status, gender and ideological differences impact sharing probabilities and contagion dynamics.
