@@ -159,7 +159,6 @@ while True:
     current = next_step
 
 # --- Influence analysis of chronic users ---
-#st.markdown("## Dashboard Summary")
 total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
 total_nodes = len(G.nodes)
 total_edges = G.number_of_edges()
@@ -192,18 +191,6 @@ avg_deg_non_chronic = np.mean([degree_cen[n] for n in non_chronic_users]) if non
 avg_betw_chronic = np.mean([betweenness_cen[n] for n in chronic_users]) if chronic_users else 0
 avg_betw_non_chronic = np.mean([betweenness_cen[n] for n in non_chronic_users]) if non_chronic_users else 0
 
-# Check if top influencers are chronic
-top_percent = 10
-top_count = max(1, int(len(G) * top_percent / 100))
-top_nodes_sorted_deg = sorted(degree_cen, key=degree_cen.get, reverse=True)
-top_nodes_sorted_betw = sorted(betweenness_cen, key=betweenness_cen.get, reverse=True)
-
-top_influencers_deg = top_nodes_sorted_deg[:top_count]
-top_influencers_betw = top_nodes_sorted_betw[:top_count]
-
-chronic_in_top_deg = sum(1 for n in top_influencers_deg if n in chronic_users)
-chronic_in_top_betw = sum(1 for n in top_influencers_betw if n in chronic_users)
-
 # --- Calculate Sharing Activity ---
 total_shares = sum(G.nodes[n]['triggered_count'] for n in G.nodes)
 chronic_shares = sum(G.nodes[n]['triggered_count'] for n in chronic_users)
@@ -219,8 +206,6 @@ col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
 col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
 col5.metric("Engaged Clinicians", clinicians_engaged)
 col6.metric("Contagion Steps", contagion_steps)
-
-# Display Sharing Activity metric
 col7.metric("Sharing Activity", f"{percent_chronic_shares:.2f}%")
 col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
 
@@ -228,9 +213,10 @@ col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
 st.subheader("Classification Report")
 st.write(report_df)
 
-# --- Visualization ---
+# --- Original Network Visualization ---
 fig, ax = plt.subplots(figsize=(10, 6))
-nx.draw(G, node_size=20, with_labels=False, ax=ax)
+node_color = ['blue' if G.nodes[n]['gender'] == 'Male' else 'pink' for n in G.nodes]
+positions = nx.spring_layout(G, seed=42)
+nx.draw(G, node_size=20, with_labels=False, node_color=node_color, ax=ax)
 ax.set_title("Network Visualization")
-
 st.pyplot(fig)
