@@ -235,21 +235,15 @@ final_share_rate = (total_shared / total_nodes) * 100
 # --- Metrics display ---
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7, col8 = st.columns(4)
-col9, col0, col1, col2 = st.columns(4)
 
 col1.metric("Total Users", total_nodes)
 col2.metric("Key Bridges", key_bridges)
 col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
 col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
-col5.metric("Triggered Shares", total_shared)
+col5.metric("Chronic Share Involvement", f"{percent_chronic_shares:.2f}%")
 col6.metric("Contagion Steps", contagion_steps)
 col7.metric("Engaged Clinicians", clinicians_engaged)
 col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
-col9.metric("Chronic Share Involvement", f"{percent_chronic_shares:.2f}%")
-col0.metric("Top 10% by Degree - Chronic Count", f"{chronic_in_top_deg} ({percent_chronic_in_top_deg:.2f}%)")
-col1.metric("Top 10% by Betweenness - Chronic Count", f"{chronic_in_top_betw} ({percent_chronic_in_top_betw:.2f}%)")
-
-
 with st.expander("📝 Interpretation of the Network Diagram"):
     st.markdown("""
     ### **Network Diagram Interpretation**
