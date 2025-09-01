@@ -117,39 +117,43 @@ accuracy = accuracy_score(y_test, y_pred)
 report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
 
-# --- Classification Results ---
+
+# --- Sidebar Checkbox for Showing Confusion Matrix ---
+show_conf_matrix = st.sidebar.checkbox("Show Confusion Matrix", value=True)
+
+# --- Classification Report ---
 st.subheader("Classification Report")
 st.write(report_df)
 
-# Calculate confusion matrix
-conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
+# --- Conditionally Show Confusion Matrix ---
+if show_conf_matrix:
+    # Calculate confusion matrix
+    conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
 
-# Plot confusion matrix using matplotlib
-fig, ax = plt.subplots(figsize=(8, 6))
-cax = ax.matshow(conf_matrix, cmap="Blues")
+    # Plot confusion matrix using matplotlib
+    fig, ax = plt.subplots(figsize=(8, 6))
+    cax = ax.matshow(conf_matrix, cmap="Blues")
 
-# Add colorbar
-fig.colorbar(cax)
+    # Add colorbar
+    fig.colorbar(cax)
 
-# Add labels and title
-ax.set_xlabel('Predicted')
-ax.set_ylabel('True')
-ax.set_title('Confusion Matrix')
+    # Add labels and title
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('True')
+    ax.set_title('Confusion Matrix')
 
-# Annotate matrix values
-for (i, j), val in np.ndenumerate(conf_matrix):
-    ax.text(j, i, f'{val}', ha='center', va='center', color='black')
+    # Annotate matrix values
+    for (i, j), val in np.ndenumerate(conf_matrix):
+        ax.text(j, i, f'{val}', ha='center', va='center', color='black')
 
-# Set the axis ticks and labels
-ax.set_xticks(np.arange(len(['pro-health', 'anti-health', 'neutral'])))
-ax.set_yticks(np.arange(len(['pro-health', 'anti-health', 'neutral'])))
-ax.set_xticklabels(['pro-health', 'anti-health', 'neutral'])
-ax.set_yticklabels(['pro-health', 'anti-health', 'neutral'])
+    # Set the axis ticks and labels
+    ax.set_xticks(np.arange(len(['pro-health', 'anti-health', 'neutral'])))
+    ax.set_yticks(np.arange(len(['pro-health', 'anti-health', 'neutral'])))
+    ax.set_xticklabels(['pro-health', 'anti-health', 'neutral'])
+    ax.set_yticklabels(['pro-health', 'anti-health', 'neutral'])
 
-# Display the plot in Streamlit
-st.pyplot(fig)
-
-
+    # Display the confusion matrix plot in Streamlit
+    st.pyplot(fig)
 
 # --- Sidebar ---
 st.sidebar.header("Network Contagion & Settings")
