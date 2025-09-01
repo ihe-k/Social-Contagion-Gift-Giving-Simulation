@@ -201,20 +201,20 @@ clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.r
 contagion_steps = len(contagion)
 final_share_rate = (total_shared / total_nodes) * 100
 
-# --- Additional Metrics ---
-st.metric("Total Users", total_nodes)
-st.metric("Key Bridges", key_bridges)
-st.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
-st.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
-st.metric("Triggered Shares", total_shared)
-st.metric("Contagion Steps", contagion_steps)
-st.metric("Engaged Clinicians", clinicians_engaged)
-st.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
-st.metric("Avg Degree (Chronic)", f"{avg_deg_chronic:.3f}")
-st.metric("Avg Degree (Non-Chronic)", f"{avg_deg_non_chronic:.3f}")
-st.metric("Avg Betweenness (Chronic)", f"{avg_betw_chronic:.3f}")
-st.metric("Avg Betweenness (Non-Chronic)", f"{avg_betw_non_chronic:.3f}")
-st.metric("Chronic Share Involvement", f"{percent_chronic_shares:.2f}%")
+# --- Metrics display ---
+col1, col2, col3, col4 = st.columns(5)
+col5, col6, col7, col8 = st.columns(5)
+
+col1.metric("Total Users", total_nodes)
+col2.metric("Key Bridges", key_bridges)
+col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
+col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
+col5.metric("Triggered Shares", total_shared)
+col6.metric("Contagion Steps", contagion_steps)
+col7.metric("Engaged Clinicians", clinicians_engaged)
+col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
+col9.metric("Chronic Share Involvement", f"{percent_chronic_shares:.2f}%")
+
 
 with st.expander("📝 Interpretation of the Network Diagram"):
     st.markdown("""
