@@ -28,6 +28,16 @@ K_THRESHOLD = 3
 
 st.title("Health Information Network Simulation")
 
+# --- Sidebar ---
+st.sidebar.header("Network Contagion & Settings")
+network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
+SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
+
+# --- Sidebar Checkbox for Showing Classification Report ---
+show_classification_report = st.sidebar.checkbox("Show Classification Report", value=True)
+# --- Sidebar Checkbox for Showing Confusion Matrix ---
+show_conf_matrix = st.sidebar.checkbox("Show Confusion Matrix", value=True)
+
 # --- Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)
 
@@ -152,16 +162,6 @@ if show_conf_matrix:
     # Display the confusion matrix plot in Streamlit
     st.pyplot(fig)
 
-
-# --- Sidebar ---
-st.sidebar.header("Network Contagion & Settings")
-network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
-SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
-
-# --- Sidebar Checkbox for Showing Classification Report ---
-show_classification_report = st.sidebar.checkbox("Show Classification Report", value=True)
-# --- Sidebar Checkbox for Showing Confusion Matrix ---
-show_conf_matrix = st.sidebar.checkbox("Show Confusion Matrix", value=True)
 
 # --- Share probability function ---
 def get_share_probability(u, v):
