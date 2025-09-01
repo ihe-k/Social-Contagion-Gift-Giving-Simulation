@@ -11,6 +11,13 @@ The goal is to understand how users with varying health conditions, ideologies a
 * Visualisation: Real-time visualisation of contagion spread over a social network graph using Matplotlib and Streamlit.
 * Model Evaluation: Display model accuracy and a classification report in the Streamlit dashboard for better transparency.
 
+## Practical Strategies for Effective Influence and Content Dissemination
+Insights from network diagrams and contagion simulations may optimise health information campaigns by:
+* Empowering High-Centrality Users:  Identifying users with high betweenness centrality serving as key bridges within the network may be encouraged to share verified and accurate content. Their position enables them to influence multiple communities effectively.
+* Engaging with Active Sharers:  Recognising users who have shared content multiple times (large and triggered nodes) as community leaders or ambassadors to promote trustworthy health information may be particularly beneficial for minoritised and hard to reach communities.
+* Targeting Key Clusters:  Using the visualisation may identify tightly connected communities. Tailoring messages within these clusters amplifies reach and peer-to-peer influence.
+*  Track Contagion Dynamics: Mapping out natural influence routes along network pathways during campaigns in real-time to assess which areas or users are most active (influential) may enable refinement of strategies as well as facilitation of efficient and widespread information diffusion.
+
 ## Technologies Used
 * Python Libraries: scikit-learn, NetworkX, Matplotlib and TextBlob
 * Streamlit: Interactive web interface for visualising contagion spread and model evaluation
@@ -18,7 +25,6 @@ The goal is to understand how users with varying health conditions, ideologies a
 * Social Network Analysis: Erdős–Rényi model for generating random social networks
 
 ## Industry Use Cases
-* Public Health Communication: This model can help design targeted public health campaigns by predicting which users (e.g., influencers or patients) are more likely to share health information.
 * Social Media Platforms: Social media platforms or podcast platforms may use this model to better understand content virality and sentiment-driven user behaviour, enhancing content recommendation systems.
 * Behavioural Insights: By studying the influence of ideology and chronic health conditions on information dissemination, this work can assist in targeted marketing, health campaigns or consumer behaviour analysis.
 * Real-Time Decision-Making: Organisations like Microsoft and Google can integrate this model into real-time analytics for digital health platforms, recommendation engines and user behaviour prediction.
