@@ -50,15 +50,15 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Assign resistance attribute ---
+# --- Assign resistance ---
 for node in G.nodes:
     G.nodes[node]['resistance'] = np.random.uniform(0, 1)
 
-# --- Seed initial nodes (e.g., 8%) ---
+# --- Seed initial nodes ---
 num_seeds = max(1, int(0.08 * NUM_USERS))
 initial_shared = random.sample(list(G.nodes), num_seeds)
 
-# --- Initialize shared status ---
+# --- Initialize shared ---
 for node in G.nodes:
     G.nodes[node]['shared'] = False
     G.nodes[node]['gifted'] = False
@@ -100,11 +100,9 @@ for node in G.nodes:
     user_features.append(features)
     user_labels.append(u['ideology'])
 
-X_train, X_test, y_train, y_test = train_test_split(
-    user_features, user_labels, test_size=0.2, random_state=42
-)
+X_train, X_test, y_train, y_test = train_test_split(user_features, user_labels, test_size=0.2, random_state=42)
 
-# --- Model training ---
+# --- Model ---
 param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
@@ -121,7 +119,7 @@ st.sidebar.header("Network Contagion & Settings")
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 
-# --- Share probability function ---
+# --- Share probability ---
 def get_share_probability(u, v):
     prob = SHARE_PROB
     if G.nodes[u]['gender'] == G.nodes[v]['gender']:
@@ -134,12 +132,8 @@ def get_share_probability(u, v):
         prob *= (1 - CROSS_IDEOLOGY_REDUCTION_FACTOR)
     return max(min(prob, 1), 0)
 
-# --- Run contagion with resistance ---
+# --- Run contagion ---
 contagion = [set(initial_shared)]
-current = set(initial_shared)
-
-RESISTANCE_THRESHOLD = 0.3
-
 while True:
     next_step = set()
     for u in G.nodes:
@@ -147,7 +141,7 @@ while True:
             for v in G.neighbors(u):
                 if G.nodes[v]['shared']:
                     share_prob = get_share_probability(v, u)
-                    if G.nodes[u]['resistance'] <= RESISTANCE_THRESHOLD:
+                    if G.nodes[u]['resistance'] <= 0.3:
                         if random.random() < share_prob:
                             G.nodes[u]['shared'] = True
                             G.nodes[u]['triggered_count'] += 1
@@ -156,10 +150,8 @@ while True:
     if not next_step:
         break
     contagion.append(next_step)
-    current = next_step
 
-# --- Influence analysis of chronic users ---
-#st.markdown("## Dashboard Summary")
+# --- Influence analysis ---
 total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
 total_nodes = len(G.nodes)
 total_edges = G.number_of_edges()
@@ -170,33 +162,15 @@ percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges >
 cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
 percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
 
-bet_cen = nx.betweenness_centrality(G)
-threshold_bet = np.percentile(list(bet_cen.values()), 80)
-key_bridges = sum(1 for v in bet_cen.values() if v >= threshold_bet)
+# Betweenness centrality for highlighting bridges
+bc = nx.betweenness_centrality(G)
+threshold_bet = np.percentile(list(bc.values()), 80)
 
-clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.random() < 0.3)
-
-contagion_steps = len(contagion)
-final_share_rate = (total_shared / total_nodes) * 100
-
-
-chronic_users = [n for n in G.nodes if G.nodes[n]['has_chronic_disease']]
-non_chronic_users = [n for n in G.nodes if not G.nodes[n]['has_chronic_disease']]
-
-degree_cen = nx.degree_centrality(G)
-betweenness_cen = nx.betweenness_centrality(G)
-
-avg_deg_chronic = np.mean([degree_cen[n] for n in chronic_users]) if chronic_users else 0
-avg_deg_non_chronic = np.mean([degree_cen[n] for n in non_chronic_users]) if non_chronic_users else 0
-
-avg_betw_chronic = np.mean([betweenness_cen[n] for n in chronic_users]) if chronic_users else 0
-avg_betw_non_chronic = np.mean([betweenness_cen[n] for n in non_chronic_users]) if non_chronic_users else 0
-
-# Check if top influencers are chronic
+# --- Determine top influencers ---
 top_percent = 10
 top_count = max(1, int(len(G) * top_percent / 100))
-top_nodes_sorted_deg = sorted(degree_cen, key=degree_cen.get, reverse=True)
-top_nodes_sorted_betw = sorted(betweenness_cen, key=betweenness_cen.get, reverse=True)
+top_nodes_sorted_deg = sorted(bc, key=bc.get, reverse=True)
+top_nodes_sorted_betw = sorted(bc, key=bc.get, reverse=True)
 
 top_influencers_deg = top_nodes_sorted_deg[:top_count]
 top_influencers_betw = top_nodes_sorted_betw[:top_count]
@@ -207,7 +181,7 @@ chronic_in_top_betw = sum(1 for n in top_influencers_betw if G.nodes[n]['has_chr
 percent_chronic_in_top_deg = (chronic_in_top_deg / top_count) * 100
 percent_chronic_in_top_betw = (chronic_in_top_betw / top_count) * 100
 
-# Track involvement in contagion
+# --- Share involvement ---
 chronic_sharers = [n for n in G.nodes if G.nodes[n]['shared'] and G.nodes[n]['has_chronic_disease']]
 total_shares = sum(G.nodes[n]['triggered_count'] for n in G.nodes)
 chronic_shares = sum(G.nodes[n]['triggered_count'] for n in chronic_users)
@@ -225,49 +199,15 @@ percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges >
 cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
 percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
 
-bet_cen = nx.betweenness_centrality(G)
-threshold_bet = np.percentile(list(bet_cen.values()), 80)
-key_bridges = sum(1 for v in bet_cen.values() if v >= threshold_bet)
+# Betweenness centrality for top 20%
+threshold_bet = np.percentile(list(bc.values()), 80)
 
-clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.random() < 0.3)
-
-contagion_steps = len(contagion)
-final_share_rate = (total_shared / total_nodes) * 100
-
-# --- Metrics display ---
-col1, col2, col3, col4 = st.columns(4)
-col5, col6, col7, col8 = st.columns(4)
-
-col1.metric("Total Users", total_nodes)
-col2.metric("Key Bridges", key_bridges)
-col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
-col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
-col5.metric("Engaged Clinicians", clinicians_engaged)
-col6.metric("Contagion Steps", contagion_steps)
-col7.metric("Sharing Activity", f"{percent_chronic_shares:.2f}%")
-col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
-with st.expander("📝 Dashboard Summary"):
-    st.write("""
-    This dashboard provides an overview of the network dynamics based on the contagion simulation.
-    - Total Users: Network size
-    - Key Bridges: Influential nodes bridging parts of the network
-    - Final Share Rate (%): Overall sharing percentage
-    - Cross-Gender Ties (%): Proportion connecting different genders
-    - Engaged Clinicians: Users interacting after sharing
-    - Contagion Steps: Rounds for spread
-    - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease    
-    - Cross-Ideology Ties (%): Ties between different ideological groups
-    """)
-
-# --- Network Visualization ---
-import matplotlib.pyplot as plt
-bc = nx.betweenness_centrality(G)
-threshold_bc = np.percentile(list(bc.values()), 80)
-
+# --- Node border colors based on betweenness ---
 node_border_colors = [
-    'green' if bc[n] >= threshold_bc else 'none' for n in G.nodes
+    'green' if bc[n] >= threshold_bet else 'black' for n in G.nodes
 ]
 
+# --- Node colors and sizes ---
 node_colors = []
 node_sizes = []
 for n in G.nodes:
@@ -278,6 +218,7 @@ for n in G.nodes:
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
 
+# --- Edges coloring ---
 edge_colors = []
 edge_widths = []
 for u, v in G.edges:
@@ -302,20 +243,24 @@ for u, v in G.edges:
             edge_colors.append('#414141')
             edge_widths.append(1)
 
+# --- Plot ---
 fig, ax = plt.subplots(figsize=(12, 11), dpi=150)
 pos = nx.spring_layout(G, seed=42, k=0.15)
 
 nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
 labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
 nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
+
+# Draw nodes with border color indicating betweenness centrality
 nx.draw_networkx_nodes(
     G,
     pos,
     node_size=node_sizes,
     node_color=node_colors,
     linewidths=0.5,
-    edgecolors='black'
+    edgecolors=node_border_colors  # <-- borders colored based on betweenness
 )
+
 if network_view == "Gender View":
     legend_handles = [
         mpatches.Patch(color='#003A6B', label='Male'),
@@ -330,20 +275,25 @@ else:
 ax.legend(handles=legend_handles, loc='best')
 ax.axis('off')
 st.pyplot(fig)
-with st.expander("ℹ️ Interpretation of the Network Diagram"):
-    st.markdown("""
-    ### **Network Diagram Interpretation**
 
-    - **Node Border Width:**  
-      Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
+# --- Interpretation ---
+st.markdown("""
+### **Network Diagram Interpretation**
 
-    - **Edge Colors (Connections):**  
-      - Red edges indicate cross-gender and ideology ties    
+- **Node Border Width:**  
+  Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
 
-    - **Clusters:**  
-      The network shows that gender homophily and ideological alignment influence connections and information diffusion.
+- **Node Border Color:**  
+  - **Green borders** highlight the top 20% of nodes with the highest betweenness centrality, marking them as key bridge nodes.  
+  - Other nodes have black borders.
 
-    - **Overall Insights:**  
-      - Users with higher centrality act as key influencers or bridges.  
-      - Chronic disease status and ideological differences impact sharing probabilities and contagion dynamics.
-    """)
+- **Edge Colors (Connections):**  
+  - Red edges indicate cross-gender and ideology ties.
+
+- **Clusters:**  
+  The network shows that gender homophily and ideological alignment influence connections and information diffusion.
+
+- **Overall Insights:**  
+  - Users with higher centrality act as key influencers or bridges.  
+  - Chronic disease status and ideological differences impact sharing probabilities and contagion dynamics.
+""")
