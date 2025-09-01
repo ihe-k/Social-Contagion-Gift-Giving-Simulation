@@ -250,7 +250,7 @@ threshold_bet_95 = np.percentile(list(bc.values()), 95)
 
 # Node border colors and widths
 node_border_colors = [
-    '#OF5132' if bc[n] >= threshold_bet_95 else 'black' for n in G.nodes
+    '#0F5132' if bc[n] >= threshold_bet_95 else 'black' for n in G.nodes
 ]
 node_border_widths = [
     3 if bc[n] >= threshold_bet_95 else 0.5 for n in G.nodes
