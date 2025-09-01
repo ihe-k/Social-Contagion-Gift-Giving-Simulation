@@ -120,27 +120,36 @@ report_df = pd.DataFrame(report_dict).transpose().round(2)
 # Calculate confusion matrix
 conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
 
-# Print out the confusion matrix for debugging
-print("Confusion Matrix:")
-print(conf_matrix)
+import numpy as np
+import matplotlib.pyplot as plt
 
-# Create a heatmap of the confusion matrix
-fig, ax = plt.subplots(figsize=(8, 6))  # Set the figure size for the plot
-sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", 
-            xticklabels=['pro-health', 'anti-health', 'neutral'], 
-            yticklabels=['pro-health', 'anti-health', 'neutral'], cbar=False, ax=ax)
+# Create the confusion matrix
+conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
 
-# Set labels and title
-plt.xlabel('Predicted')
-plt.ylabel('True')
-plt.title('Confusion Matrix')
+# Plot confusion matrix using matplotlib
+fig, ax = plt.subplots(figsize=(8, 6))
+cax = ax.matshow(conf_matrix, cmap="Blues")
 
-# Show the plot
+# Add colorbar
+fig.colorbar(cax)
+
+# Add labels and title
+ax.set_xlabel('Predicted')
+ax.set_ylabel('True')
+ax.set_title('Confusion Matrix')
+
+# Annotate matrix values
+for (i, j), val in np.ndenumerate(conf_matrix):
+    ax.text(j, i, f'{val}', ha='center', va='center', color='black')
+
+# Set the axis ticks and labels
+ax.set_xticks(np.arange(len(['pro-health', 'anti-health', 'neutral'])))
+ax.set_yticks(np.arange(len(['pro-health', 'anti-health', 'neutral'])))
+ax.set_xticklabels(['pro-health', 'anti-health', 'neutral'])
+ax.set_yticklabels(['pro-health', 'anti-health', 'neutral'])
+
+# Display the plot
 plt.show()
-
-# Show the plot
-plt.show()
-
 
 
 # --- Sidebar ---
