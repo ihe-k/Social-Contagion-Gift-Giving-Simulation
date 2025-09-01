@@ -324,6 +324,7 @@ else:
 ax.legend(handles=legend_handles, loc='best')
 ax.axis('off')
 st.pyplot(fig)
+
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     The network diagram visually represents the structure and dynamics of the social network involved in the contagion process, highlighting key influencers and connection patterns that drive the spread of health information.
