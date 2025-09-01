@@ -145,7 +145,6 @@ while True:
             for v in G.neighbors(u):
                 if G.nodes[v]['shared']:
                     share_prob = get_share_probability(v, u)
-                    # Only if resistance is low enough
                     if G.nodes[u]['resistance'] <= RESISTANCE_THRESHOLD:
                         if random.random() < share_prob:
                             G.nodes[u]['shared'] = True
@@ -157,13 +156,10 @@ while True:
     contagion.append(next_step)
     current = next_step
 
-# --- Metrics and Analysis ---
-
-# Calculate influence metrics of chronic users
+# --- Influence analysis of chronic users ---
 chronic_users = [n for n in G.nodes if G.nodes[n]['has_chronic_disease']]
 non_chronic_users = [n for n in G.nodes if not G.nodes[n]['has_chronic_disease']]
 
-# Centrality measures
 degree_cen = nx.degree_centrality(G)
 betweenness_cen = nx.betweenness_centrality(G)
 
@@ -173,11 +169,25 @@ avg_deg_non_chronic = np.mean([degree_cen[n] for n in non_chronic_users]) if non
 avg_betw_chronic = np.mean([betweenness_cen[n] for n in chronic_users]) if chronic_users else 0
 avg_betw_non_chronic = np.mean([betweenness_cen[n] for n in non_chronic_users]) if non_chronic_users else 0
 
+# Check if top influencers are chronic
+top_percent = 10
+top_count = max(1, int(len(G) * top_percent / 100))
+top_nodes_sorted_deg = sorted(degree_cen, key=degree_cen.get, reverse=True)
+top_nodes_sorted_betw = sorted(betweenness_cen, key=betweenness_cen.get, reverse=True)
+
+top_influencers_deg = top_nodes_sorted_deg[:top_count]
+top_influencers_betw = top_nodes_sorted_betw[:top_count]
+
+chronic_in_top_deg = sum(1 for n in top_influencers_deg if G.nodes[n]['has_chronic_disease'])
+chronic_in_top_betw = sum(1 for n in top_influencers_betw if G.nodes[n]['has_chronic_disease'])
+
+percent_chronic_in_top_deg = (chronic_in_top_deg / top_count) * 100
+percent_chronic_in_top_betw = (chronic_in_top_betw / top_count) * 100
+
 # Track involvement in contagion
 chronic_sharers = [n for n in G.nodes if G.nodes[n]['shared'] and G.nodes[n]['has_chronic_disease']]
 total_shares = sum(G.nodes[n]['triggered_count'] for n in G.nodes)
 chronic_shares = sum(G.nodes[n]['triggered_count'] for n in chronic_users)
-
 percent_chronic_shares = (chronic_shares / total_shares) * 100 if total_shares > 0 else 0
 
 # --- Dashboard ---
@@ -204,6 +214,7 @@ final_share_rate = (total_shared / total_nodes) * 100
 # --- Metrics display ---
 col1, col2, col3, col4, col5 = st.columns(5)
 col6, col7, col8, col9, col0 = st.columns(5)
+col1, col2, col3, col4, col5 = st.columns(5)
 
 col1.metric("Total Users", total_nodes)
 col2.metric("Key Bridges", key_bridges)
@@ -214,6 +225,9 @@ col6.metric("Contagion Steps", contagion_steps)
 col7.metric("Engaged Clinicians", clinicians_engaged)
 col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
 col9.metric("Chronic Share Involvement", f"{percent_chronic_shares:.2f}%")
+col0.metric("Chronic Share Involvement", f"{percent_chronic_shares:.2f}%")
+col1.metric("Top 10% by Degree - Chronic Count", f"{chronic_in_top_deg} ({percent_chronic_in_top_deg:.2f}%)")
+col2.metric("Top 10% by Betweenness - Chronic Count", f"{chronic_in_top_betw} ({percent_chronic_in_top_betw:.2f}%)")
 
 
 with st.expander("📝 Interpretation of the Network Diagram"):
