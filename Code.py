@@ -24,10 +24,11 @@ IDEOLOGY_HOMOPHILY_BONUS = 1.5
 st.title("Health Information Network Simulation")
 
 # --- Sidebar ---
-st.sidebar.header("Network Contagion & Settings")
+st.sidebar.header("Network Contagion")
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 
+st.sidebar.header("Model Evaluation")
 # --- Checkbox options for classification report and confusion matrix ---
 show_classification_report = st.sidebar.checkbox("Show Classification Report", value=True)
 show_conf_matrix = st.sidebar.checkbox("Show Confusion Matrix", value=True)
@@ -249,7 +250,7 @@ threshold_bet_95 = np.percentile(list(bc.values()), 95)
 
 # Node border colors and widths
 node_border_colors = [
-    'green' if bc[n] >= threshold_bet_95 else 'black' for n in G.nodes
+    '#OF5132' if bc[n] >= threshold_bet_95 else 'black' for n in G.nodes
 ]
 node_border_widths = [
     3 if bc[n] >= threshold_bet_95 else 0.5 for n in G.nodes
