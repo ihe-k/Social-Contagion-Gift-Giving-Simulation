@@ -17,9 +17,13 @@ GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 1.5
-CROSS_GENDER_REDUCTION_FACTOR = 0.7
+CROSS_GENDER_BONUS = 0.3
+CROSS_IDEOLOGY_BONUS = 0.3
+SHARE_PROB = 0.2
 CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9
+CROSS_GENDER_REDUCTION_FACTOR = 0.7
 IDEOLOGY_HOMOPHILY_BONUS = 1.5
+K_THRESHOLD = 3
 
 st.title("Health Information Network Simulation")
 
@@ -46,15 +50,15 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-# --- Assign resistance ---
+# --- Assign resistance attribute ---
 for node in G.nodes:
     G.nodes[node]['resistance'] = np.random.uniform(0, 1)
 
-# --- Seed initial nodes ---
+# --- Seed initial nodes (e.g., 8%) ---
 num_seeds = max(1, int(0.08 * NUM_USERS))
 initial_shared = random.sample(list(G.nodes), num_seeds)
 
-# --- Initialize shared ---
+# --- Initialize shared status ---
 for node in G.nodes:
     G.nodes[node]['shared'] = False
     G.nodes[node]['gifted'] = False
@@ -117,7 +121,7 @@ st.sidebar.header("Network Contagion & Settings")
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 
-# --- Share probability ---
+# --- Share probability function ---
 def get_share_probability(u, v):
     prob = SHARE_PROB
     if G.nodes[u]['gender'] == G.nodes[v]['gender']:
@@ -130,8 +134,12 @@ def get_share_probability(u, v):
         prob *= (1 - CROSS_IDEOLOGY_REDUCTION_FACTOR)
     return max(min(prob, 1), 0)
 
-# --- Run contagion ---
+# --- Run contagion with resistance ---
 contagion = [set(initial_shared)]
+current = set(initial_shared)
+
+RESISTANCE_THRESHOLD = 0.3
+
 while True:
     next_step = set()
     for u in G.nodes:
@@ -139,7 +147,7 @@ while True:
             for v in G.neighbors(u):
                 if G.nodes[v]['shared']:
                     share_prob = get_share_probability(v, u)
-                    if G.nodes[u]['resistance'] <= 0.3:
+                    if G.nodes[u]['resistance'] <= RESISTANCE_THRESHOLD:
                         if random.random() < share_prob:
                             G.nodes[u]['shared'] = True
                             G.nodes[u]['triggered_count'] += 1
@@ -148,61 +156,33 @@ while True:
     if not next_step:
         break
     contagion.append(next_step)
+    current = next_step
 
-# --- Influence analysis ---
-total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
-total_nodes = len(G.nodes)
-total_edges = G.number_of_edges()
+# --- Metrics display ---
+col1, col2, col3, col4 = st.columns(4)
+col5, col6, col7, col8 = st.columns(4)
 
-cross_gender_edges = sum(1 for u, v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender'])
-percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges > 0 else 0
+col1.metric("Total Users", NUM_USERS)
+col2.metric("Key Bridges", sum(1 for v in betweenness_centrality.values() if v >= np.percentile(list(betweenness_centrality.values()), 80)))
+col3.metric("Contagion Steps", len(contagion))
+col4.metric("Final Share Rate (%)", f"{(sum(1 for n in G.nodes if G.nodes[n]['shared']) / NUM_USERS) * 100:.1f}%")
+with st.expander("📝 Dashboard Summary"):
+    st.write("""
+    This dashboard provides an overview of the network dynamics based on the contagion simulation.
+    """)
 
-cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
-percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
-
-# --- Calculate betweenness centrality for highlighting ---
+# --- Network Visualization ---
 bc = nx.betweenness_centrality(G)
-threshold_bet = np.percentile(list(bc.values()), 80)
+threshold_bc = np.percentile(list(bc.values()), 80)
 
-# --- Determine top influencers ---
-top_percent = 10
-top_count = max(1, int(len(G) * top_percent / 100))
-top_influencers_deg = sorted(bc, key=bc.get, reverse=True)[:top_count]
-top_influencers_betw = sorted(bc, key=bc.get, reverse=True)[:top_count]
-
-chronic_in_top_deg = sum(1 for n in top_influencers_deg if G.nodes[n]['has_chronic_disease'])
-chronic_in_top_betw = sum(1 for n in top_influencers_betw if G.nodes[n]['has_chronic_disease'])
-
-percent_chronic_in_top_deg = (chronic_in_top_deg / top_count) * 100
-percent_chronic_in_top_betw = (chronic_in_top_betw / top_count) * 100
-
-# --- Share involvement ---
-chronic_users = [n for n in G.nodes if G.nodes[n]['has_chronic_disease']]
-non_chronic_users = [n for n in G.nodes if not G.nodes[n]['has_chronic_disease']]
-
-chronic_sharers = [n for n in G.nodes if G.nodes[n]['shared'] and G.nodes[n]['has_chronic_disease']]
-total_shares = sum(G.nodes[n].get('triggered_count', 0) for n in G.nodes)
-chronic_shares = sum(G.nodes[n].get('triggered_count', 0) for n in chronic_users)
-percent_chronic_shares = (chronic_shares / total_shares) * 100 if total_shares > 0 else 0
-
-# --- Dashboard ---
-st.markdown("## Dashboard Summary")
-total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
-total_nodes = len(G.nodes)
-total_edges = G.number_of_edges()
-
-cross_gender_edges = sum(1 for u, v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender'])
-percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges > 0 else 0
-
-cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
-percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
-
-# --- Node border colors based on betweenness ---
-node_border_colors = [
-    'green' if bc[n] >= threshold_bet else 'black' for n in G.nodes
+node_border_widths = [
+    5 + (bc[n] * 50) if bc[n] >= threshold_bc else 1 for n in G.nodes  # Scale betweenness centrality for border width
 ]
 
-# --- Node colors and sizes ---
+node_border_colors = [
+    'green' if bc[n] >= threshold_bc else 'none' for n in G.nodes
+]
+
 node_colors = []
 node_sizes = []
 for n in G.nodes:
@@ -213,7 +193,6 @@ for n in G.nodes:
     node_colors.append(color)
     node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
 
-# --- Edges coloring ---
 edge_colors = []
 edge_widths = []
 for u, v in G.edges:
@@ -238,22 +217,19 @@ for u, v in G.edges:
             edge_colors.append('#414141')
             edge_widths.append(1)
 
-# --- Plot ---
 fig, ax = plt.subplots(figsize=(12, 11), dpi=150)
 pos = nx.spring_layout(G, seed=42, k=0.15)
 
 nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
 labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
 nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
-
-# Nodes with border color based on betweenness (green for top 20%)
 nx.draw_networkx_nodes(
     G,
     pos,
     node_size=node_sizes,
     node_color=node_colors,
-    linewidths=0.5,
-    edgecolors=node_border_colors
+    linewidths=node_border_widths,  # Adjust node border width based on betweenness centrality
+    edgecolors=node_border_colors  # Set node border color to green if centrality is high
 )
 
 if network_view == "Gender View":
@@ -271,24 +247,7 @@ ax.legend(handles=legend_handles, loc='best')
 ax.axis('off')
 st.pyplot(fig)
 
-# --- Interpretation ---
-st.markdown("""
-### **Network Diagram Interpretation**
-
-- **Node Border Width:**  
-  Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
-
-- **Node Border Color:**  
-  - **Green borders** highlight the top 20% most central nodes, marking them as key bridges.  
-  - Other nodes have black borders.
-
-- **Edge Colors (Connections):**  
-  - Red edges indicate cross-gender and ideological ties.
-
-- **Clusters:**  
-  The network shows that gender homophily and ideological alignment influence connections and information diffusion.
-
-- **Overall Insights:**  
-  - Users with higher centrality act as key influencers or bridges.  
-  - Chronic disease status and ideological differences impact sharing probabilities and contagion dynamics.
-""")
+# --- Display Classification Report ---
+st.subheader("Model Performance")
+st.write(f"Accuracy: {accuracy:.2f}")
+st.write(report_df)
