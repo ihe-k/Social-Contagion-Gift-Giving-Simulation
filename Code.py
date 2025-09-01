@@ -240,9 +240,9 @@ col1.metric("Total Users", total_nodes)
 col2.metric("Key Bridges", key_bridges)
 col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
 col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
-col5.metric("Sharing Activity", f"{percent_chronic_shares:.2f}%")
+col5.metric("Engaged Clinicians", clinicians_engaged)
 col6.metric("Contagion Steps", contagion_steps)
-col7.metric("Engaged Clinicians", clinicians_engaged)
+col7.metric("Sharing Activity", f"{percent_chronic_shares:.2f}%")
 col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
 with st.expander("📝 Dashboard Summary"):
     st.write("""
@@ -251,10 +251,10 @@ with st.expander("📝 Dashboard Summary"):
     - Key Bridges: Influential nodes bridging parts of the network
     - Final Share Rate (%): Overall sharing percentage
     - Cross-Gender Ties (%): Proportion connecting different genders
-    - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease
+    - Engaged Clinicians: Users interacting after sharing
     - Contagion Steps: Rounds for spread
-    - Engaged Clinicians: Users interacting after sharing.    
-    - Cross-Ideology Ties (%): Ties between different ideological groups.
+    - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease    
+    - Cross-Ideology Ties (%): Ties between different ideological groups
     """)
 
 # --- Network Visualization ---
