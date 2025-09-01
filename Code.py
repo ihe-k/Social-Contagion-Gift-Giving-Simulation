@@ -48,6 +48,28 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
+import random
+import numpy as np
+
+# --- Determine number of seed nodes (limit initial shared nodes) ---
+num_seeds = max(1, int(0.01 * NUM_USERS))  # 1% of total users
+initial_shared = random.sample(list(G.nodes), num_seeds)
+
+# --- Assign resistance attribute to each node ---
+for node in G.nodes:
+    G.nodes[node]['resistance'] = np.random.uniform(0, 1)
+
+# --- Initialize shared status ---
+for node in G.nodes:
+    G.nodes[node]['shared'] = False
+    G.nodes[node]['gifted'] = False
+    G.nodes[node]['triggered_count'] = 0
+
+# --- Set seed nodes as initially shared ---
+for node in initial_shared:
+    G.nodes[node]['shared'] = True
+    G.nodes[node]['gifted'] = True
+
 # --- Features for ML ---
 def calc_sentiment_trends():
     trends = []
@@ -113,6 +135,30 @@ def get_share_probability(u, v):
     else:
         prob *= (1 - CROSS_IDEOLOGY_REDUCTION_FACTOR)
     return max(min(prob, 1), 0)
+
+contagion = [set(initial_shared)]
+current = set(initial_shared)
+
+RESISTANCE_THRESHOLD = 0.3  # adjust as needed
+
+while True:
+    next_step = set()
+    for u in G.nodes:
+        if not G.nodes[u]['shared']:
+            for v in G.neighbors(u):
+                if G.nodes[v]['shared']:
+                    share_prob = get_share_probability(v, u)
+                    # Only share if resistance is below threshold
+                    if G.nodes[u]['resistance'] <= RESISTANCE_THRESHOLD:
+                        if random.random() < share_prob:
+                            G.nodes[u]['shared'] = True
+                            G.nodes[u]['triggered_count'] += 1
+                            next_step.add(u)
+                            break
+    if not next_step:
+        break
+    contagion.append(next_step)
+    current = next_step
 
 # --- Contagion Simulation ---
 pos = nx.spring_layout(G, seed=42, k=0.15)
