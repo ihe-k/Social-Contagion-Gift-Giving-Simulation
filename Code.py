@@ -243,7 +243,7 @@ with st.expander("📝 Dashboard Summary"):
 bc = nx.betweenness_centrality(G)
 threshold_bet = np.percentile(list(bc.values()), 80)
 
-# --- Top 5% bridge nodes with thicker green border ---
+# --- Top 5% bridge nodes with thicker red border ---
 top_percent = 5
 top_count = max(1, int(len(G) * top_percent / 100))
 threshold_bet_95 = np.percentile(list(bc.values()), 95)
@@ -293,14 +293,14 @@ for u, v in G.edges:
             edge_widths.append(1)
 
 # --- Plot network ---
-fig, ax = plt.subplots(figsize=(12, 11), dpi=150)
+fig, ax = plt.subplots(figsize=(18, 11), dpi=150)
 pos = nx.spring_layout(G, seed=42, k=0.15)
 
 nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
 labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
 nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
 
-# Draw nodes with thicker green border for top 5% bridge nodes
+# Draw nodes with thicker red border for top 5% bridge nodes
 nx.draw_networkx_nodes(
     G,
     pos,
@@ -329,7 +329,7 @@ st.pyplot(fig)
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
     The network diagram visually represents the structure and dynamics of the social network involved in the contagion process, highlighting key influencers and connection patterns that drive the spread of health information.
-    - By emphasising nodes with high betweenness centrality (bridge nodes) with thicker, green borders, it identifies key influencers or connectors that facilitate information spread across different parts of the network.  
+    - By emphasising nodes with high betweenness centrality (bridge nodes) with thicker, red borders, it identifies key influencers or connectors that facilitate information spread across different parts of the network.  
     - It shows how users (nodes) are connected through social ties (edges), indicating who interacts with whom based on gender or ideological similarity/difference.  The colors of the edges reveal whether connections are within the same group (e.g., same gender or ideology) or across groups, illustrating the degree of homophily and cross-group interactions.
     - The structure shows potential routes through which health information or misinformation can propagate especially via bridge nodes that connect otherwise separate communities.
     - Overall Insights: Users with higher centrality act as key influencers or bridges.  Chronic disease status, gender and ideological differences impact sharing probabilities and contagion dynamics.
