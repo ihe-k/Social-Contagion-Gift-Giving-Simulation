@@ -117,12 +117,20 @@ accuracy = accuracy_score(y_test, y_pred)
 report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
 
+# Check the unique values in y_test and y_pred
+print("Unique values in y_test:", set(y_test))
+print("Unique values in y_pred:", set(y_pred))
+
+# Ensure the labels passed to confusion_matrix match the unique values
+labels = ['pro-health', 'anti-health', 'neutral']
+
 # Calculate confusion matrix
-conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
+conf_matrix = confusion_matrix(y_test, y_pred, labels=labels)
 
 # Create a heatmap of the confusion matrix
 fig, ax = plt.subplots(figsize=(8, 6))
-sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=['pro-health', 'anti-health', 'neutral'], yticklabels=['pro-health', 'anti-health', 'neutral'], cbar=False)
+sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", 
+            xticklabels=labels, yticklabels=labels, cbar=False)
 
 # Set labels and title
 plt.xlabel('Predicted')
@@ -131,6 +139,7 @@ plt.title('Confusion Matrix')
 
 # Show the plot
 plt.show()
+
 
 
 # --- Sidebar ---
