@@ -208,15 +208,107 @@ col5.metric("Engaged Clinicians", clinicians_engaged)
 col6.metric("Contagion Steps", contagion_steps)
 col7.metric("Sharing Activity", f"{percent_chronic_shares:.2f}%")
 col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
-
+with st.expander("📝 Dashboard Summary"):
+    st.write("""
+    This dashboard provides an overview of the network dynamics based on the contagion simulation.
+    - Total Users: Network size
+    - Key Bridges: Influential nodes bridging parts of the network
+    - Final Share Rate (%): Overall sharing percentage
+    - Cross-Gender Ties (%): Proportion connecting different genders
+    - Engaged Clinicians: Users interacting after sharing
+    - Contagion Steps: Rounds for spread
+    - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease    
+    - Cross-Ideology Ties (%): Ties between different ideological groups
+    """)
 # --- Classification Results ---
 st.subheader("Classification Report")
 st.write(report_df)
 
-# --- Original Network Visualization ---
-fig, ax = plt.subplots(figsize=(10, 6))
-node_color = ['blue' if G.nodes[n]['gender'] == 'Male' else 'pink' for n in G.nodes]
-positions = nx.spring_layout(G, seed=42)
-nx.draw(G, node_size=20, with_labels=False, node_color=node_color, ax=ax)
-ax.set_title("Network Visualization")
+# --- Network Visualization ---
+import matplotlib.pyplot as plt
+bc = nx.betweenness_centrality(G)
+threshold_bc = np.percentile(list(bc.values()), 80)
+
+node_border_colors = [
+    'green' if bc[n] >= threshold_bc else 'none' for n in G.nodes
+]
+
+node_colors = []
+node_sizes = []
+for n in G.nodes:
+    if network_view == "Gender View":
+        color = '#003A6B' if G.nodes[n]['gender'] == 'Male' else '#5293BB'
+    else:
+        color = {'pro-health':'#003A6B','anti-health':'#89CFF1','neutral':'#5293BB'}.get(G.nodes[n]['ideology'],'#000000')
+    node_colors.append(color)
+    node_sizes.append(300 + 100 * G.nodes[n]['triggered_count'])
+
+edge_colors = []
+edge_widths = []
+for u, v in G.edges:
+    if network_view == "Gender View":
+        if G.nodes[u]['gender'] != G.nodes[v]['gender']:
+            edge_colors.append('red')
+            edge_widths.append(2)
+        else:
+            edge_colors.append('#414141')
+            edge_widths.append(1)
+    else:
+        u_ideo = G.nodes[u]['ideology']
+        v_ideo = G.nodes[v]['ideology']
+        if u_ideo != v_ideo:
+            if 'neutral' in (u_ideo, v_ideo):
+                edge_colors.append('red')
+                edge_widths.append(2)
+            else:
+                edge_colors.append('#414141')
+                edge_widths.append(1)
+        else:
+            edge_colors.append('#414141')
+            edge_widths.append(1)
+
+fig, ax = plt.subplots(figsize=(12, 11), dpi=150)
+pos = nx.spring_layout(G, seed=42, k=0.15)
+
+nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
+labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
+nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
+nx.draw_networkx_nodes(
+    G,
+    pos,
+    node_size=node_sizes,
+    node_color=node_colors,
+    linewidths=0.5,
+    edgecolors='black'
+)
+if network_view == "Gender View":
+    legend_handles = [
+        mpatches.Patch(color='#003A6B', label='Male'),
+        mpatches.Patch(color='#5293BB', label='Female')
+    ]
+else:
+    legend_handles = [
+        mpatches.Patch(color='#003A6B', label='Pro-Health'),
+        mpatches.Patch(color='#89CFF1', label='Anti-Health'),
+        mpatches.Patch(color='#5293BB', label='Neutral')
+    ]
+ax.legend(handles=legend_handles, loc='best')
+ax.axis('off')
 st.pyplot(fig)
+with st.expander("ℹ️ Interpretation of the Network Diagram"):
+    st.markdown("""
+    ### **Network Diagram Interpretation**
+
+    - **Node Border Width:**  
+      Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
+
+    - **Edge Colors (Connections):**  
+      - Red edges indicate cross-gender and ideology ties    
+
+    - **Clusters:**  
+      The network shows that gender homophily and ideological alignment influence connections and information diffusion.
+
+    - **Overall Insights:**  
+      - Users with higher centrality act as key influencers or bridges.  
+      - Chronic disease status and ideological differences impact sharing probabilities and contagion dynamics.
+    """)
