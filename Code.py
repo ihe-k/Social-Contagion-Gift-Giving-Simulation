@@ -25,6 +25,8 @@ CROSS_GENDER_REDUCTION_FACTOR = 0.7
 IDEOLOGY_HOMOPHILY_BONUS = 1.5
 K_THRESHOLD = 3
 
+zoom_level = st.sidebar.slider("Zoom level", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
+
 # --- Network Setup ---
 G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)  # slightly lower prob for clarity
 nx.set_node_attributes(G, False, 'shared')
