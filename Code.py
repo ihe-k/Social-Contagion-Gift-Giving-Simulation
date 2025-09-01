@@ -202,8 +202,8 @@ contagion_steps = len(contagion)
 final_share_rate = (total_shared / total_nodes) * 100
 
 # --- Metrics display ---
-col1, col2, col3, col4 = st.columns(5)
-col5, col6, col7, col8 = st.columns(5)
+col1, col2, col3, col4, col5 = st.columns(5)
+col6, col7, col8, col9, col0 = st.columns(5)
 
 col1.metric("Total Users", total_nodes)
 col2.metric("Key Bridges", key_bridges)
