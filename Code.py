@@ -125,15 +125,18 @@ print("Confusion Matrix:")
 print(conf_matrix)
 
 # Create a heatmap of the confusion matrix
-fig, ax = plt.subplots(figsize=(8, 6))
+fig, ax = plt.subplots(figsize=(8, 6))  # Set the figure size for the plot
 sns.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", 
             xticklabels=['pro-health', 'anti-health', 'neutral'], 
-            yticklabels=['pro-health', 'anti-health', 'neutral'], cbar=False)
+            yticklabels=['pro-health', 'anti-health', 'neutral'], cbar=False, ax=ax)
 
 # Set labels and title
 plt.xlabel('Predicted')
 plt.ylabel('True')
 plt.title('Confusion Matrix')
+
+# Show the plot
+plt.show()
 
 # Show the plot
 plt.show()
