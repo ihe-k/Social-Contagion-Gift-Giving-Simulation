@@ -240,30 +240,21 @@ col1.metric("Total Users", total_nodes)
 col2.metric("Key Bridges", key_bridges)
 col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
 col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
-col5.metric("Chronic Share Involvement", f"{percent_chronic_shares:.2f}%")
+col5.metric("Sharing Activity", f"{percent_chronic_shares:.2f}%")
 col6.metric("Contagion Steps", contagion_steps)
 col7.metric("Engaged Clinicians", clinicians_engaged)
 col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
-with st.expander("📝 Interpretation of the Network Diagram"):
-    st.markdown("""
-    ### **Network Diagram Interpretation**
-
-    - **Node Size:**  
-      Reflects how many other users this node has influenced or triggered.  
-      Larger nodes indicate that more shares are being triggered.
-
-    - **Node Border Width:**  
-      Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
-
-    - **Edge Colors (Connections):**  
-      - Red edges indicate cross-gender and ideology ties    
-
-    - **Clusters:**  
-      The network shows that gender homophily and ideological alignment influence connections and information diffusion.
-
-    - **Overall Insights:**  
-      - Users with higher centrality act as key influencers or bridges.  
-      - Chronic disease status and ideological differences impact sharing probabilities and contagion dynamics.
+with st.expander("📝 Dashboard Summary"):
+    st.write("""
+    This dashboard provides an overview of the network dynamics based on the contagion simulation.
+    - Total Users: Network size
+    - Key Bridges: Influential nodes bridging parts of the network
+    - Final Share Rate (%): Overall sharing percentage
+    - Cross-Gender Ties (%): Proportion connecting different genders
+    - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease
+    - Contagion Steps: Rounds for spread
+    - Engaged Clinicians: Users interacting after sharing.    
+    - Cross-Ideology Ties (%): Ties between different ideological groups.
     """)
 
 # --- Network Visualization ---
