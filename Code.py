@@ -117,6 +117,10 @@ accuracy = accuracy_score(y_test, y_pred)
 report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
 
+# --- Classification Results ---
+st.subheader("Classification Report")
+st.write(report_df)
+
 # Calculate confusion matrix
 conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
 
