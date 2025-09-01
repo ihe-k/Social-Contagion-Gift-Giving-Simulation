@@ -157,6 +157,27 @@ while True:
     current = next_step
 
 # --- Influence analysis of chronic users ---
+st.markdown("## Dashboard Summary")
+total_shared = sum(1 for n in G.nodes if G.nodes[n]['shared'])
+total_nodes = len(G.nodes)
+total_edges = G.number_of_edges()
+
+cross_gender_edges = sum(1 for u, v in G.edges if G.nodes[u]['gender'] != G.nodes[v]['gender'])
+percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges > 0 else 0
+
+cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
+percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
+
+bet_cen = nx.betweenness_centrality(G)
+threshold_bet = np.percentile(list(bet_cen.values()), 80)
+key_bridges = sum(1 for v in bet_cen.values() if v >= threshold_bet)
+
+clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.random() < 0.3)
+
+contagion_steps = len(contagion)
+final_share_rate = (total_shared / total_nodes) * 100
+
+
 chronic_users = [n for n in G.nodes if G.nodes[n]['has_chronic_disease']]
 non_chronic_users = [n for n in G.nodes if not G.nodes[n]['has_chronic_disease']]
 
