@@ -9,6 +9,10 @@ import matplotlib.patches as mpatches
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report
+import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
+from matplotlib.legend_handler import HandlerBase
+import matplotlib.patches as mpatches
 
 # --- Parameters ---
 NUM_USERS = 300
@@ -35,6 +39,26 @@ nx.set_node_attributes(G, '', 'gender')
 nx.set_node_attributes(G, False, 'has_chronic_disease')
 nx.set_node_attributes(G, '', 'ideology')
 nx.set_node_attributes(G, '', 'sentiment')
+
+###
+
+class HandlerFixedSizeMarker(HandlerBase):
+    def __init__(self, size_in_pixels=10, color='black'):
+        self.size_in_pixels = size_in_pixels
+        self.color = color
+        super().__init__()
+
+    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+        # Draw a circle with fixed pixel size
+        radius = self.size_in_pixels / 2
+        circle = mpatches.Circle(
+            (width / 2, height / 2),
+            radius=radius,
+            facecolor=self.color,
+            transform=trans
+        )
+        return [circle]
+
 
 # Assign user attributes
 for node in G.nodes:
@@ -254,29 +278,43 @@ nx.draw_networkx_nodes(
 )
 
 # --- Legend setup ---
-import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
+# Define fixed marker size in pixels
+FIXED_MARKER_SIZE = 10
 
-# Define fixed marker size in points
-MARKER_SIZE = 10
-
+# Prepare legend labels and colors based on your view
 if network_view == "Gender View":
     legend_handles = [
-        mlines.Line2D([], [], color='#003A6B', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Male'),
-        mlines.Line2D([], [], color='#5293BB', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Female')
+        ('Male', '#003A6B'),
+        ('Female', '#5293BB')
     ]
 else:
     legend_handles = [
-        mlines.Line2D([], [], color='#003A6B', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Pro-Health'),
-        mlines.Line2D([], [], color='#89CFF1', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Anti-Health'),
-        mlines.Line2D([], [], color='#5293BB', marker='o', linestyle='None', markersize=MARKER_SIZE, label='Neutral')
+        ('Pro-Health', '#003A6B'),
+        ('Anti-Health', '#89CFF1'),
+        ('Neutral', '#5293BB')
     ]
 
-# Plot the legend
-ax.legend(handles=legend_handles, loc='best')
+# Create dummy plot handles for the legend
+fig, ax = plt.subplots()
+for label, color in legend_handles:
+    ax.plot([], [], marker='o', color=color, linestyle='None', label=label)
 
-# Finalize plot
-#ax.set_title("Large Network Visualization (300 nodes)")
-# ax.axis('off')
+# Map labels to custom handlers
+handler_map = {
+    label: HandlerFixedSizeMarker(size_in_pixels=FIXED_MARKER_SIZE, color=color)
+    for label, color in legend_handles
+}
 
+# Draw the legend with custom handlers
+ax.legend(
+    handles=[ax.lines[i] for i in range(len(legend_handles))],
+    labels=[label for label, _ in legend_handles],
+    handler_map=handler_map,
+    loc='best'
+)
+
+ax.set_visible(False)  # hide the dummy plot
+plt.close(fig)
+
+# Now, when you call st.pyplot(fig), the legend will have fixed-size markers
 st.pyplot(fig)
