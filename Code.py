@@ -293,7 +293,7 @@ for u, v in G.edges:
             edge_widths.append(1)
 
 # --- Plot network ---
-fig, ax = plt.subplots(figsize=(12, 12), dpi=150)
+fig, ax = plt.subplots(figsize=(14, 12), dpi=150)
 pos = nx.spring_layout(G, seed=42, k=0.15)
 
 nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
