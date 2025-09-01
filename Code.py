@@ -17,13 +17,9 @@ GIFT_BONUS = 10
 IDEOLOGY_CROSS_BONUS = 0.2
 CHRONIC_PROPENSITY = 0.6
 GENDER_HOMOPHILY_BONUS = 1.5
-CROSS_GENDER_BONUS = 0.3
-CROSS_IDEOLOGY_BONUS = 0.3
-SHARE_PROB = 0.2
-CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9
 CROSS_GENDER_REDUCTION_FACTOR = 0.7
+CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9
 IDEOLOGY_HOMOPHILY_BONUS = 1.5
-K_THRESHOLD = 3
 
 st.title("Health Information Network Simulation")
 
@@ -100,9 +96,11 @@ for node in G.nodes:
     user_features.append(features)
     user_labels.append(u['ideology'])
 
-X_train, X_test, y_train, y_test = train_test_split(user_features, user_labels, test_size=0.2, random_state=42)
+X_train, X_test, y_train, y_test = train_test_split(
+    user_features, user_labels, test_size=0.2, random_state=42
+)
 
-# --- Model ---
+# --- Model training ---
 param_grid = {'n_estimators': [100], 'max_depth': [10], 'min_samples_split': [2]}
 grid = GridSearchCV(RandomForestClassifier(random_state=42), param_grid, cv=2, n_jobs=-1)
 grid.fit(X_train, y_train)
@@ -162,18 +160,15 @@ percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges >
 cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
 percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
 
-# Betweenness centrality for highlighting bridges
+# --- Calculate betweenness centrality for highlighting ---
 bc = nx.betweenness_centrality(G)
 threshold_bet = np.percentile(list(bc.values()), 80)
 
 # --- Determine top influencers ---
 top_percent = 10
 top_count = max(1, int(len(G) * top_percent / 100))
-top_nodes_sorted_deg = sorted(bc, key=bc.get, reverse=True)
-top_nodes_sorted_betw = sorted(bc, key=bc.get, reverse=True)
-
-top_influencers_deg = top_nodes_sorted_deg[:top_count]
-top_influencers_betw = top_nodes_sorted_betw[:top_count]
+top_influencers_deg = sorted(bc, key=bc.get, reverse=True)[:top_count]
+top_influencers_betw = sorted(bc, key=bc.get, reverse=True)[:top_count]
 
 chronic_in_top_deg = sum(1 for n in top_influencers_deg if G.nodes[n]['has_chronic_disease'])
 chronic_in_top_betw = sum(1 for n in top_influencers_betw if G.nodes[n]['has_chronic_disease'])
@@ -182,8 +177,11 @@ percent_chronic_in_top_deg = (chronic_in_top_deg / top_count) * 100
 percent_chronic_in_top_betw = (chronic_in_top_betw / top_count) * 100
 
 # --- Share involvement ---
+chronic_users = [n for n in G.nodes if G.nodes[n]['has_chronic_disease']]
+non_chronic_users = [n for n in G.nodes if not G.nodes[n]['has_chronic_disease']]
+
 chronic_sharers = [n for n in G.nodes if G.nodes[n]['shared'] and G.nodes[n]['has_chronic_disease']]
-total_shares = sum(G.nodes[n]['triggered_count'] for n in G.nodes)
+total_shares = sum(G.nodes[n].get('triggered_count', 0) for n in G.nodes)
 chronic_shares = sum(G.nodes[n].get('triggered_count', 0) for n in chronic_users)
 percent_chronic_shares = (chronic_shares / total_shares) * 100 if total_shares > 0 else 0
 
@@ -198,9 +196,6 @@ percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges >
 
 cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
 percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
-
-# Betweenness centrality for top 20%
-threshold_bet = np.percentile(list(bc.values()), 80)
 
 # --- Node border colors based on betweenness ---
 node_border_colors = [
@@ -251,14 +246,14 @@ nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
 labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
 nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
 
-# Draw nodes with border color indicating betweenness centrality
+# Nodes with border color based on betweenness (green for top 20%)
 nx.draw_networkx_nodes(
     G,
     pos,
     node_size=node_sizes,
     node_color=node_colors,
     linewidths=0.5,
-    edgecolors=node_border_colors  # <-- borders colored based on betweenness
+    edgecolors=node_border_colors
 )
 
 if network_view == "Gender View":
@@ -284,11 +279,11 @@ st.markdown("""
   Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
 
 - **Node Border Color:**  
-  - **Green borders** highlight the top 20% of nodes with the highest betweenness centrality, marking them as key bridge nodes.  
+  - **Green borders** highlight the top 20% most central nodes, marking them as key bridges.  
   - Other nodes have black borders.
 
 - **Edge Colors (Connections):**  
-  - Red edges indicate cross-gender and ideology ties.
+  - Red edges indicate cross-gender and ideological ties.
 
 - **Clusters:**  
   The network shows that gender homophily and ideological alignment influence connections and information diffusion.
