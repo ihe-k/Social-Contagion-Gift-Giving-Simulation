@@ -20,14 +20,14 @@ GENDER_HOMOPHILY_BONUS = 1.5
 CROSS_GENDER_BONUS = 0.3
 CROSS_IDEOLOGY_BONUS = 0.3
 SHARE_PROB = 0.2
-CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9  # strongly reduce cross-ideology sharing
+CROSS_IDEOLOGY_REDUCTION_FACTOR = 0.9
 CROSS_GENDER_REDUCTION_FACTOR = 0.7
 IDEOLOGY_HOMOPHILY_BONUS = 1.5
 K_THRESHOLD = 3
 
-
 # --- Network Setup ---
-G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)  # slightly lower prob for clarity
+G = nx.erdos_renyi_graph(NUM_USERS, 0.05, seed=42)
+
 nx.set_node_attributes(G, False, 'shared')
 nx.set_node_attributes(G, 0, 'score')
 nx.set_node_attributes(G, False, 'gifted')
@@ -48,16 +48,14 @@ for node in G.nodes:
     G.nodes[node]['triggered_count'] = 0
     G.nodes[node]['gifted'] = False
 
-import random
+# --- Assign resistance attribute ---
 import numpy as np
-
-# --- Determine number of seed nodes (limit initial shared nodes) ---
-num_seeds = max(1, int(0.01 * NUM_USERS))  # 1% of total users
-initial_shared = random.sample(list(G.nodes), num_seeds)
-
-# --- Assign resistance attribute to each node ---
 for node in G.nodes:
     G.nodes[node]['resistance'] = np.random.uniform(0, 1)
+
+# --- Limit initial seed nodes ---
+num_seeds = max(1, int(0.01 * NUM_USERS))
+initial_shared = random.sample(list(G.nodes), num_seeds)
 
 # --- Initialize shared status ---
 for node in G.nodes:
@@ -136,10 +134,12 @@ def get_share_probability(u, v):
         prob *= (1 - CROSS_IDEOLOGY_REDUCTION_FACTOR)
     return max(min(prob, 1), 0)
 
+# --- Contagion simulation with resistance ---
+# Initialize contagion with seed nodes
 contagion = [set(initial_shared)]
 current = set(initial_shared)
 
-RESISTANCE_THRESHOLD = 0.3  # adjust as needed
+RESISTANCE_THRESHOLD = 0.3  # you can tune this
 
 while True:
     next_step = set()
@@ -160,37 +160,6 @@ while True:
     contagion.append(next_step)
     current = next_step
 
-# --- Contagion Simulation ---
-pos = nx.spring_layout(G, seed=42, k=0.15)
-seed_nodes = random.sample(list(G.nodes), INIT_SHARED)
-for node in G.nodes:
-    G.nodes[node]['shared'] = False
-    G.nodes[node]['gifted'] = False
-    G.nodes[node]['triggered_count'] = 0
-
-for node in seed_nodes:
-    G.nodes[node]['shared'] = True
-    G.nodes[node]['gifted'] = True
-
-contagion = [set(seed_nodes)]
-current = set(seed_nodes)
-
-while True:
-    next_step = set()
-    for u in G.nodes:
-        if not G.nodes[u]['shared']:
-            for v in G.neighbors(u):
-                if G.nodes[v]['shared']:
-                    share_prob = get_share_probability(v, u)
-                    if random.random() < share_prob:
-                        G.nodes[u]['shared'] = True
-                        G.nodes[u]['triggered_count'] += 1
-                        next_step.add(u)
-                        break
-    if not next_step:
-        break
-    contagion.append(next_step)
-    current = next_step
 
 # --- Dashboard Metrics ---
 st.markdown("## Dashboard Summary")
@@ -301,7 +270,6 @@ fig, ax = plt.subplots(figsize=(12, 11), dpi=150)
 pos = nx.spring_layout(G, seed=42, k=0.15)
 
 nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
-# Draw only labels for top nodes
 import matplotlib.patches as mpatches
 labels = {node: str(node) for node in sorted(bc, key=bc.get, reverse=True)[:int(0.1*NUM_USERS)]}
 nx.draw_networkx_labels(G, pos, labels=labels, font_size=8, font_color='white')
@@ -327,6 +295,5 @@ else:
         mpatches.Patch(color='#5293BB', label='Neutral')
     ]
 ax.legend(handles=legend_handles, loc='best')
-#ax.set_title("Large Network Visualization (300 nodes)")
 ax.axis('off')
 st.pyplot(fig)
