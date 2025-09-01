@@ -54,7 +54,7 @@ for node in G.nodes:
     G.nodes[node]['resistance'] = np.random.uniform(0, 1)
 
 # --- Limit initial seed nodes ---
-num_seeds = max(1, int(0.01 * NUM_USERS))
+num_seeds = max(1, int(0.08 * NUM_USERS))
 initial_shared = random.sample(list(G.nodes), num_seeds)
 
 # --- Initialize shared status ---
@@ -117,8 +117,8 @@ report_df = pd.DataFrame(report_dict).transpose().round(2)
 
 # --- Sidebar ---
 st.sidebar.header("Network Contagion & Settings")
-SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
+SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
 
 # --- Adjusted Share Probability Function ---
 def get_share_probability(u, v):
