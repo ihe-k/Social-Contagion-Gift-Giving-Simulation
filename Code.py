@@ -120,12 +120,6 @@ report_df = pd.DataFrame(report_dict).transpose().round(2)
 # Calculate confusion matrix
 conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-# Create the confusion matrix
-conf_matrix = confusion_matrix(y_test, y_pred, labels=['pro-health', 'anti-health', 'neutral'])
-
 # Plot confusion matrix using matplotlib
 fig, ax = plt.subplots(figsize=(8, 6))
 cax = ax.matshow(conf_matrix, cmap="Blues")
@@ -148,8 +142,9 @@ ax.set_yticks(np.arange(len(['pro-health', 'anti-health', 'neutral'])))
 ax.set_xticklabels(['pro-health', 'anti-health', 'neutral'])
 ax.set_yticklabels(['pro-health', 'anti-health', 'neutral'])
 
-# Display the plot
-plt.show()
+# Display the plot in Streamlit
+st.pyplot(fig)
+
 
 
 # --- Sidebar ---
