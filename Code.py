@@ -270,41 +270,24 @@ nx.draw_networkx_nodes(
     edgecolors='black'
 )
 
-# --- Legend with fixed marker size ---
-# Define fixed marker size in pixels
-FIXED_MARKER_SIZE = 15
-
+# --- Legend setup ---
+LEGEND_MARKER_SIZE = 300
 if network_view == "Gender View":
-    legend_data = [
-        ('Male', '#003A6B'),
-        ('Female', '#5293BB')
+    legend_handles = [
+        mpatches.Patch(color='#003A6B', label='Male'),
+        mpatches.Patch(color='#5293BB', label='Female')
     ]
 else:
-    legend_data = [
-        ('Pro-Health', '#003A6B'),
-        ('Anti-Health', '#89CFF1'),
-        ('Neutral', '#5293BB')
+    legend_handles = [
+        mpatches.Patch(color='#003A6B', label='Pro-Health'),
+        mpatches.Patch(color='#89CFF1', label='Anti-Health'),
+        mpatches.Patch(color='#5293BB', label='Neutral')
     ]
 
-# Create dummy plot handles
-for label, color in legend_data:
-    ax.plot([], [], marker='o', color=color, linestyle='None', markersize=FIXED_MARKER_SIZE)
+# Draw the legend with markerscale=1 to keep size consistent
+ax.legend(handles=legend_handles, loc='best', markerscale=1)
 
-# Map labels to custom handlers
-handler_map = {
-    label: HandlerFixedSizeMarker(size_in_pixels=FIXED_MARKER_SIZE, color=color)
-    for label, color in legend_data
-}
+ax.set_title("Large Network Visualization (300 nodes)")
+ax.axis('off')
 
-# Create legend
-ax.legend(
-    handles=[ax.lines[i] for i in range(len(legend_data))],
-    labels=[label for label, _ in legend_data],
-    handler_map=handler_map,
-    loc='best'
-)
-
-ax.set_axis_off()
-
-# Show in Streamlit
 st.pyplot(fig)
