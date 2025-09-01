@@ -1,38 +1,14 @@
 import random
 import networkx as nx
 import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
-from matplotlib.legend_handler import HandlerBase
-import matplotlib.patches as mpatches
+from textblob import TextBlob
 import streamlit as st
 import numpy as np
 import pandas as pd
+import matplotlib.patches as mpatches
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report
-
-# --- Custom Legend Handler for fixed marker size ---
-class HandlerFixedSizeMarker(HandlerBase):
-    def __init__(self, size_in_pixels=15, color='black'):
-        self.size_in_pixels = size_in_pixels
-        self.color = color
-        super().__init__()
-
-    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
-        radius = self.size_in_pixels / 2
-        circle = mpatches.Circle(
-            (width / 2, height / 2),
-            radius=radius,
-            facecolor=self.color,
-            transform=trans
-        )
-        return [circle]
-
-# --- Streamlit Sidebar Controls ---
-st.sidebar.header("Network Contagion & Settings")
-network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
-SHARE_PROB = st.sidebar.slider("Base Share Probability (Contagion Spread)", 0.0, 1.0, 0.3, 0.05)
-zoom_level = st.sidebar.slider("Zoom In > Zoom Out", min_value=0.5, max_value=2.0, value=1.0, step=0.1)
 
 # --- Parameters ---
 NUM_USERS = 300
