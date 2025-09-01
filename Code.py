@@ -186,6 +186,58 @@ percent_cross_gender = (cross_gender_edges / total_edges) * 100 if total_edges >
 cross_ideology_edges = sum(1 for u, v in G.edges if G.nodes[u]['ideology'] != G.nodes[v]['ideology'])
 percent_cross_ideology = (cross_ideology_edges / total_edges) * 100 if total_edges > 0 else 0
 
+bet_cen = nx.betweenness_centrality(G)
+threshold_bet = np.percentile(list(bet_cen.values()), 80)
+key_bridges = sum(1 for v in bet_cen.values() if v >= threshold_bet)
+
+clinicians_engaged = sum(1 for n in G.nodes if G.nodes[n]['shared'] and random.random() < 0.3)
+
+contagion_steps = len(contagion)
+final_share_rate = (total_shared / total_nodes) * 100
+
+
+chronic_users = [n for n in G.nodes if G.nodes[n]['has_chronic_disease']]
+non_chronic_users = [n for n in G.nodes if not G.nodes[n]['has_chronic_disease']]
+
+degree_cen = nx.degree_centrality(G)
+betweenness_cen = nx.betweenness_centrality(G)
+
+avg_deg_chronic = np.mean([degree_cen[n] for n in chronic_users]) if chronic_users else 0
+avg_deg_non_chronic = np.mean([degree_cen[n] for n in non_chronic_users]) if non_chronic_users else 0
+
+avg_betw_chronic = np.mean([betweenness_cen[n] for n in chronic_users]) if chronic_users else 0
+avg_betw_non_chronic = np.mean([betweenness_cen[n] for n in non_chronic_users]) if non_chronic_users else 0
+
+# --- Calculate Sharing Activity ---
+total_shares = sum(G.nodes[n]['triggered_count'] for n in G.nodes)
+chronic_shares = sum(G.nodes[n]['triggered_count'] for n in chronic_users)
+percent_chronic_shares = (chronic_shares / total_shares) * 100 if total_shares > 0 else 0
+
+# --- Dashboard Metrics ---
+col1, col2, col3, col4 = st.columns(4)
+col5, col6, col7, col8 = st.columns(4)
+
+col1.metric("Total Users", total_nodes)
+col2.metric("Key Bridges", key_bridges)
+col3.metric("Final Share Rate (%)", f"{final_share_rate:.1f}%")
+col4.metric("Cross-Gender Ties (%)", f"{percent_cross_gender:.1f}%")
+col5.metric("Engaged Clinicians", clinicians_engaged)
+col6.metric("Contagion Steps", contagion_steps)
+col7.metric("Sharing Activity", f"{percent_chronic_shares:.2f}%")
+col8.metric("Cross-Ideology Ties (%)", f"{percent_cross_ideology:.1f}%")
+with st.expander("📝 Dashboard Summary"):
+    st.write("""
+    This dashboard provides an overview of the network dynamics based on the contagion simulation.
+    - Total Users: Network size
+    - Key Bridges: Influential nodes bridging parts of the network
+    - Final Share Rate (%): Overall sharing percentage
+    - Cross-Gender Ties (%): Proportion connecting different genders
+    - Engaged Clinicians: Users interacting after sharing
+    - Contagion Steps: Rounds for spread
+    - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease    
+    - Cross-Ideology Ties (%): Ties between different ideological groups
+    """)
+
 # --- Compute betweenness centrality again for visualization ---
 bc = nx.betweenness_centrality(G)
 threshold_bet = np.percentile(list(bc.values()), 80)
