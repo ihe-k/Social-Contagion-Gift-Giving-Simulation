@@ -122,7 +122,7 @@ report_dict = classification_report(y_test, y_pred, output_dict=True)
 report_df = pd.DataFrame(report_dict).transpose().round(2)
 
 # --- Sidebar: network view ---
-network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
+#network_view = st.sidebar.radio("Choose Network View", ("Gender View", "Ideology View"))
 
 # --- Dashboard metrics ---
 st.sidebar.header("Network Contagion & Settings")
