@@ -326,18 +326,9 @@ ax.axis('off')
 st.pyplot(fig)
 with st.expander("ℹ️ Interpretation of the Network Diagram"):
     st.markdown("""
-    ### **Network Diagram Interpretation**
-
-    - **Node Border Width:**  
-      Indicates betweenness centrality — users with thicker borders serve as important bridges in the network, connecting different parts and enabling information spread.
-
-    - **Edge Colors (Connections):**  
-      - Red edges indicate cross-gender and ideology ties    
-
-    - **Clusters:**  
-      The network shows that gender homophily and ideological alignment influence connections and information diffusion.
-
-    - **Overall Insights:**  
-      - Users with higher centrality act as key influencers or bridges.  
-      - Chronic disease status and ideological differences impact sharing probabilities and contagion dynamics.
+    The network diagram visually represents the structure and dynamics of the social network involved in the contagion process, highlighting key influencers and connection patterns that drive the spread of health information.
+    - By emphasising nodes with high betweenness centrality (bridge nodes) with thicker, green borders, it identifies key influencers or connectors that facilitate information spread across different parts of the network.  
+    - It shows how users (nodes) are connected through social ties (edges), indicating who interacts with whom based on gender or ideological similarity/difference.  The colors of the edges reveal whether connections are within the same group (e.g., same gender or ideology) or across groups, illustrating the degree of homophily and cross-group interactions.
+    - The structure shows potential routes through which health information or misinformation can propagate especially via bridge nodes that connect otherwise separate communities.
+    - Overall Insights: Users with higher centrality act as key influencers or bridges.  Chronic disease status, gender and ideological differences impact sharing probabilities and contagion dynamics.
     """)
