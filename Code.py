@@ -5,6 +5,7 @@ from textblob import TextBlob
 import streamlit as st
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.patches as mpatches
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
@@ -251,7 +252,7 @@ for u, v in G.edges:
             edge_widths.append(1)
 
 # --- Plot ---
-fig, ax = plt.subplots(figsize=(30, 25))
+fig, ax = plt.subplots(figsize=(40, 35), dpi=150))
 pos = nx.spring_layout(G, seed=42, k=0.15)
 
 nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.5, edge_color='gray')
