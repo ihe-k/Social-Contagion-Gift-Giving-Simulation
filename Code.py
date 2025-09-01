@@ -255,9 +255,6 @@ with st.expander("📝 Dashboard Summary"):
     - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease    
     - Cross-Ideology Ties (%): Ties between different ideological groups
     """)
-# --- Classification Results ---
-st.subheader("Classification Report")
-st.write(report_df)
 
 # --- Network Visualization ---
 import matplotlib.pyplot as plt
