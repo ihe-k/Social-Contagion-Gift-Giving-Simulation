@@ -184,7 +184,7 @@ percent_chronic_in_top_betw = (chronic_in_top_betw / top_count) * 100
 # --- Share involvement ---
 chronic_sharers = [n for n in G.nodes if G.nodes[n]['shared'] and G.nodes[n]['has_chronic_disease']]
 total_shares = sum(G.nodes[n]['triggered_count'] for n in G.nodes)
-chronic_shares = sum(G.nodes[n]['triggered_count'] for n in chronic_users)
+chronic_shares = sum(G.nodes[n].get('triggered_count', 0) for n in chronic_users)
 percent_chronic_shares = (chronic_shares / total_shares) * 100 if total_shares > 0 else 0
 
 # --- Dashboard ---
