@@ -37,7 +37,7 @@ Insights from network diagrams and contagion simulations may optimise health inf
 ## Project Structure
 ```plaintext
 gift-contagion-simulation/
-├── contagion_sim.py  # Main simulation and Streamlit dashboard script
+├── Code.py  # Main simulation and Streamlit dashboard script
 ├── requirements.txt                         # List of required Python packages
 ├── README.md                                # Project overview and instructions
 ```
