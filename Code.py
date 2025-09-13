@@ -236,7 +236,7 @@ with st.expander("📝 Dashboard Summary"):
     - Engaged Clinicians: Users interacting after sharing
     - Contagion Steps: Rounds for spread
     - Sharing Activity (Chronic Users): Proportion of total sharing activity (triggered shares) that originate from users with chronic disease    
-    - Cross-Ideology Ties (%): Ties between different ideological groups
+    - Cross-Ideology Ties (%): Proportion of connections tying ‘neutral’ users with ‘pro-health’ or ‘anti-health’ groups
     """)
 
 # --- Compute betweenness centrality again for visualization ---
