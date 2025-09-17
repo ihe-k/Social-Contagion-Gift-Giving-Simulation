@@ -37,17 +37,17 @@ As chronic illness care shifts from institutions to home and community-based ser
 
 This inquiry builds on this project by embedding care access, mobility constraints and health behaviour dynamics within the real-world platforms, neighborhoods and transportation infrastructure systems that shape life for chronically ill individuals experiencing housing precarity.
 
-Research could focus on exploring the ways housing context, mobility, and digital platform ecosystems affect the accessibility, quality and continuity of HCBS for people with chronic illness residing in temporary accommodations (e.g., shelters, motels or short-term rentals).
+Research could focus on exploring the ways housing context, mobility constraints and digital platform ecosystems could impact the accessibility, quality and continuity of HCBS for people with chronic illness residing in temporary accommodations (e.g., shelters, motels or short-term rentals).
 
 ### Research Directions
 1. Geospatial Mapping of HCBS and Housing Instability:  
 * Use census and housing market data to identify areas with high concentrations of temporary or unstable housing including Airbnb listings.
-* Map the distribution of HCBS providers (e.g., home health agencies, visiting nurses, rehab services).
-* Identify care deserts where housing instability co-occurs with limited HCBS access and overlay short-term rental density to explore whether Airbnb clusters correlate with low health care access zones.
+* Map the distribution of HCBS providers (e.g., home health agencies, visiting nurses or rehabilitation services).
+* Identify care deserts where housing instability co-occurs with limited HCBS access and overlay short-term rental density to explore whether Airbnb clusters correlate with low healthcare access zones.
 
 2. Map informal care systems
 * Evaluate how mutual aid or peer support groups, street medicine teams, faith-based health outreach, social media networks complement or compensate for formal HCBS gaps in high-turnover housing areas.
-* Analyse spatial proximity and network connectivity to identify mismatches in care delivery like neighbourhoods with high needs but no nearby informal or formal care services or community care providers that are not well integrated into the local network so are under-used.
+* Analyse spatial proximity and network connectivity to identify mismatches in care delivery (e.g., neighbourhoods with high needs but no nearby informal or formal care services or community care providers that are not well integrated into the local network so are underutilised).
 
 3. Mobility Constraints and Access to Care
 Assess how barriers like affordability, overcrowding and road closures or unsafe infrastructure shape dependence on social media groups, neighbourhood-based care (e.g., mobile clinics) and impact physical mobility (walkability, public transit access) or social mobility (exposure to support networks)
