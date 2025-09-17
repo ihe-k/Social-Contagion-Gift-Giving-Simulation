@@ -29,12 +29,38 @@ Insights from network diagrams and contagion simulations may optimise health inf
 ## Industry Use Cases
 * Social Media Platforms: Social media platforms or podcast platforms may use this model to better understand content virality and sentiment-driven user behaviour, enhancing content recommendation systems.
 * Behavioural Insights: By studying the influence of ideology and chronic health conditions on information dissemination, this work can assist in targeted marketing, health campaigns or consumer behaviour analysis.
+* Public Health Systems: This model serves as an innovative tool for understanding information diffusion and social contagion in public health systems, particularly in the context of health misinformation or chronic disease management.
 * Real-Time Decision-Making: Organisations like Microsoft and Google can integrate this model into real-time analytics for digital health platforms, recommendation engines and user behaviour prediction.
 
-## Academic Relevance
-* Public Health Systems: This model serves as an innovative tool for understanding information diffusion and social contagion in public health systems, particularly in the context of health misinformation or chronic disease management.
-* Behavioural Science Research: This project integrates behavioural science and machine learning, contributing to research on how ideologies and health conditions influence human behaviour in social networks.
-* Data Science & AI: The project demonstrates the application of machine learning algorithms (e.g., logistic regression) in predicting social behaviour and potentially may contribute to data science as well as AI research on social media networks.
+## Future Work
+As chronic illness care shifts from institutions to home and community-based services (HCBS), a major research question emerges: How might decentralised platforms like Airbnb be leveraged or regulated to expand access to care for people living in temporary or unstable housing?
+
+This inquiry builds on this project by embedding care access, mobility constraints and health behaviour dynamics within the real-world platforms, neighborhoods and transportation infrastructure systems that shape life for chronically ill individuals experiencing housing precarity.
+
+Research could focus on exploring the ways housing context, mobility, and digital platform ecosystems affect the accessibility, quality and continuity of HCBS for people with chronic illness residing in temporary accommodations (e.g., shelters, motels or short-term rentals).
+
+### Research Directions
+1. Geospatial Mapping of HCBS and Housing Instability:  
+* Use census and housing market data to identify areas with high concentrations of temporary or unstable housing including Airbnb listings.
+* Map the distribution of HCBS providers (e.g., home health agencies, visiting nurses, rehab services).
+* Identify care deserts where housing instability co-occurs with limited HCBS access and overlay short-term rental density to explore whether Airbnb clusters correlate with low health care access zones.
+
+2. Map informal care systems
+* Evaluate how mutual aid or peer support groups, street medicine teams, faith-based health outreach, social media networks complement or compensate for formal HCBS gaps in high-turnover housing areas.
+* Analyse spatial proximity and network connectivity to identify mismatches in care delivery like neighbourhoods with high needs but no nearby informal or formal care services or community care providers that are not well integrated into the local network so are under-used.
+
+3. Mobility Constraints and Access to Care
+Assess how barriers like affordability, overcrowding and road closures or unsafe infrastructure shape dependence on social media groups, neighbourhood-based care (e.g., mobile clinics) and impact physical mobility (walkability, public transit access) or social mobility (exposure to support networks)
+
+### Platforms and the Future of Distributed Care
+Building on precedents like Papa, DispatchHealth and Uber Health, this work could explore speculative models where platform-mediated services help fill care gaps in neighbourhoods with high housing turnover. For example:
+* Gig-dispatched care coordinated through app-based platforms (e.g., visiting nurses, peer support workers, 'meals-on-wheels', medication delivery).
+* Airbnb hosts or listings as potential nodes in distributed care networks (particularly in care deserts or recovery-focused housing).
+
+### AI Integration
+* Geospatial ML models that identify emerging care deserts and predict HCBS demand in areas of high housing turnover.
+* Recommender systems to match individuals in short-term housing with nearby services, peer support or mobile clinics.
+* LLM-driven agents in simulation models to replicate how individuals seek information, interpret health messaging or decide between care options.
 
 ## Project Structure
 ```plaintext
