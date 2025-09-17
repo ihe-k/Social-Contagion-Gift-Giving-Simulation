@@ -49,13 +49,13 @@ Research could focus on exploring the ways housing context, mobility constraints
 * Evaluate how mutual aid or peer support groups, street medicine teams, faith-based health outreach, social media networks complement or compensate for formal HCBS gaps in high-turnover housing areas.
 * Analyse spatial proximity and network connectivity to identify mismatches in care delivery (e.g., neighbourhoods with high needs but no nearby informal or formal care services or community care providers that are not well integrated into the local network so are underutilised).
 
-3. Mobility Constraints and Access to Care
+3. Mobility Constraints and Access to Care  
 Assess how barriers like affordability, overcrowding and road closures or unsafe infrastructure shape dependence on social media groups, neighbourhood-based care (e.g., mobile clinics) and impact physical mobility (walkability, public transit access) or social mobility (exposure to support networks)
 
 ### Platforms and the Future of Distributed Care
 Building on precedents like Papa, DispatchHealth and Uber Health, this work could explore speculative models where platform-mediated services help fill care gaps in neighbourhoods with high housing turnover. For example:
 * Gig-dispatched care coordinated through app-based platforms (e.g., visiting nurses, peer support workers, 'meals-on-wheels', medication delivery).
-* Airbnb hosts or listings as potential nodes in distributed care networks (particularly in care deserts or recovery-focused housing).
+* Airbnb hosts or listings as potential centres in distributed care networks (particularly in care deserts or recovery-focused housing).
 
 ### AI Integration
 * Geospatial ML models that identify emerging care deserts and predict HCBS demand in areas of high housing turnover.
