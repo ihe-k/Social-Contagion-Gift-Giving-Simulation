@@ -45,7 +45,7 @@ pip install streamlit networkx matplotlib
 Clone the repository to your local machine:
 
 ```plaintext
-git clone https://github.com/your-username/health-info-contagion.git
+git clone https://github.com/your-username/Social-Contagion-Gift-Giving-Simulation.git
 ```
 ### Step 2: Install Required Libraries
 Install the necessary Python libraries by running the following command:
