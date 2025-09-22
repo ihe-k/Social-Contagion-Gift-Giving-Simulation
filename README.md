@@ -91,8 +91,6 @@ st.text(report)
 
 3. Sentiment and Ideology Updates: The analyze_sentiment function can be updated to not only classify sentiment but also map it to ideologies (pro-health, anti-health and neutral). The user profile creation logic in your user_datasection should reflect this approach.
 
-4. Model Interpretation: Optionally, include SHAP (SHapley Additive exPlanations) or LIME (Local Interpretable Model-agnostic Explanations) to provide explanations for model predictions which is helpful for both academic transparency and industry adoption.
-
 ## Model Improvements and Optimisation
 1. Feature Engineering
 To enhance the predictive power of the model several features were engineered to capture more complex patterns in the data. These features include:
