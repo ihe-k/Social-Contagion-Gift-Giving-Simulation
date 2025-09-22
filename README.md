@@ -106,9 +106,9 @@ After implementing these feature engineering techniques and optimising the hyper
 ## Future Work
 As chronic illness care shifts from institutions to home and community-based services (HCBS), a major research question emerges: How might decentralised platforms like Airbnb be leveraged or regulated to expand access to care for people living in temporary or unstable housing?
 
-This inquiry builds on this project by embedding care access, mobility constraints and health behaviour dynamics within the real-world platforms, neighborhoods and transportation infrastructure systems that shape life for chronically ill individuals experiencing housing precarity.
+This inquiry builds on this project by embedding care access, mobility constraints and health behaviour dynamics within the real-world platforms, neighborhoods and transportation infrastructure systems that shape life for chronically ill individuals experiencing housing precarity.  
 
-Research could focus on exploring the ways housing context, mobility constraints and digital platform ecosystems could impact the accessibility, quality and continuity of HCBS for people with chronic illness residing in temporary accommodations (e.g., shelters, motels or short-term rentals).
+Research could focus on exploring the ways housing context, mobility constraints and digital platform ecosystems could impact the accessibility, quality and continuity of HCBS for people with chronic illness residing in temporary accommodations (e.g., shelters, short-term rentals or traditional housing that incorporates nursing or palliative care).
 
 ### Research Directions
 1. Geospatial Mapping of HCBS and Housing Instability:  
@@ -121,7 +121,7 @@ Research could focus on exploring the ways housing context, mobility constraints
 * Mapping these informal systems and Airbnb’s influence on local networks can show mismatches in how care is delivered and whether Airbnb clusters facilitate access to these support systems.
 
 3. Mobility Constraints and Access to Care  
-* Affordability vs Mobility: In areas with Airbnb prevalence, affordability often becomes a key consideration for guests. Airbnb guests, especially those in low-cost areas, may face mobility challenges due to poor infrastructure, limiting access to public transportation or essential services. The affordability of Airbnb rentals in areas with inadequate healthcare infrastructure could exacerbate mobility constraints for temporary residents. These guests might be more reliant on local social media groups or neighbourhood-based care, such as mobile clinics, as a means of coping with limited access to healthcare.
+* Affordability vs Mobility: In areas with Airbnb prevalence, affordability often becomes a key consideration for guests. Airbnb guests, especially those in low-cost areas, may face mobility challenges due to poor infrastructure, limiting access to public transportation or essential services. The affordability of Airbnb rentals in areas with inadequate healthcare infrastructure could exacerbate mobility constraints for temporary residents. These guests might be more reliant on local social media groups or neighbourhood-based care, such as mobile clinics or on-demans nursing services, as a means of coping with limited access to healthcare.
 * Overcrowding: In cities where Airbnb listings are dense, overcrowding might affect public infrastructure and impair residents from navigating spaces. Poor or unsafe infrastructure, combined with overcrowded streets due to tourists, could create physical mobility barriers. This impacts access to healthcare and could influence whether guests book accommodations in areas with better accessibility or in places where healthcare is harder to reach (thus promoting a reliance on informal care).
 
 4. Sociocultural and Health System Variables
@@ -135,12 +135,10 @@ Future iterations can also incorporate sociocultural variables that further infl
 Incorporating these variables will require ethically sourced datasets, potentially leveraging unsupervised learning or transfer learning on large multilingual datasets as well as adapting the sentiment/ideology classifier to better handle cultural nuance and context-specific meaning.
 
 ### Platforms and the Future of Distributed Care
-Building on precedents like Papa, DispatchHealth and Uber Health, this work could explore speculative models where platform-mediated services help fill care gaps in neighbourhoods with high housing turnover, particularly in the context of vulnerable as well as transient populations.  These speculative models can integrate not only geospatial mobility but also sociocultural factors that influence healthcare access and information diffusion. For example:
+Building on precedents like Papa, DispatchHealth and Uber Health, this work could explore speculative models where platform-mediated services help fill care gaps in neighbourhoods with high housing turnover, particularly in the context of vulnerable as well as transient populations with chronic illness who may be underserved by traditional healthcare models.  These speculative models can integrate not only geospatial mobility but also sociocultural factors that influence healthcare access and information diffusion. For example:
 * Gig-dispatched care coordinated through app-based platforms (e.g., visiting nurses, paramedics, mental health support workers, dental services, medication delivery) may significantly enhance the community care model.  This includes on-demand emergency care, such as the management of chronic conditions, minor emergencies, on-the-spot diagnostics, health screenings, vaccinations or health check-ups.
-* Airbnb hosts or listings as potential centres in distributed care networks (particularly in care deserts or recovery-focused housing).
+* Airbnb hosts or listings as potential centres in distributed care networks (particularly in care deserts or recovery-focused housing).  This includes temporary home care environments, where Airbnb listings serve as specialised accommodations for guests who require in-home nursing or personal care away from home or travel to healthcare providers for treatment, such as palliative care or surgeries. 
 * Cultural and Ethnic Considerations: Distributed care services could also consider ethnic or cultural norms that affect care delivery. For instance, religious or cultural proscriptions might influence what type of health information or services are shared in these communities.
-
-This research could explore how platforms like Airbnb may be leveraged for temporary housing as well as distributed healthcare delivery to address the needs of those with chronic illness who may be underserved by traditional healthcare models.
 
 ### AI Integration
 * Geospatial ML models that identify emerging care deserts and predict HCBS demand in areas of high housing turnover.
