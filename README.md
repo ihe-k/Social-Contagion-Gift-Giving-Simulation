@@ -138,7 +138,7 @@ Incorporating these variables will require ethically sourced datasets, potential
 
 ### Platforms and the Future of Distributed Care
 Building on precedents like Papa, DispatchHealth and Uber Health, this work could explore speculative models where platform-mediated services help fill care gaps in neighbourhoods with high housing turnover, particularly in the context of vulnerable as well as transient populations.  These speculative models can integrate not only geospatial mobility but also sociocultural factors that influence healthcare access and information diffusion. For example:
-* Gig-dispatched care coordinated through app-based platforms (e.g., visiting nurses, peer support workers, vaccinations, dental services, wound care, medication delivery or on-demand emergency care).
+* Gig-dispatched care coordinated through app-based platforms (e.g., visiting nurses, paramedics, mental health support workers, dental services, medication delivery or on-demand emergency care, such as managing chronic conditions, minor emergencies, on-the-spot diagnostics mental health and substance misuse support as well as health screenings and vaccinations or health check-ups).
 * Airbnb hosts or listings as potential centres in distributed care networks (particularly in care deserts or recovery-focused housing).
 * Cultural and Ethnic Considerations: Distributed care services could also consider ethnic or cultural norms that affect care delivery. For instance, religious or cultural proscriptions might influence what type of health information or services are shared in these communities.
 
