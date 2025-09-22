@@ -26,44 +26,6 @@ Insights from network diagrams and contagion simulations may optimise health inf
 * Machine Learning Models: Random Forest Classifier for user behaviour prediction based on sentiment, ideology and health conditions
 * Social Network Analysis: Erdős–Rényi model for generating random social networks
 
-## Future Work
-As chronic illness care shifts from institutions to home and community-based services (HCBS), a major research question emerges: How might decentralised platforms like Airbnb be leveraged or regulated to expand access to care for people living in temporary or unstable housing?
-
-This inquiry builds on this project by embedding care access, mobility constraints and health behaviour dynamics within the real-world platforms, neighborhoods and transportation infrastructure systems that shape life for chronically ill individuals experiencing housing precarity.
-
-Research could focus on exploring the ways housing context, mobility constraints and digital platform ecosystems could impact the accessibility, quality and continuity of HCBS for people with chronic illness residing in temporary accommodations (e.g., shelters, motels or short-term rentals).
-
-### Research Directions
-1. Geospatial Mapping of HCBS and Housing Instability:  
-* Areas with high turnover or unstable housing that are identified using census and housing market data, such as neighbourhoods with high Airbnb activity, could be mapped alongside housing instability. These transient populations may be more likely to rely on short-term rentals like Airbnb, often due to the instability of longer-term housing options.
-* Mapping Airbnb locations alongside HCBS providers could highlight neighbourhoods where Airbnb is more prevalent but healthcare services are sparse. In such regions, guests who rely on short-term stays may find it harder to access formal care, especially if they are located far from established services. This creates an opportunity to identify whether short-term rental density correlates with care deserts and where temporary residents may face challenges in accessing care.
-
-2. Proximity Mapping and Network Connectivity
-* In areas with high turnover where Airbnb stays are concentrated but the formal healthcare network is weak, informal care networks (e.g., faith-based health outreach, mutual aid groups, social media networks or street medicine teams) may grow in importance.
-* Analysing the proximity between Airbnb listings and care providers can reveal gaps in care delivery as guests in Airbnb rentals may be more likely to rely on local informal care systems or community-driven services, especially in areas with limited HCBS access.
-* Mapping these informal systems and Airbnb’s influence on local networks can show mismatches in how care is delivered, and whether Airbnb clusters facilitate access to these support systems.
-
-3. Mobility Constraints and Access to Care  
-* Affordability vs Mobility: In areas with Airbnb prevalence, affordability often becomes a key consideration for guests. Airbnb guests, especially those in low-cost areas, may face mobility challenges due to poor infrastructure, limiting access to public transportation or essential services. The affordability of Airbnb rentals in areas with inadequate healthcare infrastructure could exacerbate mobility constraints for temporary residents. These guests might be more reliant on local social media groups or neighbourhood-based care, such as mobile clinics, as a means of coping with limited access to healthcare.
-* Overcrowding: In cities where Airbnb listings are dense, overcrowding might affect public infrastructure and impair residents from navigating spaces. Poor or unsafe infrastructure, combined with overcrowded streets due to tourists, could create physical mobility barriers. This impacts access to healthcare and could influence whether guests book accommodations in areas with better accessibility or in places where healthcare is harder to reach (thus promoting a reliance on informal care).
-
-### Platforms and the Future of Distributed Care
-Building on precedents like Papa, DispatchHealth and Uber Health, this work could explore speculative models where platform-mediated services help fill care gaps in neighbourhoods with high housing turnover. For example:
-* Gig-dispatched care coordinated through app-based platforms (e.g., visiting nurses, peer support workers, 'meals-on-wheels', medication delivery).
-* Airbnb hosts or listings as potential centres in distributed care networks (particularly in care deserts or recovery-focused housing).
-
-### AI Integration
-* Geospatial ML models that identify emerging care deserts and predict HCBS demand in areas of high housing turnover.
-* Recommender systems to match individuals in short-term housing with nearby services, peer support or mobile clinics.
-* LLM-driven agents in simulation models to replicate how individuals seek information, interpret health messaging or decide between care options.
-
-## Industry and Public Health Application
-* Social Media and Platform Analytics: Social media platforms or content platforms (e.g., X, YouTube, podcast networks) may use this model to better understand how health-related content spreads through digital communities. Insights on sentiment-driven behaviour and ideological alignment enable more nuanced content recommendation systems and misinformation detection strategies.
-* Behavioural and Market Insights: By modelling how users with different health conditions, ideologies and demographic attributes interact, this simulation may inform targeted marketing, health campaign design and consumer segmentation in industries such as digital wellness, telehealth and preventive care. This app highlights how homophily and cross-ideological exposure impact virality as well as trust which are relevant behavioural insights  to both commercial and public messaging.
-* Public Health Systems: This tool offers an innovative framework to simulate the spread of accurate or misleading health information across different social configurations in public health systems, particularly in the context of chronic disease management, vaccination uptake, or mental health outreach where communities have limited trust in traditional healthcare channels.
-* Real-Time Decision-Making: Organisations like Microsoft or Google can integrate this model into digital health analytics, recommendation engines or real-time monitoring systems to anticipate user responses to health content, adapt interfaces dynamically and personalise intervention strategies. The ability of the app to reflect demographic and ideological nuances allows for more responsive, context-aware systems
-* Short-Term Rental Platforms & Distributed Care Innovation: Platforms like Airbnb may indirectly benefit from this model by understanding how housing instability, geospatial mobility and informal support care networks impact access to care. In regions with dense Airbnb activity, insights from this model may help reveal care deserts, inform community-based health initiatives and guide design of distributed service models (e.g., mobile clinics, gig-based care delivery). This supports speculative use cases in which short-term rentals become apart of a broader ecosystem for temporary housing and care coordination, especially for populations experiencing precarity or displacement.
-
 ## Project Structure
 ```plaintext
 gift-contagion-simulation/
@@ -144,18 +106,62 @@ Example: "Nodes with high betweenness centrality were likely to be more influent
 After implementing these feature engineering techniques and optimising the hyperparameters, the final model was evaluated based on various metrics like accuracym and F1-score. The model performance improved, particularly especially in handling time-dependent features and network-based data.
 
 ## Future Work
-While the current model effectively captures ideological and health-related drivers of behaviour, future iterations can incorporate sociocultural variables that further influence online health information sharing. These include:
+As chronic illness care shifts from institutions to home and community-based services (HCBS), a major research question emerges: How might decentralised platforms like Airbnb be leveraged or regulated to expand access to care for people living in temporary or unstable housing?
+
+This inquiry builds on this project by embedding care access, mobility constraints and health behaviour dynamics within the real-world platforms, neighborhoods and transportation infrastructure systems that shape life for chronically ill individuals experiencing housing precarity.
+
+Research could focus on exploring the ways housing context, mobility constraints and digital platform ecosystems could impact the accessibility, quality and continuity of HCBS for people with chronic illness residing in temporary accommodations (e.g., shelters, motels or short-term rentals).
+
+### Research Directions
+1. Geospatial Mapping of HCBS and Housing Instability:  
+* Areas with high turnover or unstable housing that are identified using census and housing market data, such as neighbourhoods with high Airbnb activity, could be mapped alongside housing instability. These transient populations may be more likely to rely on short-term rentals like Airbnb, often due to the instability of longer-term housing options.
+* Mapping Airbnb locations alongside HCBS providers could highlight neighbourhoods where Airbnb is more prevalent but healthcare services are sparse. In such regions, guests who rely on short-term stays may find it harder to access formal care, especially if they are located far from established services. This creates an opportunity to identify whether short-term rental density correlates with care deserts and where temporary residents may face challenges in accessing care.
+
+2. Proximity Mapping and Network Connectivity
+* In areas with high turnover where Airbnb stays are concentrated but the formal healthcare network is weak, informal care networks (e.g., faith-based health outreach, mutual aid groups, social media networks or street medicine teams) may grow in importance.
+* Analysing the proximity between Airbnb listings and care providers can reveal gaps in care delivery as guests in Airbnb rentals may be more likely to rely on local informal care systems or community-driven services, especially in areas with limited HCBS access.
+* Mapping these informal systems and Airbnb’s influence on local networks can show mismatches in how care is delivered and whether Airbnb clusters facilitate access to these support systems.
+
+3. Mobility Constraints and Access to Care  
+* Affordability vs Mobility: In areas with Airbnb prevalence, affordability often becomes a key consideration for guests. Airbnb guests, especially those in low-cost areas, may face mobility challenges due to poor infrastructure, limiting access to public transportation or essential services. The affordability of Airbnb rentals in areas with inadequate healthcare infrastructure could exacerbate mobility constraints for temporary residents. These guests might be more reliant on local social media groups or neighbourhood-based care, such as mobile clinics, as a means of coping with limited access to healthcare.
+* Overcrowding: In cities where Airbnb listings are dense, overcrowding might affect public infrastructure and impair residents from navigating spaces. Poor or unsafe infrastructure, combined with overcrowded streets due to tourists, could create physical mobility barriers. This impacts access to healthcare and could influence whether guests book accommodations in areas with better accessibility or in places where healthcare is harder to reach (thus promoting a reliance on informal care).
+
+4. Sociocultural and Health System Variables
+Future iterations can also incorporate sociocultural variables that further influence online health information sharing and access to care.  This will help to broaden the scope of the research, particularly in understanding how didgital ecosystems, platforms like Airbnb as well as social networks intersect with health systems. These might include:
 * Ethnicity and Nationality: Cultural context deeply affects health beliefs and behaviours. Including demographic data (where ethically sourced and privacy-compliant) could reveal region-specific or ethnically patterned contagion dynamics.
 * Religious and Cultural Proscriptions: Religious norms and cultural taboos often guide what kind of health information individuals consider acceptable to share especially regarding topics like mental health, sexual health or vaccination.
 * Language and Regional Vernacular: Language usage patterns may reflect underlying cultural values and affect how sentiment as well as ideology is expressed and interpreted.
 * Cross-Cultural Contagion: Modelling how information crosses cultural boundaries (e.g., Western vs. Eastern health ideologies) could help predict global misinformation or health behaviour patterns.
 * Community-Specific Homophily: Other in-group dynamics, in addition to gender, such as ethnicity-based homophily may also affect contagion probability.
-Incorporating these variables will require ethically sourced datasets, potentially leveraging unsupervised learning or transfer learning on large multilingual datasets and adapting the sentiment/ideology classifier to better handle cultural nuance and context-specific meaning.
+
+Incorporating these variables will require ethically sourced datasets, potentially leveraging unsupervised learning or transfer learning on large multilingual datasets as well as adapting the sentiment/ideology classifier to better handle cultural nuance and context-specific meaning.
+
+### Platforms and the Future of Distributed Care
+Building on precedents like Papa, DispatchHealth and Uber Health, this work could explore speculative models where platform-mediated services help fill care gaps in neighbourhoods with high housing turnover, particularly in the context of vulnerable as well as transient populations.  These speculative models can integrate not only geospatial mobility but also sociocultural factors that influence healthcare access and information diffusion. For example:
+* Gig-dispatched care coordinated through app-based platforms (e.g., visiting nurses, peer support workers, vaccinations, dental services, wound care, medication delivery or on-demand emergency care).
+* Airbnb hosts or listings as potential centres in distributed care networks (particularly in care deserts or recovery-focused housing).
+* Cultural and Ethnic Considerations: Distributed care services could also consider ethnic or cultural norms that affect care delivery. For instance, religious or cultural proscriptions might influence what type of health information or services are shared in these communities.
+
+This research could explore how platforms like Airbnb may be leveraged for temporary housing as well as distributed healthcare delivery to address the needs of those with chronic illness who may be underserved by traditional healthcare models.
+
+### AI Integration
+* Geospatial ML models that identify emerging care deserts and predict HCBS demand in areas of high housing turnover.
+* Recommender systems to match individuals in short-term housing with nearby services, peer support or mobile clinics while considering sociocultural and health belief variables.  For example, some populations may prefer healthcare services that align with their cultural variables (e.g., alternative care options).
+* LLM-driven agents in simulation models could simulate how individuals facing houring instability make health decisions.  This would include replicating how sociocultural factors, such as religious beliefs or ethnic identities) shape their search for information, interpret health messaging or decide between care options.  
 
 ## Example Usage
 * Social Network Simulation: After setting up the environment, the network is simulated with users sharing information based on their health conditions, ideologies and social ties. This will lead to a dynamic contagion process where information spreads through the network.
 * Real-Time Visualisation: The Streamlit dashboard provides a visual representation of the network, highlighting which users are sharing information and how it spreads across different ideological groups and health conditions.
 * Health Information Diffusion: Using real-time data from RSS feeds, the model predicts how information will spread among users with varying health conditions and ideologies.
+
+These AI-driven models may also be able to predict how informal care networks evolve in areas with high housing turnover and whether short-term rental platforms like Airbnb may be utilised to strengthen these systems.
+
+## Industry and Public Health Applications
+* Social Media and Platform Analytics: Social media platforms or content platforms (e.g., X, YouTube, podcast networks) may use this model to better understand how health-related content spreads through digital communities, including how sociocultural dynamics like ethnicity and religion affect content sharing. Insights on sentiment-driven behaviour and ideological alignment enable more nuanced content recommendation systems and misinformation detection strategies, particularly in communities with high levels of housing instability.
+* Behavioural and Market Insights: By modelling how users with different health conditions, ideologies and sociocultural attributes interact, this simulation may inform targeted marketing, health campaign design and consumer segmentation in industries such as digital wellness, telehealth and preventive care. This app highlights how homophily and cross-ideological exposure impact virality as well as trust in health information which are relevant behavioural insights to both commercial and public messaging.
+* Public Health Systems: This tool offers an innovative framework to simulate the spread of accurate or misleading health information across different social configurations in public health systems, particularly in the context of chronic disease management, vaccination uptake, or mental health outreach where communities have limited trust in traditional healthcare channels. Inorporating how sociocultural factors and housing instability exposes vulnerable populations (e.g., those living in unstable housing or cultural enclaves) specific health information can help inform public health policy and health communication strategies for diverse groups.
+* Real-Time Decision-Making: Organisations like Microsoft or Google can integrate this model into digital health analytics, recommendation engines or real-time monitoring systems to anticipate user responses to health content, adapt interfaces dynamically and personalise intervention strategies. The ability of the app to reflect demographic and ideological nuances allows for more responsive, culturally-sensitive systems
+* Short-Term Rental Platforms & Distributed Care Innovation: Platforms like Airbnb may indirectly benefit from this model by understanding how housing instability, geospatial mobility and informal support care networks impact access to care, particularly in care deserts or areas with high Airbnb density. Insights from the model may help short-term rental platforms identify areas with vulnerable populations (e.g., individuals with chronic illness or experiencing housing precarity) and facilitate the design of distributed care models like mobile clinics or gig-based care delivery. Additionally, integrating Airbnb hosts as part of a broader care ecosystem could provide new opportunities for temporary housing to be utilised for care coordination, leveraging informal support as well as community-based health initiatives (especially for populations experiencing precarity or displacement).
 
 ## Contact and Contributing
 Contact: For collaboration or inquiries, please contact me here. Contributions are welcome. Feel free to open issues or create pull requests.
