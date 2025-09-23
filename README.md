@@ -87,13 +87,13 @@ report = classification_report(y_test, y_pred, output_dict=False)
 st.text("Classification Report:")
 st.text(report)
 ```
-2. Visualisation Updates: The Streamlit visualisation for the contagion process was further enhanced by adding labels for clarity on user attributes (e.g., gender or health conditions) and contagion status.
+2. Visualisation Updates: The Streamlit visualisation for the contagion process was further enhanced by adding labels for clarity on user attributes (e.g., gender or health conditions).
 
-3. Sentiment and Ideology Updates: The analyze_sentiment function can be updated to not only classify sentiment but also map it to ideologies (pro-health, anti-health and neutral). The user profile creation logic in your user_datasection should reflect this approach.
+3. Sentiment and Ideology Updates: The analyze_sentiment function can be updated to not only classify sentiment but also map it to ideologies (pro-health, anti-health and neutral). The user profile creation logic in the user_datasection should reflect this approach.
 
 ## Model Improvements and Optimisation
 1. Feature Engineering
-To enhance the predictive power of the model several features were engineered to capture more complex patterns in the data. These features include:
+To enhance the predictive power of the model, several features were engineered to capture more complex patterns in the data. These features include:
 
 * Network Centrality Measures  
 Rationale: When dealing with network data (e.g., social media or interactions between users), centrality measures like betweenness centrality are important in identifying influential nodes.
@@ -104,7 +104,7 @@ Example: "Nodes with high betweenness centrality were likely to be more influent
 After implementing these feature engineering techniques and optimising the hyperparameters, the final model was evaluated based on various metrics like accuracym and F1-score. The model performance improved, particularly especially in handling time-dependent features and network-based data.
 
 ## Future Work
-As chronic illness care shifts from institutions to home and community-based services (HCBS), a major research question emerges: How might decentralised platforms like Airbnb be leveraged or regulated to expand access to care for people living in temporary or unstable housing?
+As chronic illness care shifts from institutions to home and community-based services (HCBS), a major research question emerges: How can decentralised platforms like Airbnb be leveraged or regulated to expand access to care for people living in temporary or unstable housing?
 
 This inquiry builds on this project by embedding care access, mobility constraints and health behaviour dynamics within the real-world platforms, neighborhoods and transportation infrastructure systems that shape life for chronically ill individuals experiencing housing precarity.  
 
@@ -118,11 +118,11 @@ Research could focus on exploring the ways housing context, mobility constraints
 2. Proximity Mapping and Network Connectivity
 * In areas with high turnover where Airbnb stays are concentrated but the formal healthcare network is weak, informal care networks (e.g., faith-based health outreach, mutual aid groups, social media networks or street medicine teams) may grow in importance.
 * Analysing the proximity between Airbnb listings and care providers can reveal gaps in care delivery as guests in Airbnb rentals may be more likely to rely on local informal care systems or community-driven services in areas with limited HCBS access.
-* Mapping these informal systems and Airbnb’s influence on local networks can show mismatches in how care is delivered and whether Airbnb clusters facilitate access to these support systems.
+* Mapping these informal systems with Airbnb’s influence on local networks can show mismatches in how care is delivered and whether Airbnb clusters facilitate access to these support systems.
 
-3. Mobility Constraints and Access to Care  
-* Affordability vs Mobility: In areas with high Airbnb prevalence, affordability often becomes a key consideration for guests. Airbnb guests, especially those in low-cost areas, may face mobility challenges due to reduced access to public transportation or essential services as a result of poor infrastructure. The affordability of Airbnb rentals in areas with inadequate healthcare infrastructure could exacerbate mobility constraints for temporary residents. These guests might be more reliant on local social media groups or neighbourhood-based care, such as mobile clinics or on-demand nursing services to cope with limited healthcare access.
-* Overcrowding: In cities where Airbnb listings are dense, overcrowding might affect public infrastructure and impair residents from navigating spaces. Poor or unsafe infrastructure, combined with overcrowded streets due to tourists, could create physical mobility barriers and influence whether guests book accommodations in areas with better accessibility or in places where healthcare is harder to reach (thus promoting a reliance on informal care).
+3. Mobility Constraints and Access to Care 
+* Affordability vs Mobility: In areas with high Airbnb prevalence, affordability often becomes a key consideration for guests. Airbnb guests, especially those in low-cost areas, may face mobility challenges due to reduced access to public transportation or essential services as a result of poor infrastructure. The affordability of Airbnb rentals in areas with inadequate healthcare infrastructure could exacerbate mobility constraints for temporary residents. These guests might become more reliant on local social media groups or neighbourhood-based care, such as mobile clinics or on-demand nursing services to cope with limited healthcare access.
+* Overcrowding: In cities where Airbnb listings are dense, overcrowding might affect public infrastructure and impair residents from navigating spaces. Poor or unsafe infrastructure, combined with overcrowded streets due to tourists, could create physical mobility barriers and influence whether guests choose to book accommodations in areas with better accessibility or in places where healthcare is harder to reach (promoting a reliance on informal care).
 
 4. Sociocultural and Health System Variables
 Future iterations can also incorporate sociocultural variables that further influence online health information sharing and access to care.  This will help to broaden the scope of the research, particularly in understanding how digital ecosystems, platforms like Airbnb as well as social networks intersect with health systems. These might include:
@@ -152,7 +152,7 @@ Building on precedents like Papa, DispatchHealth and Uber Health, this work coul
 * Real-Time Decision-Making: Organisations like Microsoft or Google can integrate this model into digital health analytics, recommendation engines or real-time monitoring systems to anticipate user responses to health content, adapt interfaces dynamically and personalise intervention strategies. The ability of the app to reflect demographic and ideological nuances allows for more responsive, culturally-sensitive systems
 * Short-Term Rental Platforms & Distributed Care Innovation: Platforms like Airbnb may indirectly benefit from this model by understanding how housing instability, geospatial mobility and informal support care networks impact access to care, particularly in care deserts or areas with high Airbnb density. Insights from the model may help short-term rental platforms identify areas with vulnerable populations (e.g., individuals with chronic illness or experiencing housing precarity) and facilitate the design of distributed care models like mobile clinics or gig-based care delivery.
 
-Additionally, integrating Airbnb hosts as part of a broader care ecosystem could provide new opportunities for temporary housing to be utilised for care coordination.  This could provide opportunities for hosts to partner with healthcare providers to offer specialised accomodation for guests requiring in-home nursing away from home or an appropriate living space closer to treatment.  This approach could complement urgent treatment centres by bridging the gap between preventative care and emergency intervention so as to improve access to care within community settings, particularly for those unable to access fixed-location services due to mobility limitations.
+Additionally, integrating Airbnb hosts as part of a broader care ecosystem could provide new opportunities for temporary housing to be utilised for care coordination.  This could provide opportunities for hosts to partner with healthcare providers to offer specialised accomodation for guests requiring in-home nursing away from home or an appropriate living space closer to treatment.  This approach could complement urgent treatment centres by bridging the gap between preventative care and emergency intervention within community settings, particularly for those unable to access fixed-location care services due to mobility limitations.
 
 ## Contact and Contributing
 Contact: For collaboration or inquiries, please contact me here. Contributions are welcome. Feel free to open issues or create pull requests.
