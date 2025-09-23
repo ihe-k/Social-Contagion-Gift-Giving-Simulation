@@ -70,7 +70,7 @@ streamlit run app.py
 http://localhost:8501
 
 ### Code Updates
-1. Model Evaluation in Streamlit: A model accuracy and classification repor is displayed using the following code: 
+1. Model Evaluation in Streamlit: A model accuracy and classification report is displayed using the following code: 
 
 ```plaintext
 # Evaluate model performance
